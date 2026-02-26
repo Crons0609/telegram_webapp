@@ -1,193 +1,32 @@
 <!DOCTYPE html>
-<html lang="es" class="no-js">
+<html lang="es">
 <head>
-
-  <!-- ================= CORE META ================= -->
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0f14">
-  <meta name="color-scheme" content="dark light">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-
-  <!-- ================= SEO ================= -->
-  <title>Casino Estrella | Plataforma Premium de Juegos Online</title>
-  <meta name="description" content="Casino Estrella es una plataforma premium de juegos online con experiencia inmersiva 3D, diseño corporativo y navegación fluida.">
-  <meta name="robots" content="index, follow">
-  <meta name="author" content="Casino Estrella">
-  <link rel="canonical" href="https://tudominio.com/">
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Casino Estrella">
-  <meta property="og:description" content="Experiencia de casino premium con animaciones 3D y diseño de alto nivel.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://tudominio.com/">
-  <meta property="og:image" content="/static/img/preview.jpg">
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-
-  <!-- ================= STRUCTURED DATA ================= -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Casino Estrella",
-    "url": "https://tudominio.com/",
-    "logo": "https://tudominio.com/static/img/logo.png",
-    "sameAs": []
-  }
-  </script>
-
-  <!-- Preconnect -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="/static/style.css">
-
-  <!-- Script -->
-  <script>
-    document.documentElement.classList.remove("no-js");
-  </script>
-  <script defer src="/static/script.js"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vegas Royale | Telegram Web App</title>
+  <meta name="description" content="Casino estilo Las Vegas para Telegram Web App con animaciones premium." />
+  <link rel="stylesheet" href="/static/assets/css/casino.css" />
+  <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script defer src="/static/assets/js/ui.js"></script>
 </head>
+<body class="landing-body">
+  <div class="bg-layer" aria-hidden="true"></div>
 
-<body>
-
-  <!-- Skip Link -->
-  <a href="#main-content" class="skip-link">
-    Saltar al contenido principal
-  </a>
-
-  <!-- ================= HEADER ================= -->
-  <header class="hero">
-
-    <!-- NAVIGATION -->
-    <nav class="navbar" aria-label="Navegación principal">
-      <div class="container nav-container">
-
-        <a href="/" class="brand">
-          <span class="brand-icon" aria-hidden="true">🎰</span>
-          <span class="brand-name">Casino Estrella</span>
-        </a>
-
-        <div class="nav-actions">
-          <button 
-            class="btn-outline"
-            type="button"
-            data-action="login"
-          >
-            Iniciar sesión
-          </button>
-        </div>
-
-      </div>
-    </nav>
-
-    <!-- HERO -->
-    <section class="hero-section" aria-labelledby="hero-title">
-      <div class="container hero-grid">
-
-        <div class="hero-content">
-          <h1 id="hero-title" class="hero-title">
-            Vive la experiencia del
-            <span class="gradient-text">Casino Premium</span>
-          </h1>
-
-          <p class="hero-description">
-            Arquitectura digital moderna, animaciones 3D fluidas
-            y estructura empresarial diseñada para una experiencia profesional.
-          </p>
-
-          <div class="hero-buttons">
-            <button 
-              class="btn-primary"
-              type="button"
-              data-action="entrar"
-            >
-              Entrar al Casino
-            </button>
-
-            <button 
-              class="btn-secondary"
-              type="button"
-              data-action="explorar"
-            >
-              Ver Juegos
-            </button>
-          </div>
-        </div>
-
-        <!-- Visual 3D -->
-        <div class="hero-visual" aria-hidden="true">
-          <div class="card-3d-wrapper" data-ui="tilt">
-            <div class="card-3d">
-              <div class="card-face front">🎰</div>
-              <div class="card-face back">💎</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
+  <header class="site-header">
+    <h1 class="neon-logo" data-animate="pulse">VEGAS ROYALE</h1>
+    <p class="subtitle">Web App Premium para Telegram</p>
   </header>
 
-  <!-- ================= MAIN ================= -->
-  <main id="main-content">
-
-    <!-- GAMES -->
-    <section class="games-section" aria-labelledby="games-title">
-      <div class="container">
-
-        <header class="section-header">
-          <h2 id="games-title">Juegos Disponibles</h2>
-          <p class="section-subtitle">
-            Diseñados con precisión visual y arquitectura escalable.
-          </p>
-        </header>
-
-        <div class="games-grid">
-
-          <article class="game-card">
-            <button 
-              class="game-button"
-              type="button"
-              data-url="/slotmachine"
-              data-ui="tilt"
-              aria-label="Abrir juego Slot Machine"
-            >
-              <span class="game-icon" aria-hidden="true">🎰</span>
-              <span class="game-name">Slot Machine</span>
-            </button>
-          </article>
-
-        </div>
-
-      </div>
+  <main class="landing-main">
+    <section class="panel gold-frame fade-in">
+      <h2>Bienvenido al Casino</h2>
+      <p>Luces neón, slots 3D y una experiencia vibrante lista para jugar en móvil.</p>
+      <a class="btn-3d btn-primary" href="/slotmachine">Entrar al Slot Machine</a>
     </section>
-
   </main>
 
-  <!-- ================= FOOTER ================= -->
-  <footer class="footer">
-    <div class="container footer-content">
-
-      <div class="footer-brand">
-        <span class="brand-icon" aria-hidden="true">🎰</span>
-        <span>Casino Estrella</span>
-      </div>
-
-      <div class="footer-meta">
-        <p>© 2026 Casino Estrella. Todos los derechos reservados.</p>
-        <p class="muted">
-          Juego responsable | Plataforma segura | Soporte 24/7
-        </p>
-      </div>
-
-    </div>
+  <footer class="site-footer">
+    <small>© 2026 Vegas Royale • Juego responsable</small>
   </footer>
-
 </body>
 </html>
