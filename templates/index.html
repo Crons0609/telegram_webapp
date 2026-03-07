@@ -69,16 +69,13 @@
         <!-- Dropdown Salas -->
         <div class="dropdown">
           <button class="btn-secondary dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false"
-            onclick="toggleDropdown('salas-dropdown')">
+            onclick="toggleDropdown('salas-dropdown', event)">
             🌐 Online
           </button>
           <div class="dropdown-menu" id="salas-dropdown">
             <button class="dropdown-item" onclick="openRoomCreateModal()">➕ Crear Sala</button>
             <button class="dropdown-item" onclick="openRoomBrowserModal()">🔍 Salas Públicas</button>
             <button class="dropdown-item" onclick="openRoomJoinModal()">🔑 Unirse por Código</button>
-            <div style="border-top:1px solid rgba(255,255,255,.08); margin:5px 0;"></div>
-            <button class="dropdown-item" onclick="UserProfileManager.openModal()"
-              style="color:#f8e594; font-weight:700;">⭐ Mi Perfil Élite</button>
           </div>
         </div>
 
@@ -182,6 +179,24 @@
               <p class="game-card-desc">5 rodillos, premios épicos y lluvia de monedas al ganar.</p>
               <button class="game-card-btn" type="button" onclick="navigateTo('/slotmachine')">
                 TIRAR SLOT →
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- ── LOTO INSTANTÁNEO ── -->
+        <article class="game-card game-card--loto reveal reveal-d3" style="--card-accent:#9b30ff;">
+          <div class="game-card-inner" data-url="/loto" role="button" tabindex="0" aria-label="Jugar Loto Instantáneo"
+            onclick="navigateTo('/loto')"
+            style="background:linear-gradient(135deg,rgba(60,0,100,.55),rgba(0,30,80,.55));">
+            <span class="game-card-emoji" aria-hidden="true">🎱</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Lotería · Dos Esferas</p>
+              <h3 class="game-card-name">Loto Instantáneo</h3>
+              <p class="game-card-desc">Dos esferas 3D, 20 bolas físicas, un número ganador entre el 00 y el 99.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/loto')"
+                style="background:linear-gradient(135deg,#7c1fff,#00c8ff);">
+                JUGAR AHORA →
               </button>
             </div>
           </div>

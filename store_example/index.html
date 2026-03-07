@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Tienda BITS - Zona Jackpot 777</title>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Supabase SDK (Debe cargar antes de inicializarse como módulo local) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-gold: #f59e0b;
+            --accent-purple: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            margin-bottom: 25px;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .username {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--accent-purple);
+        }
+
+        .vip-badge {
+            font-size: 0.75em;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 800;
+            margin-top: 5px;
+            display: inline-block;
+            text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: max-content;
+        }
+
+        .vip-0 {
+            background: #475569;
+            color: #f8fafc;
+        }
+
+        .vip-1 {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .vip-2 {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .vip-3 {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+        }
+
+        .vip-4 {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .balance {
+            font-weight: 800;
+            font-size: 1.3em;
+            color: var(--accent-gold);
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+        }
+
+        .store-title {
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            margin-top: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(to right, #f59e0b, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+
+        .packages-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .package-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .package-card:active {
+            transform: scale(0.98);
+        }
+
+        .package-card.valuable {
+            border: 1px solid var(--accent-gold);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+        }
+
+        .package-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-gold));
+            opacity: 0.8;
+        }
+
+        .package-bits {
+            font-size: 1.8em;
+            font-weight: 900;
+            color: var(--accent-gold);
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .package-price {
+            font-size: 1.3em;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+
+        .best-value {
+            position: absolute;
+            top: 12px;
+            right: -25px;
+            background: #ef4444;
+            color: white;
+            padding: 4px 30px;
+            font-weight: 800;
+            font-size: 0.7em;
+            transform: rotate(45deg);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+        }
+
+        .paypal-container {
+            width: 100%;
+            min-height: 40px;
+            z-index: 10;
+        }
+
+        /* Toast Notifications flotantes */
+        .notification {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            transition: top 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            /* Que el click pase, en caso de estorbar */
+        }
+
+        .notification.show {
+            top: 25px;
+        }
+
+        .notification.info {
+            background-color: #3b82f6;
+        }
+
+        .notification.success {
+            background-color: #10b981;
+        }
+
+        .notification.error {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Alertas en pantalla -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Interface del Usuario a nivel local o cargada localmente usando Telegram SDK -->
+    <div class="header">
+        <div class="user-info">
+            <span class="username" id="user-username">Cargando perfil...</span>
+            <span class="vip-badge vip-0" id="user-vip">VIP 0</span>
+        </div>
+        <div class="balance" id="user-bits">... Bits</div>
+    </div>
+
+    <h1 class="store-title">Comprar Bits</h1>
+
+    <div class="packages-grid">
+
+        <!-- Paquete $1 -->
+        <div class="package-card">
+            <div class="package-bits">1,000 BITS</div>
+            <div class="package-price">$1.00 USD</div>
+            <div id="paypal-button-container-1" class="paypal-container"></div>
+        </div>
+
+        <!-- Paquete $5 -->
+        <div class="package-card">
+            <div class="package-bits">5,500 BITS</div>
+            <div class="package-price">$5.00 USD</div>
+            <div id="paypal-button-container-5" class="paypal-container"></div>
+        </div>
+
+        <!-- Paquete $10 -->
+        <div class="package-card">
+            <div class="package-bits">12,000 BITS</div>
+            <div class="package-price">$10.00 USD</div>
+            <div id="paypal-button-container-10" class="paypal-container"></div>
+        </div>
+
+        <!-- Paquete $20 -->
+        <div class="package-card">
+            <div class="package-bits">26,000 BITS</div>
+            <div class="package-price">$20.00 USD</div>
+            <div id="paypal-button-container-20" class="paypal-container"></div>
+        </div>
+
+        <!-- Paquete $50 -->
+        <div class="package-card valuable">
+            <div class="best-value">Mejor Valor</div>
+            <div class="package-bits">70,000 BITS</div>
+            <div class="package-price">$50.00 USD</div>
+            <div id="paypal-button-container-50" class="paypal-container"></div>
+        </div>
+
+    </div>
+
+    <!-- ===== SCRIPTS ===== -->
+
+    <!-- 1. Cargar el SDK de PayPal de manera nativa -->
+    <script id="paypal-script"
+        src="https://www.paypal.com/sdk/js?client-id=ARIbqolPZ_S8yK_AIsRvL1MjdvXk0i1t_QEig7OpXNiZIGNV6a0R6ixssDFdXP4VYPOl1NCNqz6STUHt&currency=USD"></script>
+
+    <!-- 2. Logic app y clientes (Cargados en formato módulo nativo para evitar coluciones globales y ES6 functions) -->
+    <script type="module" src="supabase_client.js"></script>
+    <script type="module" src="bits_store.js"></script>
+
+    <!-- 3. Funciones locales de la pasarela y dibujado de Smart Buttons -->
+    <script src="paypal_checkout.js"></script>
+
+</body>
+
+</html>

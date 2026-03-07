@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta name="theme-color" content="#0b0614">
+    <title>Loto Instantáneo | Casino Premium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Orbitron:wght@700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/perfil.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script defer src="/static/js/soundManager.js"></script>
+    <script defer src="/static/js/perfil.js"></script>
+    <style>
+        :root {
+            --loto-gold: #f8d448;
+            --loto-purple: #9b30ff;
+            --loto-blue: #00c8ff;
+            --loto-bg: #0b0614;
+            --loto-panel: rgba(15, 10, 35, 0.92);
+            --loto-glass: rgba(255, 255, 255, 0.06);
+            --loto-border: rgba(155, 48, 255, 0.35);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: var(--loto-bg);
+            font-family: 'Montserrat', sans-serif;
+            color: #fff
+        }
+
+        /* ── HEADER ── */
+        .loto-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: linear-gradient(180deg, rgba(11, 6, 20, .96) 80%, transparent);
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--loto-glass);
+            border: 1px solid var(--loto-border);
+            color: #fff;
+            font-size: .85rem;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background .2s;
+        }
+
+        .btn-back:hover {
+            background: rgba(155, 48, 255, .25)
+        }
+
+        .loto-title-wrap {
+            text-align: center
+        }
+
+        .loto-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, var(--loto-purple), var(--loto-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .loto-subtitle {
+            font-size: .65rem;
+            color: rgba(255, 255, 255, .5);
+            letter-spacing: .08em;
+            text-transform: uppercase
+        }
+
+        .bits-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--loto-glass);
+            border: 1px solid rgba(248, 212, 72, .35);
+            padding: 7px 12px;
+            border-radius: 20px;
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--loto-gold);
+        }
+
+        /* ── CANVAS ── */
+        #loto-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+        }
+
+        /* ── SPHERES LABEL ── */
+        .sphere-labels {
+            position: fixed;
+            top: 58px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            pointer-events: none;
+            z-index: 50;
+            padding: 0 12%;
+        }
+
+        .sphere-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: .7rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, .55);
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            text-shadow: 0 0 12px var(--loto-purple);
+        }
+
+        /* ── DIGIT DISPLAY ── */
+        .digit-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            pointer-events: none;
+            z-index: 60;
+            opacity: 0;
+            transition: opacity .4s;
+        }
+
+        .digit-display.visible {
+            opacity: 1
+        }
+
+        .digit-box {
+            width: 64px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, .6);
+            border: 2px solid var(--loto-border);
+            border-radius: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--loto-gold);
+            text-shadow: 0 0 20px var(--loto-gold);
+            box-shadow: inset 0 0 20px rgba(155, 48, 255, .2), 0 0 30px rgba(155, 48, 255, .3);
+            transition: all .3s;
+        }
+
+        .digit-box.lit {
+            border-color: var(--loto-gold);
+            box-shadow: inset 0 0 30px rgba(248, 212, 72, .25), 0 0 40px rgba(248, 212, 72, .5);
+        }
+
+        .digit-sep {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: rgba(255, 255, 255, .3)
+        }
+
+        /* ── BOTTOM PANEL ── */
+        .bottom-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: linear-gradient(0deg, rgba(11, 6, 20, .98) 70%, transparent);
+            padding: 16px 20px 24px;
+        }
+
+        /* Number selector */
+        .number-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .digit-picker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .digit-picker label {
+            font-size: .65rem;
+            color: rgba(255, 255, 255, .45);
+            letter-spacing: .1em;
+            text-transform: uppercase
+        }
+
+        .picker-row {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .picker-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1px solid var(--loto-border);
+            background: var(--loto-glass);
+            color: #fff;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .15s;
+        }
+
+        .picker-btn:active {
+            background: rgba(155, 48, 255, .4)
+        }
+
+        .picker-val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            min-width: 44px;
+            text-align: center;
+            color: var(--loto-gold);
+            text-shadow: 0 0 15px rgba(248, 212, 72, .6);
+        }
+
+        .number-preview {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, .4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .number-preview span {
+            font-size: .6rem;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, .3)
+        }
+
+        /* Bet row */
+        .bet-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .bet-label {
+            font-size: .7rem;
+            color: rgba(255, 255, 255, .5);
+            white-space: nowrap
+        }
+
+        .bet-chips {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+            justify-content: center;
+            flex-wrap: wrap
+        }
+
+        .chip-btn {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--loto-border);
+            background: var(--loto-glass);
+            color: #fff;
+            font-size: .75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .chip-btn.active,
+        .chip-btn:active {
+            background: linear-gradient(135deg, var(--loto-purple), #6a0fd9);
+            border-color: var(--loto-purple);
+            box-shadow: 0 0 12px rgba(155, 48, 255, .5);
+        }
+
+        /* Play button */
+        .play-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #7c1fff, #00c8ff);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #fff;
+            cursor: pointer;
+            letter-spacing: .08em;
+            box-shadow: 0 4px 24px rgba(124, 31, 255, .5);
+            transition: all .2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .play-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed
+        }
+
+        .play-btn:not(:disabled):active {
+            transform: scale(.97)
+        }
+
+        .play-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, .15), transparent);
+            border-radius: inherit;
+        }
+
+        /* ── RESULT OVERLAY ── */
+        #result-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, .75);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .4s;
+        }
+
+        #result-overlay.visible {
+            opacity: 1;
+            pointer-events: all
+        }
+
+        .result-badge {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        .result-badge.win {
+            color: var(--loto-gold);
+            text-shadow: 0 0 40px rgba(248, 212, 72, .8), 0 0 80px rgba(248, 212, 72, .4);
+        }
+
+        .result-badge.lose {
+            color: rgba(255, 255, 255, .7);
+            text-shadow: none
+        }
+
+        .result-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 6px
+        }
+
+        .result-sub {
+            font-size: .85rem;
+            color: rgba(255, 255, 255, .6);
+            margin-bottom: 24px
+        }
+
+        .result-win-amount {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--loto-gold);
+            margin-bottom: 24px
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 12px
+        }
+
+        .result-btn {
+            padding: 12px 28px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .result-btn.primary {
+            background: linear-gradient(135deg, var(--loto-purple), #00c8ff);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(155, 48, 255, .4);
+        }
+
+        .result-btn.secondary {
+            background: var(--loto-glass);
+            border: 1px solid var(--loto-border);
+            color: #fff
+        }
+
+        /* ── HISTORY ── */
+        .history-strip {
+            position: fixed;
+            top: 58px;
+            right: 12px;
+            z-index: 80;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+        }
+
+        .history-item {
+            font-family: 'Orbitron', sans-serif;
+            font-size: .65rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, .6);
+            border: 1px solid rgba(255, 255, 255, .1);
+            color: rgba(255, 255, 255, .5);
+        }
+
+        .history-item.won {
+            color: var(--loto-gold);
+            border-color: rgba(248, 212, 72, .3)
+        }
+
+        /* ── STATUS MSG ── */
+        #status-msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, 80px);
+            z-index: 90;
+            font-size: .85rem;
+            font-weight: 700;
+            background: rgba(0, 0, 0, .7);
+            padding: 8px 18px;
+            border-radius: 20px;
+            border: 1px solid var(--loto-border);
+            opacity: 0;
+            transition: opacity .3s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        #status-msg.visible {
+            opacity: 1
+        }
+
+        /* ── PROFILE MODAL ── */
+        #profile-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 300
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="loto-header">
+        <a href="{{ url_for('home') }}" class="btn-back">← Volver</a>
+        <div class="loto-title-wrap">
+            <div class="loto-title">Loto Instantáneo</div>
+            <div class="loto-subtitle">00 – 99 · Dos Esferas</div>
+        </div>
+        <div class="bits-badge">
+            <span>🪙</span>
+            <span id="bits-display">{{ bits }}</span>
+        </div>
+    </header>
+
+    <!-- SPHERE LABELS -->
+    <div class="sphere-labels">
+        <span class="sphere-label">Esfera 1</span>
+        <span class="sphere-label">Esfera 2</span>
+    </div>
+
+    <!-- THREE.JS CANVAS -->
+    <canvas id="loto-canvas"></canvas>
+
+    <!-- DIGIT DISPLAY (center screen, shown during extraction) -->
+    <div class="digit-display" id="digit-display">
+        <div class="digit-box" id="digit-1">?</div>
+        <div class="digit-sep">·</div>
+        <div class="digit-box" id="digit-2">?</div>
+    </div>
+
+    <!-- HISTORY STRIP -->
+    <div class="history-strip" id="history-strip"></div>
+
+    <!-- STATUS MESSAGE -->
+    <div id="status-msg"></div>
+
+    <!-- BOTTOM PANEL -->
+    <div class="bottom-panel">
+        <!-- Number selector -->
+        <div class="number-selector">
+            <!-- Digit 1 picker -->
+            <div class="digit-picker">
+                <label>Decena</label>
+                <div class="picker-row">
+                    <button class="picker-btn" id="d1-down">▼</button>
+                    <div class="picker-val" id="d1-val">0</div>
+                    <button class="picker-btn" id="d1-up">▲</button>
+                </div>
+            </div>
+            <!-- Preview -->
+            <div class="number-preview">
+                <div id="chosen-display"
+                    style="font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;color:#fff">00</div>
+                <span>Tu número</span>
+            </div>
+            <!-- Digit 2 picker -->
+            <div class="digit-picker">
+                <label>Unidad</label>
+                <div class="picker-row">
+                    <button class="picker-btn" id="d2-down">▼</button>
+                    <div class="picker-val" id="d2-val">0</div>
+                    <button class="picker-btn" id="d2-up">▲</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bet chips -->
+        <div class="bet-row">
+            <span class="bet-label">🪙 Apuesta:</span>
+            <div class="bet-chips" id="bet-chips">
+                <button class="chip-btn active" data-amount="25">25</button>
+                <button class="chip-btn" data-amount="50">50</button>
+                <button class="chip-btn" data-amount="100">100</button>
+                <button class="chip-btn" data-amount="250">250</button>
+                <button class="chip-btn" data-amount="500">500</button>
+            </div>
+        </div>
+
+        <!-- Play button -->
+        <button class="play-btn" id="play-btn">🎱 JUGAR — <span id="bet-label">25</span> Bits</button>
+    </div>
+
+    <!-- RESULT OVERLAY -->
+    <div id="result-overlay">
+        <div class="result-badge" id="result-badge">00</div>
+        <div class="result-title" id="result-title">¡GANASTE!</div>
+        <div class="result-sub" id="result-sub">Tu número era correcto</div>
+        <div class="result-win-amount" id="result-win-amount"></div>
+        <div class="result-actions">
+            <button class="result-btn primary" id="result-play-again">🎱 Jugar Otra Vez</button>
+            <button class="result-btn secondary" onclick="window.location.href='/'">🏠 Lobby</button>
+        </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div id="profile-modal" class="modal-overlay hidden">
+        <div class="modal-content profile-content">
+            <header class="modal-header">
+                <h2 style="color:#f8e594">Perfil del Jugador</h2>
+                <button class="btn-close" onclick="UserProfileManager.closeModal()">×</button>
+            </header>
+            <div class="modal-body" id="profile-content-area"></div>
+        </div>
+    </div>
+
+    <!-- THREE.JS + CANNON-ES (CDN) -->
+    <script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+  }
+}
+</script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import * as CANNON from 'cannon-es';
+
+        /* =========================================================
+           CONSTANTS
+           ========================================================= */
+        const SPHERE_R = 3.2;
+        const BALL_R = 0.38;
+        const INNER_R = SPHERE_R - BALL_R - 0.05;
+        const TUBE_R = 0.55;
+        const PAYOUT = 75; // bet multiplier for a win
+
+        /* =========================================================
+           STATE
+           ========================================================= */
+        let state = 'IDLE'; // IDLE | MIXING | EXTRACT1 | EXTRACT2 | RESULT
+        let betAmount = 25;
+        let chosenD1 = 0, chosenD2 = 0;
+        let winningResult = '00';
+        let winD1 = 0, winD2 = 0;
+        let bits = parseInt(document.getElementById('bits-display').textContent) || 0;
+        let history = [];
+        let animTime = 0;
+        let mixProgress = 0;
+        const MIX_DURATION = 5.0; // seconds
+        let extractTimer = 0;
+        let extractPhase = 0; // 0=rising, 1=paused, 2=done
+        let slowFactor = 1;
+
+        /* =========================================================
+           AUDIO (Web Audio API)
+           ========================================================= */
+        let audioCtx = null;
+        function getAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            return audioCtx;
+        }
+        function playTone(freq, type, dur, vol = 0.2, delay = 0) {
+            const ctx = getAudio();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.type = type; osc.frequency.value = freq;
+            gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + dur);
+            osc.start(ctx.currentTime + delay);
+            osc.stop(ctx.currentTime + delay + dur);
+        }
+        function playBounce() { playTone(180 + Math.random() * 80, 'triangle', 0.08, 0.06); }
+        function playMotor(on) {
+            if (on) {
+                playTone(60, 'sawtooth', 0.4, 0.08);
+                playTone(120, 'sawtooth', 0.4, 0.04, 0.1);
+            }
+        }
+        function playExtract() {
+            for (let i = 0; i < 5; i++) playTone(400 + i * 120, 'sine', 0.15, 0.1, i * 0.07);
+        }
+        function playWin() {
+            [523, 659, 784, 1047].forEach((f, i) => playTone(f, 'sine', 0.3, 0.18, i * 0.12));
+        }
+        function playLose() { playTone(150, 'sawtooth', 0.4, 0.15); }
+
+        /* =========================================================
+           THREE.JS SETUP
+           ========================================================= */
+        const canvas = document.getElementById('loto-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b0614);
+        scene.fog = new THREE.FogExp2(0x0b0614, 0.035);
+
+        const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+        const CAM_DEFAULT = new THREE.Vector3(0, 1.5, 14);
+        camera.position.copy(CAM_DEFAULT);
+        camera.lookAt(0, 0, 0);
+
+        /* ---- Lights ---- */
+        const ambient = new THREE.AmbientLight(0x200040, 0.6);
+        scene.add(ambient);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        sunLight.position.set(5, 10, 8);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+
+        // Purple fill
+        const purpleLight = new THREE.PointLight(0x9b30ff, 3, 20);
+        purpleLight.position.set(-3, 4, 3);
+        scene.add(purpleLight);
+
+        // Blue accent
+        const blueLight = new THREE.PointLight(0x00c8ff, 3, 20);
+        blueLight.position.set(3, 4, 3);
+        scene.add(blueLight);
+
+        /* ---- Floor ---- */
+        const floorGeo = new THREE.PlaneGeometry(40, 40);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0020, roughness: 0.9, metalness: 0.1 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2; floor.position.y = -4.5;
+        floor.receiveShadow = true; scene.add(floor);
+
+        /* =========================================================
+           SPHERE FACTORY
+           ========================================================= */
+        function createSphereGroup(xOffset) {
+            const group = new THREE.Group();
+            group.position.x = xOffset;
+
+            // Glass shell (outer)
+            const shellGeo = new THREE.SphereGeometry(SPHERE_R, 64, 64);
+            const shellMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                transmission: 0.92,
+                roughness: 0.04,
+                metalness: 0.0,
+                thickness: 0.6,
+                ior: 1.45,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                envMapIntensity: 1.2,
+            });
+            const shell = new THREE.Mesh(shellGeo, shellMat);
+            group.add(shell);
+
+            // Inner glow sphere
+            const glowGeo = new THREE.SphereGeometry(SPHERE_R * 0.98, 32, 32);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: 0x4a0080, transparent: true, opacity: 0.08, side: THREE.BackSide, depthWrite: false
+            });
+            group.add(new THREE.Mesh(glowGeo, glowMat));
+
+            // Interior point light
+            const innerLight = new THREE.PointLight(0x9b30ff, 2.5, SPHERE_R * 2.5);
+            group.add(innerLight);
+
+            // Tube (top extraction nozzle)
+            const tubeGeo = new THREE.CylinderGeometry(TUBE_R, TUBE_R * 1.2, 2.0, 16, 1, true);
+            const tubeMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, transmission: 0.85, roughness: 0.05, transparent: true, opacity: 0.3,
+                side: THREE.DoubleSide, depthWrite: false
+            });
+            const tube = new THREE.Mesh(tubeGeo, tubeMat);
+            tube.position.y = SPHERE_R + 0.9;
+            group.add(tube);
+
+            // Tube cap ring
+            const ringGeo = new THREE.TorusGeometry(TUBE_R * 1.1, 0.07, 12, 60);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0x9b30ff, emissive: 0x9b30ff, emissiveIntensity: 1, metalness: 0.8, roughness: 0.2 });
+            [SPHERE_R + 0.05, SPHERE_R + 1.85].forEach(y => {
+                const r = new THREE.Mesh(ringGeo, ringMat); r.position.y = y; group.add(r);
+            });
+
+            // Base stand
+            const baseGeo = new THREE.CylinderGeometry(SPHERE_R * 0.6, SPHERE_R * 0.8, 0.4, 24);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x220044, metalness: 0.9, roughness: 0.2 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = -(SPHERE_R + 0.15); group.add(base);
+
+            return { group, shell, innerLight };
+        }
+
+        /* =========================================================
+           BALL FACTORY (canvas texture for digit)
+           ========================================================= */
+        const BALL_COLORS = [
+            0xff2255, 0xff6600, 0xffcc00, 0x22dd44, 0x00bbff,
+            0x9933ff, 0xff3399, 0x00ffcc, 0xff4444, 0x44aaff
+        ];
+
+        function makeBallTexture(digit) {
+            const size = 256;
+            const cv = document.createElement('canvas');
+            cv.width = cv.height = size;
+            const ctx = cv.getContext('2d');
+            // Base color
+            const grad = ctx.createRadialGradient(size * .38, size * .35, size * .05, size / 2, size / 2, size * .5);
+            grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
+            // Number
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * .44}px 'Orbitron', monospace`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 10;
+            ctx.fillText(String(digit), size / 2, size / 2 + 4);
+            return new THREE.CanvasTexture(cv);
+        }
+
+        function createBall(digit, color) {
+            const geo = new THREE.SphereGeometry(BALL_R, 32, 32);
+            const tex = makeBallTexture(digit);
+            const mat = new THREE.MeshStandardMaterial({
+                color, map: tex,
+                metalness: 0.4, roughness: 0.25,
+                emissive: new THREE.Color(color), emissiveIntensity: 0.12,
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.userData.digit = digit;
+            return mesh;
+        }
+
+        /* =========================================================
+           CANNON-ES PHYSICS WORLD
+           ========================================================= */
+        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.8, 0) });
+        world.broadphase = new CANNON.SAPBroadphase(world);
+        world.allowSleep = false;
+
+        // Sphere shell containers (two)
+        const SPHERE_OFFSETS = [-4.5, 4.5];
+
+        const sphereData = SPHERE_OFFSETS.map((xOff, idx) => {
+            // Visual group
+            const { group, shell, innerLight } = createSphereGroup(xOff);
+            scene.add(group);
+
+            // Physics: inner container (inverted sphere made of a hollow compound)
+            // We use a large static sphere body as the container walls
+            const containerBody = new CANNON.Body({ mass: 0 });
+            const containerShape = new CANNON.Sphere(INNER_R);
+            containerBody.addShape(containerShape);
+            containerBody.position.set(xOff, 0, 0);
+            // Invert friction so balls bounce inside
+            containerBody.material = new CANNON.Material('container');
+            world.addBody(containerBody);
+
+            // Balls
+            const ballMat = new CANNON.Material('ball');
+            const contactMat = new CANNON.ContactMaterial(ballMat, ballMat, { restitution: 0.65, friction: 0.3 });
+            const wallContact = new CANNON.ContactMaterial(ballMat, containerBody.material, { restitution: 0.55, friction: 0.2 });
+            world.addContactMaterial(contactMat);
+            world.addContactMaterial(wallContact);
+
+            const balls = [];
+            for (let d = 0; d < 10; d++) {
+                // Physics body
+                const body = new CANNON.Body({
+                    mass: 1,
+                    shape: new CANNON.Sphere(BALL_R),
+                    material: ballMat,
+                    linearDamping: 0.05,
+                    angularDamping: 0.05,
+                });
+                // Scatter initial positions
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const r = (INNER_R - BALL_R) * 0.55 * Math.cbrt(Math.random());
+                body.position.set(
+                    xOff + r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * Math.sin(theta) - 1.5,
+                    r * Math.cos(phi)
+                );
+                body.velocity.set((Math.random() - .5) * 2, (Math.random() - .5) * 2, (Math.random() - .5) * 2);
+                world.addBody(body);
+
+                // Mesh
+                const mesh = createBall(d, BALL_COLORS[d]);
+                scene.add(mesh);
+
+                // Collision sound
+                body.addEventListener('collide', (e) => {
+                    const v = e.contact.getImpactVelocityAlongNormal();
+                    if (Math.abs(v) > 1.5 && (state === 'MIXING' || state === 'IDLE')) playBounce();
+                });
+
+                balls.push({ body, mesh, digit: d, extracted: false });
+            }
+
+            return { group, shell, balls, containerBody, innerLight, xOff, winBall: null, extractMesh: null, winDigit: null };
+        });
+
+        /* =========================================================
+           CUSTOM RENDERER: keep balls inside sphere
+           ========================================================= */
+        function enforceSpherewall() {
+            sphereData.forEach(({ containerBody, balls }) => {
+                const center = containerBody.position;
+                balls.forEach(({ body }) => {
+                    const dx = body.position.x - center.x;
+                    const dy = body.position.y - center.y;
+                    const dz = body.position.z - center.z;
+                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    const maxR = INNER_R - BALL_R;
+                    if (dist > maxR) {
+                        const nx = dx / dist, ny = dy / dist, nz = dz / dist;
+                        body.position.set(center.x + nx * maxR, center.y + ny * maxR, center.z + nz * maxR);
+                        // Reflect velocity
+                        const vDot = body.velocity.x * nx + body.velocity.y * ny + body.velocity.z * nz;
+                        body.velocity.x -= 2 * vDot * nx;
+                        body.velocity.y -= 2 * vDot * ny;
+                        body.velocity.z -= 2 * vDot * nz;
+                        // Dampen
+                        body.velocity.scale(0.8, body.velocity);
+                    }
+                });
+            });
+        }
+
+        /* =========================================================
+           MIXING IMPULSES
+           ========================================================= */
+        function applyMixImpulses(intensity) {
+            sphereData.forEach(({ containerBody, balls }) => {
+                const c = containerBody.position;
+                balls.forEach(({ body, extracted }) => {
+                    if (extracted) return;
+                    const dx = body.position.x - c.x, dy = body.position.y - c.y, dz = body.position.z - c.z;
+                    const f = intensity * (2 + Math.random() * 3);
+                    body.applyForce(
+                        new CANNON.Vec3(
+                            (Math.random() - .5) * f - dx * .5,
+                            (Math.random() - .5) * f - dy * .5 + f * .3,
+                            (Math.random() - .5) * f - dz * .5
+                        ),
+                        body.position
+                    );
+                });
+            });
+        }
+
+        /* =========================================================
+           EXTRACTION ANIMATION
+           ========================================================= */
+        let extractBall1 = null, extractBall2 = null;
+        let e1Phase = 'idle', e2Phase = 'idle';
+        let e1Y = 0, e2Y = 0;
+
+        function chooseWinBall(sIdx) {
+            const sd = sphereData[sIdx];
+            const remaining = sd.balls.filter(b => !b.extracted);
+            if (!remaining.length) return null;
+            const chosen = remaining.find(b => b.digit === (sIdx === 0 ? winD1 : winD2)) || remaining[0];
+            chosen.extracted = true;
+            chosen.body.sleep(); // stop physics
+            sd.winBall = chosen;
+            return chosen;
+        }
+
+        /* =========================================================
+           CAMERA ANIMATION
+           ========================================================= */
+        let camTarget = CAM_DEFAULT.clone();
+        let camLookTarget = new THREE.Vector3(0, 0, 0);
+        const camLookCurrent = new THREE.Vector3(0, 0, 0);
+
+        function setCameraFocus(x, y) {
+            camTarget.set(x, y + 1.5, 6);
+            camLookTarget.set(x, y, 0);
+        }
+        function resetCamera() {
+            camTarget.copy(CAM_DEFAULT);
+            camLookTarget.set(0, 0, 0);
+        }
+
+        /* =========================================================
+           TUBE EXIT POSITIONS
+           ========================================================= */
+        function getTubeTop(sIdx) {
+            return { x: SPHERE_OFFSETS[sIdx], yStart: SPHERE_R + 0.4, yEnd: SPHERE_R + 2.2 };
+        }
+
+        /* =========================================================
+           MAIN GAME LOGIC
+           ========================================================= */
+        async function startGame() {
+            if (state !== 'IDLE') return;
+
+            const chosen = String(chosenD1) + String(chosenD2);
+            const response = await fetch('/api/loto/play', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bet: betAmount, chosen })
+            });
+            const data = await response.json();
+            if (data.status !== 'ok') {
+                showStatus(data.message || 'Error', 2000);
+                return;
+            }
+
+            winningResult = data.result;
+            winD1 = parseInt(winningResult[0]);
+            winD2 = parseInt(winningResult[1]);
+            bits = data.bits;
+            updateBitsDisplay();
+
+            document.getElementById('play-btn').disabled = true;
+            document.getElementById('digit-1').textContent = '?';
+            document.getElementById('digit-2').textContent = '?';
+            document.getElementById('digit-display').classList.remove('visible');
+            document.getElementById('digit-1').classList.remove('lit');
+            document.getElementById('digit-2').classList.remove('lit');
+
+            state = 'MIXING';
+            mixProgress = 0;
+            animTime = 0;
+            e1Phase = 'idle'; e2Phase = 'idle';
+            extractBall1 = null; extractBall2 = null;
+            playMotor(true);
+            showStatus('🎱 Mezclando bolas...', 0);
+        }
+
+        /* =========================================================
+           ANIMATION LOOP
+           ========================================================= */
+        const clock = new THREE.Clock();
+        let lastPhysicsTime = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const rawDt = clock.getDelta();
+            const dt = Math.min(rawDt, 0.05) * slowFactor;
+
+            // ── Physics step ──
+            if (state === 'MIXING' || state === 'IDLE') {
+                world.step(1 / 60, rawDt, 3);
+                enforceSpherewall();
+            }
+
+            // ── Sync meshes from physics ──
+            sphereData.forEach(sd => {
+                sd.balls.forEach(({ body, mesh, extracted }) => {
+                    if (!extracted) {
+                        mesh.position.copy(body.position);
+                        mesh.quaternion.copy(body.quaternion);
+                    }
+                });
+            });
+
+            // ── State machine ──
+            if (state === 'MIXING') {
+                mixProgress += rawDt / MIX_DURATION;
+                const intensity = 4 + Math.sin(mixProgress * Math.PI * 2) * 2;
+                if (Math.random() < 0.5) applyMixImpulses(intensity);
+
+                // Rotating glow
+                sphereData.forEach(sd => {
+                    sd.innerLight.intensity = 2 + Math.sin(animTime * 3) * 0.8;
+                    sd.group.rotation.y += rawDt * 0.15;
+                });
+
+                if (mixProgress >= 1) {
+                    // Start extracting sphere 1
+                    state = 'EXTRACT1';
+                    slowFactor = 0.35; // slow motion
+                    extractBall1 = chooseWinBall(0);
+                    e1Phase = 'rising';
+                    e1Y = extractBall1 ? extractBall1.mesh.position.y : 0;
+                    setCameraFocus(SPHERE_OFFSETS[0], SPHERE_R + 1);
+                    showStatus('✨ Extrayendo primer dígito...', 0);
+                    playExtract();
+                }
+            }
+            else if (state === 'EXTRACT1') {
+                if (e1Phase === 'rising' && extractBall1) {
+                    const target = getTubeTop(0);
+                    const tx = target.x, ty = target.yEnd;
+                    const b1 = extractBall1.mesh;
+                    b1.position.x += (tx - b1.position.x) * 6 * dt;
+                    b1.position.z += (0 - b1.position.z) * 6 * dt;
+                    b1.position.y += (ty - b1.position.y) * 4 * dt;
+                    if (Math.abs(b1.position.y - ty) < 0.1) {
+                        e1Phase = 'paused';
+                        // Show digit 1
+                        document.getElementById('digit-1').textContent = String(winD1);
+                        document.getElementById('digit-1').classList.add('lit');
+                        document.getElementById('digit-display').classList.add('visible');
+                        setTimeout(() => {
+                            // Extract sphere 2
+                            state = 'EXTRACT2';
+                            extractBall2 = chooseWinBall(1);
+                            e2Phase = 'rising';
+                            e2Y = extractBall2 ? extractBall2.mesh.position.y : 0;
+                            setCameraFocus(SPHERE_OFFSETS[1], SPHERE_R + 1);
+                            showStatus('✨ Extrayendo segundo dígito...', 0);
+                            playExtract();
+                        }, 900 / slowFactor);
+                    }
+                }
+            }
+            else if (state === 'EXTRACT2') {
+                if (e2Phase === 'rising' && extractBall2) {
+                    const target = getTubeTop(1);
+                    const tx = target.x, ty = target.yEnd;
+                    const b2 = extractBall2.mesh;
+                    b2.position.x += (tx - b2.position.x) * 6 * dt;
+                    b2.position.z += (0 - b2.position.z) * 6 * dt;
+                    b2.position.y += (ty - b2.position.y) * 4 * dt;
+                    if (Math.abs(b2.position.y - ty) < 0.1) {
+                        e2Phase = 'paused';
+                        document.getElementById('digit-2').textContent = String(winD2);
+                        document.getElementById('digit-2').classList.add('lit');
+                        setTimeout(() => {
+                            slowFactor = 1;
+                            resetCamera();
+                            showResult(winningResult, data_won);
+                            state = 'RESULT';
+                        }, 900);
+                    }
+                }
+            }
+
+            // ── Camera smooth follow ──
+            camera.position.lerp(camTarget, 5 * rawDt);
+            camLookCurrent.lerp(camLookTarget, 5 * rawDt);
+            camera.lookAt(camLookCurrent);
+
+            // ── Lights pulse ──
+            animTime += rawDt;
+            purpleLight.intensity = 2.5 + Math.sin(animTime * 1.7) * 0.8;
+            blueLight.intensity = 2.5 + Math.cos(animTime * 1.3) * 0.8;
+
+            renderer.render(scene, camera);
+        }
+
+        // Store won flag accessible in timeout closure
+        let data_won = false;
+
+        /* =========================================================
+           RESULT
+           ========================================================= */
+        async function showResult(result, won) {
+            const chosen = String(chosenD1) + String(chosenD2);
+            document.getElementById('result-badge').textContent = result;
+            document.getElementById('result-badge').className = 'result-badge ' + (won ? 'win' : 'lose');
+
+            if (won) {
+                const winAmt = betAmount * PAYOUT;
+                document.getElementById('result-title').textContent = '🎉 ¡GANASTE!';
+                document.getElementById('result-sub').textContent = `Tu número ${chosen} era el correcto`;
+                document.getElementById('result-win-amount').textContent = `+${winAmt} 🪙 Bits`;
+                playWin();
+                // Credit
+                fetch('/api/loto/result', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ win_amount: winAmt })
+                }).then(r => r.json()).then(d => { if (d.bits) { bits = d.bits; updateBitsDisplay(); } });
+                addHistory(result, true);
+            } else {
+                document.getElementById('result-title').textContent = 'Sin suerte esta vez';
+                document.getElementById('result-sub').textContent = `Elegiste ${chosen} · Salió ${result}`;
+                document.getElementById('result-win-amount').textContent = '';
+                playLose();
+                addHistory(result, false);
+            }
+            hideStatus();
+            document.getElementById('result-overlay').classList.add('visible');
+        }
+
+        function addHistory(result, won) {
+            history.unshift({ result, won });
+            if (history.length > 5) history.pop();
+            renderHistory();
+        }
+        function renderHistory() {
+            const el = document.getElementById('history-strip');
+            el.innerHTML = history.map(h => `<div class="history-item${h.won ? ' won' : ''}">${h.result}</div>`).join('');
+        }
+
+        function resetGame() {
+            state = 'IDLE';
+            slowFactor = 1;
+            document.getElementById('result-overlay').classList.remove('visible');
+            document.getElementById('digit-display').classList.remove('visible');
+            document.getElementById('digit-1').textContent = '?';
+            document.getElementById('digit-2').textContent = '?';
+            document.getElementById('digit-1').classList.remove('lit');
+            document.getElementById('digit-2').classList.remove('lit');
+            document.getElementById('play-btn').disabled = false;
+
+            // Reset physics for all balls
+            sphereData.forEach(sd => {
+                sd.winBall = null;
+                sd.balls.forEach(b => {
+                    b.extracted = false;
+                    b.body.wakeUp();
+                    const r = (INNER_R - BALL_R) * 0.5 * Math.cbrt(Math.random());
+                    const theta = Math.random() * Math.PI * 2, phi = Math.random() * Math.PI;
+                    b.body.position.set(
+                        sd.xOff + r * Math.sin(phi) * Math.cos(theta),
+                        r * Math.sin(phi) * Math.sin(theta) - 1.5,
+                        r * Math.cos(phi)
+                    );
+                    b.body.velocity.set((Math.random() - .5) * 4, (Math.random() - .5) * 4, (Math.random() - .5) * 4);
+                    b.body.angularVelocity.set(0, 0, 0);
+                    b.mesh.position.copy(b.body.position);
+                });
+                sd.group.rotation.y = 0;
+            });
+            resetCamera();
+        }
+
+        /* =========================================================
+           UI HELPERS
+           ========================================================= */
+        function updateBitsDisplay() {
+            document.getElementById('bits-display').textContent = bits;
+        }
+        function showStatus(msg, dur) {
+            const el = document.getElementById('status-msg');
+            el.textContent = msg; el.classList.add('visible');
+            if (dur > 0) setTimeout(hideStatus, dur);
+        }
+        function hideStatus() {
+            document.getElementById('status-msg').classList.remove('visible');
+        }
+        function updateChosenDisplay() {
+            document.getElementById('chosen-display').textContent = String(chosenD1) + String(chosenD2);
+        }
+
+        /* =========================================================
+           RESIZE
+           ========================================================= */
+        function onResize() {
+            const w = window.innerWidth, h = window.innerHeight;
+            renderer.setSize(w, h);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+        window.addEventListener('resize', onResize);
+        onResize();
+
+        /* =========================================================
+           UI EVENTS
+           ========================================================= */
+        // Digit pickers
+        document.getElementById('d1-up').addEventListener('click', () => { chosenD1 = (chosenD1 + 1) % 10; document.getElementById('d1-val').textContent = chosenD1; updateChosenDisplay(); });
+        document.getElementById('d1-down').addEventListener('click', () => { chosenD1 = (chosenD1 + 9) % 10; document.getElementById('d1-val').textContent = chosenD1; updateChosenDisplay(); });
+        document.getElementById('d2-up').addEventListener('click', () => { chosenD2 = (chosenD2 + 1) % 10; document.getElementById('d2-val').textContent = chosenD2; updateChosenDisplay(); });
+        document.getElementById('d2-down').addEventListener('click', () => { chosenD2 = (chosenD2 + 9) % 10; document.getElementById('d2-val').textContent = chosenD2; updateChosenDisplay(); });
+
+        // Bet chips
+        document.getElementById('bet-chips').addEventListener('click', e => {
+            const btn = e.target.closest('.chip-btn');
+            if (!btn || state !== 'IDLE') return;
+            document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            betAmount = parseInt(btn.dataset.amount);
+            document.getElementById('bet-label').textContent = betAmount;
+        });
+
+        // Play
+        document.getElementById('play-btn').addEventListener('click', () => {
+            if (state !== 'IDLE') return;
+            data_won = false; // reset
+            // We need to temporarily store the won result before showResult is called
+            // The API returns won; we patch via module-level variable below
+            startGameWithWonFlag();
+        });
+
+        async function startGameWithWonFlag() {
+            if (state !== 'IDLE') return;
+            const chosen = String(chosenD1) + String(chosenD2);
+            const response = await fetch('/api/loto/play', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bet: betAmount, chosen })
+            });
+            const data = await response.json();
+            if (data.status !== 'ok') {
+                showStatus(data.message || 'Error', 2500);
+                return;
+            }
+
+            winningResult = data.result;
+            winD1 = parseInt(winningResult[0]);
+            winD2 = parseInt(winningResult[1]);
+            data_won = data.won;
+            bits = data.bits;
+            updateBitsDisplay();
+
+            document.getElementById('play-btn').disabled = true;
+            document.getElementById('digit-1').textContent = '?';
+            document.getElementById('digit-2').textContent = '?';
+            document.getElementById('digit-display').classList.remove('visible');
+            document.getElementById('digit-1').classList.remove('lit');
+            document.getElementById('digit-2').classList.remove('lit');
+
+            state = 'MIXING';
+            mixProgress = 0;
+            animTime = 0;
+            e1Phase = 'idle'; e2Phase = 'idle';
+            extractBall1 = null; extractBall2 = null;
+            playMotor(true);
+            showStatus('🎱 Mezclando bolas...', 0);
+        }
+
+        // Play again
+        document.getElementById('result-play-again').addEventListener('click', resetGame);
+
+        /* =========================================================
+           START RENDER LOOP
+           ========================================================= */
+        // Remove old startGame bind since we use startGameWithWonFlag
+        animate();
+    </script>
+</body>
+
+</html>

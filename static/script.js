@@ -379,15 +379,29 @@
   /* =====================================================
      MULTIPLAYER LOBBY (DROPDOWNS & MODALS)
   ===================================================== */
-  window.toggleDropdown = function (id) {
+  window.toggleDropdown = function (id, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     const d = document.getElementById(id);
     if (!d) return;
-    d.classList.toggle('show');
+
+    // Si ya está abierto y tocamos el mismo, lo cerramos
+    if (d.classList.contains('show')) {
+      d.classList.remove('show');
+      return;
+    }
+
+    // Cerramos todos los demás primero
+    document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+
+    d.classList.add('show');
   };
 
   // Close dropdown if clicked outside
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.dropdown')) {
+    if (!e.target.closest('.dropdown-menu') && !e.target.closest('.dropdown-toggle')) {
       document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
     }
   });

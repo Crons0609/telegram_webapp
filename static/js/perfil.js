@@ -102,10 +102,10 @@ window.UserProfileManager = {
                 </div>
             </div>
             <div class="stats-grid">
-                <div class="stat-box"><span class="stat-value">${p.juegos_jugados||0}</span><span class="stat-label">Jugados</span></div>
-                <div class="stat-box"><span class="stat-value">${p.jackpots_ganados||0}</span><span class="stat-label">Jackpots</span></div>
-                <div class="stat-box"><span class="stat-value">${p.total_ganados||0}</span><span class="stat-label">Bits Ganados</span></div>
-                <div class="stat-box"><span class="stat-value">${p.wins_total||0}</span><span class="stat-label">Total Wins</span></div>
+                <div class="stat-box"><span class="stat-value">${p.juegos_jugados || 0}</span><span class="stat-label">Jugados</span></div>
+                <div class="stat-box"><span class="stat-value">${p.jackpots_ganados || 0}</span><span class="stat-label">Jackpots</span></div>
+                <div class="stat-box"><span class="stat-value">${p.total_ganados || 0}</span><span class="stat-label">Bits Ganados</span></div>
+                <div class="stat-box"><span class="stat-value">${p.wins_total || 0}</span><span class="stat-label">Total Wins</span></div>
             </div>
             <div style="display:flex;gap:10px;margin-bottom:20px;">
                 <button class="btn-primary" style="flex:1" onclick="UserProfileManager.claimDailyReward()">🎁 Recompensa Diaria</button>
@@ -148,15 +148,15 @@ window.UserProfileManager = {
 
     renderInventory: function () {
         const ALL_FRAMES = [
-            {id:'bronze1',name:'Bronce I',req:1},{id:'bronze2',name:'Bronce II',req:2},{id:'bronze3',name:'Bronce III',req:3},
-            {id:'silver1',name:'Plata I',req:4},{id:'silver2',name:'Plata II',req:6},{id:'silver3',name:'Plata III',req:8},
-            {id:'gold1',name:'Oro I',req:10},{id:'gold2',name:'Oro II',req:12},{id:'gold3',name:'Oro III',req:14},
-            {id:'diamond1',name:'Diamante I',req:16},{id:'diamond2',name:'Diamante II',req:18},{id:'diamond3',name:'Diamante III',req:20},
-            {id:'legendary1',name:'Legendario I',req:22},{id:'legendary2',name:'Legendario II',req:24},{id:'legendary3',name:'Legendario III',req:26}
+            { id: 'bronze1', name: 'Bronce I', req: 1 }, { id: 'bronze2', name: 'Bronce II', req: 2 }, { id: 'bronze3', name: 'Bronce III', req: 3 },
+            { id: 'silver1', name: 'Plata I', req: 4 }, { id: 'silver2', name: 'Plata II', req: 6 }, { id: 'silver3', name: 'Plata III', req: 8 },
+            { id: 'gold1', name: 'Oro I', req: 10 }, { id: 'gold2', name: 'Oro II', req: 12 }, { id: 'gold3', name: 'Oro III', req: 14 },
+            { id: 'diamond1', name: 'Diamante I', req: 16 }, { id: 'diamond2', name: 'Diamante II', req: 18 }, { id: 'diamond3', name: 'Diamante III', req: 20 },
+            { id: 'legendary1', name: 'Legendario I', req: 22 }, { id: 'legendary2', name: 'Legendario II', req: 24 }, { id: 'legendary3', name: 'Legendario III', req: 26 }
         ];
         const ALL_THEMES = [
-            {id:'default',name:'Moderno (Base)',req:1},{id:'dark_premium',name:'Dark Premium',req:7},
-            {id:'gold_imperial',name:'Gold Imperial',req:13},{id:'las_vegas',name:'Las Vegas',req:19},{id:'noir',name:'Noir Élite',req:25}
+            { id: 'default', name: 'Moderno (Base)', req: 1 }, { id: 'dark_premium', name: 'Dark Premium', req: 7 },
+            { id: 'gold_imperial', name: 'Gold Imperial', req: 13 }, { id: 'las_vegas', name: 'Las Vegas', req: 19 }, { id: 'noir', name: 'Noir Élite', req: 25 }
         ];
 
         const myUnlocks = this.currentProfile.unlocked_items || [];
@@ -172,7 +172,7 @@ window.UserProfileManager = {
                 const isUnlocked = isBase || myUnlocks.some(u => u.type === typeKey && u.id === item.id);
                 const isEquipped = activeId === item.id;
                 const div = document.createElement('div');
-                div.className = `inventory-item${!isUnlocked?' locked':''}${isEquipped?' equipped':''}`;
+                div.className = `inventory-item${!isUnlocked ? ' locked' : ''}${isEquipped ? ' equipped' : ''}`;
                 const previewHtml = typeKey === 'frame'
                     ? `<div class="item-frame-preview" style="background-image:url('/static/img/frames/${item.id}.png')"></div>`
                     : `<div class="item-icon">🎨</div>`;
@@ -199,21 +199,21 @@ window.UserProfileManager = {
             const res = await fetch('/api/trophies');
             const data = await res.json();
             if (data.status === 'ok') this._renderTrophyGrid(data.trophies, grid);
-        } catch(e) { grid.innerHTML = '<p style="color:red;text-align:center">Error</p>'; }
+        } catch (e) { grid.innerHTML = '<p style="color:red;text-align:center">Error</p>'; }
     },
 
     _renderTrophyGrid: function (trophies, container) {
-        const unlocked = trophies.filter(t=>t.unlocked).length;
+        const unlocked = trophies.filter(t => t.unlocked).length;
         let html = `<div class="trophies-summary"><span class="trophy-count">${unlocked}/${trophies.length}</span><span class="trophy-count-label">Trofeos Desbloqueados</span></div><div class="trophy-grid-inner">`;
         trophies.forEach(t => {
-            html += `<div class="trophy-card ${t.unlocked?'unlocked':'locked'}" title="${t.desc}">
+            html += `<div class="trophy-card ${t.unlocked ? 'unlocked' : 'locked'}" title="${t.desc}">
                 <div class="trophy-img-wrap">
                     <img src="${t.img}" alt="${t.name}" class="trophy-img">
-                    ${!t.unlocked?'<div class="trophy-lock-overlay">🔒</div>':''}
+                    ${!t.unlocked ? '<div class="trophy-lock-overlay">🔒</div>' : ''}
                 </div>
                 <div class="trophy-name">${t.name}</div>
                 <div class="trophy-desc">${t.desc}</div>
-                ${t.unlocked?'<div class="trophy-unlocked-badge">✓ Desbloqueado</div>':''}
+                ${t.unlocked ? '<div class="trophy-unlocked-badge">✓ Desbloqueado</div>' : ''}
             </div>`;
         });
         container.innerHTML = html + '</div>';
@@ -226,7 +226,7 @@ window.UserProfileManager = {
             const res = await fetch('/api/missions');
             const data = await res.json();
             if (data.status === 'ok') this._renderMissionList(data.missions, list);
-        } catch(e) { list.innerHTML = '<p style="color:red;text-align:center">Error</p>'; }
+        } catch (e) { list.innerHTML = '<p style="color:red;text-align:center">Error</p>'; }
     },
 
     _renderMissionList: function (missions, container) {
@@ -244,8 +244,8 @@ window.UserProfileManager = {
                     <div class="mission-name">${m.name}</div>
                     <div class="mission-desc">${m.desc}</div>
                     <div class="mission-rewards">
-                        ${m.xp_reward>0?`<span class="reward-badge xp">+${m.xp_reward} XP</span>`:''}
-                        ${m.bits_reward>0?`<span class="reward-badge bits">+${m.bits_reward} Bits</span>`:''}
+                        ${m.xp_reward > 0 ? `<span class="reward-badge xp">+${m.xp_reward} XP</span>` : ''}
+                        ${m.bits_reward > 0 ? `<span class="reward-badge bits">+${m.bits_reward} Bits</span>` : ''}
                     </div>
                     <div class="mission-progress-bar-bg"><div class="mission-progress-bar-fill" style="width:${m.progress_percent}%"></div></div>
                 </div>
@@ -259,11 +259,11 @@ window.UserProfileManager = {
         if (btn) btn.disabled = true;
         try {
             const res = await fetch('/api/missions/claim', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({mission_id: missionId})
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mission_id: missionId })
             });
             const data = await res.json();
-            if (data.status==='ok') {
+            if (data.status === 'ok') {
                 if (window.Telegram) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
                 const bitsEl = document.getElementById('global-bits-display');
                 if (bitsEl && data.bits) bitsEl.innerText = data.bits;
@@ -273,28 +273,28 @@ window.UserProfileManager = {
                 if (btn) btn.disabled = false;
                 alert(data.message);
             }
-        } catch(e) { if(btn) btn.disabled=false; console.error(e); }
+        } catch (e) { if (btn) btn.disabled = false; console.error(e); }
     },
 
     equipItem: async function (type, id) {
         try {
             const res = await fetch('/api/profile/equip', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({type, id})
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, id })
             });
             const data = await res.json();
-            if (data.status==='ok') {
+            if (data.status === 'ok') {
                 if (window.Telegram) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                if (type==='frame') {
+                if (type === 'frame') {
                     this.currentProfile.avatar_frame = id;
                     this.currentProfile.marco_actual = id;
                     const hf = document.querySelector('.elite-avatar-wrap .avatar-frame');
                     if (hf) hf.className = `avatar-frame frame-${id}`;
                 }
-                if (type==='theme') { this.currentProfile.tema_actual = id; this.applyTheme(id); }
+                if (type === 'theme') { this.currentProfile.tema_actual = id; this.applyTheme(id); }
                 this.renderProfile();
             } else { alert(data.message); }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     },
 
     updateName: async function () {
@@ -304,31 +304,31 @@ window.UserProfileManager = {
         if (newName.length < 3 || newName.length > 20) { alert("El nombre debe tener entre 3 y 20 caracteres."); return; }
         try {
             const res = await fetch('/api/profile/update_name', {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({name: newName})
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
             });
             const data = await res.json();
-            if (data.status==='ok') {
+            if (data.status === 'ok') {
                 alert("Nombre actualizado correctamente");
                 this.currentProfile.nombre = data.name;
                 const hn = document.querySelector('.elite-name');
                 if (hn) hn.innerText = data.name;
                 this.renderProfile();
             } else { alert(data.message); }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     },
 
     claimDailyReward: async function () {
         try {
-            const res = await fetch('/api/profile/daily_reward', {method:'POST'});
+            const res = await fetch('/api/profile/daily_reward', { method: 'POST' });
             const data = await res.json();
-            if (data.status==='ok') {
+            if (data.status === 'ok') {
                 alert(`¡Felicidades! Has reclamado ${data.reward} Bits. Racha actual: ${data.streak} días.`);
                 const bitsEl = document.getElementById('global-bits-display');
                 if (bitsEl) bitsEl.innerText = data.bits_actuales;
                 this.openModal('info');
             } else { alert(data.message); }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     },
 
     openPublicProfile: async function (userId) {
@@ -345,7 +345,7 @@ window.UserProfileManager = {
         try {
             const res = await fetch(`/api/profile/${userId}`);
             const data = await res.json();
-            if (data.status==='ok') {
+            if (data.status === 'ok') {
                 const p = data.profile;
                 const frameId = p.marco || 'none';
                 const hasFrame = frameId && frameId !== 'none' && frameId !== 'default';
@@ -356,7 +356,7 @@ window.UserProfileManager = {
 
                 let trophyHtml = '<p style="color:#888;font-size:0.85rem;text-align:center;padding:10px">Sin trofeos aún</p>';
                 if (p.trophies && p.trophies.length > 0) {
-                    trophyHtml = `<div class="trophy-grid-public">${p.trophies.map(t=>`
+                    trophyHtml = `<div class="trophy-grid-public">${p.trophies.map(t => `
                         <div class="trophy-card-sm" title="${t.name}: ${t.desc}">
                             <img src="${t.img}" alt="${t.name}" class="trophy-img-sm" onerror="this.outerHTML='<div style=\"font-size:2rem\">🏆</div>'">
                             <div class="trophy-name-sm">${t.name}</div>
@@ -369,13 +369,13 @@ window.UserProfileManager = {
                         <div class="avatar-container">${frameHtml}${avatarHtml}</div>
                         <div class="profile-info">
                             <h3 class="profile-name">${p.nombre}</h3>
-                            <div class="profile-rank-badge"><span>${p.rank_icon||'🎖️'}</span> ${p.rango}</div>
+                            <div class="profile-rank-badge"><span>${p.rank_icon || '🎖️'}</span> ${p.rango}</div>
                             <div class="xp-container">
                                 <div class="xp-label">
                                     <span>XP: ${p.xp}</span>
-                                    <span>${p.wins_total||0} Victorias</span>
+                                    <span>${p.wins_total || 0} Victorias</span>
                                 </div>
-                                <div class="xp-bar-bg"><div class="xp-bar-fill" style="width:${p.progress?p.progress.percent:0}%"></div></div>
+                                <div class="xp-bar-bg"><div class="xp-bar-fill" style="width:${p.progress ? p.progress.percent : 0}%"></div></div>
                             </div>
                         </div>
                     </div>
@@ -383,30 +383,30 @@ window.UserProfileManager = {
                         <div class="stat-box"><span class="stat-value">${p.jackpots_ganados}</span><span class="stat-label">Jackpots</span></div>
                         <div class="stat-box"><span class="stat-value">${p.moches_ganados}</span><span class="stat-label">Moches</span></div>
                         <div class="stat-box"><span class="stat-value">${p.ruletas_ganadas}</span><span class="stat-label">Ruletas</span></div>
-                        <div class="stat-box"><span class="stat-value">${p.wins_total||0}</span><span class="stat-label">Total Wins</span></div>
+                        <div class="stat-box"><span class="stat-value">${p.wins_total || 0}</span><span class="stat-label">Total Wins</span></div>
                     </div>
                     <div class="trophies-section-public">
                         <h4 class="section-title-sm">🏆 Trofeos</h4>
                         ${trophyHtml}
                     </div>`;
             } else {
-                if(area) area.innerHTML = `<p style="text-align:center;color:red;">No se pudo cargar el perfil.</p>`;
+                if (area) area.innerHTML = `<p style="text-align:center;color:red;">No se pudo cargar el perfil.</p>`;
             }
-        } catch(e) { console.error(e); if(area) area.innerHTML='<p style="text-align:center;color:red;">Error de red.</p>'; }
+        } catch (e) { console.error(e); if (area) area.innerHTML = '<p style="text-align:center;color:red;">Error de red.</p>'; }
     },
 
     applyTheme: function (t) { document.body.setAttribute('data-casino-theme', t); localStorage.setItem('casino_theme', t); },
-    loadSavedTheme: function () { const t=localStorage.getItem('casino_theme'); if(t) document.body.setAttribute('data-casino-theme', t); },
+    loadSavedTheme: function () { const t = localStorage.getItem('casino_theme'); if (t) document.body.setAttribute('data-casino-theme', t); },
 
     checkLevelUp: function (pu) {
         if (!pu) return;
         if (pu.leveled_up) {
             this.showLevelUpBanner(pu.new_level, pu.rank_info, pu.unlocks);
-            if(window.CasinoAudio) window.CasinoAudio.playSfx('win_big');
-            if(window.Telegram) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+            if (window.CasinoAudio) window.CasinoAudio.playSfx('win_big');
+            if (window.Telegram) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             this.currentProfile = null;
         }
-        if (pu.new_trophies && pu.new_trophies.length>0) this.showTrophyToasts(pu.new_trophies);
+        if (pu.new_trophies && pu.new_trophies.length > 0) this.showTrophyToasts(pu.new_trophies);
     },
 
     showTrophyToasts: function (trophies) {
@@ -422,7 +422,7 @@ window.UserProfileManager = {
         document.getElementById('trophy-toast-desc').innerText = trophy.desc;
         toast.classList.remove('hidden');
         toast.classList.add('show');
-        setTimeout(() => { toast.classList.remove('show'); setTimeout(()=>toast.classList.add('hidden'),400); }, 3500);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.classList.add('hidden'), 400); }, 3500);
     },
 
     showLevelUpBanner: function (level, rankInfo, unlocks) {
@@ -432,7 +432,7 @@ window.UserProfileManager = {
         document.getElementById('lu-icon').innerText = rankInfo.icon;
         document.getElementById('lu-desc').innerText = rankInfo.full_name || rankInfo.name;
         const ud = document.getElementById('lu-unlocks');
-        ud.innerHTML = (unlocks&&unlocks.length>0) ? '<strong>'+unlocks.join('<br>')+'</strong>' : '';
+        ud.innerHTML = (unlocks && unlocks.length > 0) ? '<strong>' + unlocks.join('<br>') + '</strong>' : '';
         banner.classList.add('show');
         setTimeout(() => banner.classList.remove('show'), 5000);
     }
@@ -443,16 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
     UserProfileManager.loadSavedTheme();
 });
 
-if (typeof window.toggleDropdown === 'undefined') {
-    window.toggleDropdown = function (id) {
-        const d = document.getElementById(id);
-        if (d) d.classList.toggle('show');
-    };
-    document.addEventListener('click', function (e) {
-        if (!e.target.closest('.dropdown'))
-            document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
-    });
-}
 
 window.openRecargarBits = function () {
     const tg = window.Telegram?.WebApp;
@@ -460,7 +450,7 @@ window.openRecargarBits = function () {
     const tguser = tg?.initDataUnsafe?.user?.username || window.USER_DATA?.username || 'Usuario';
     const msg = `Hola, quiero recargar Bits.\n\nID Telegram: ${tgid}\nUsuario: @${tguser}\n\n¿Cuántos Bits puedo comprar?`;
     const url = `https://t.me/antraxx_g59?text=${encodeURIComponent(msg)}`;
-    try { navigator.clipboard.writeText(msg); } catch(e) {}
+    try { navigator.clipboard.writeText(msg); } catch (e) { }
     if (tg && tg.openTelegramLink) tg.openTelegramLink(url);
     else window.open(url, '_blank');
     document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));

@@ -316,6 +316,82 @@ def ruleta():
     return render_template("ruleta.html", bits=bits, photo_url=photo_url)
 
 # =====================================================
+# LOTO INSTANTÁNEO
+# =====================================================
+@app.route('/loto')
+def loto():
+    telegram_id = session.get("telegram_id")
+    bits = database.obtener_bits(telegram_id) if telegram_id else 0
+    photo_url = session.get("photo_url", "")
+    return render_template("loto.html", bits=bits, photo_url=photo_url)
+
+@app.route('/api/loto/play', methods=["POST"])
+def loto_play():
+    """Validate bet, deduct bits, generate winning number, return result."""
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "Usuario no autenticado"}), 401
+
+    data = request.get_json()
+    bet_amount = int(data.get("bet", 0))
+    chosen = str(data.get("chosen", "")).zfill(2)  # e.g. "73"
+
+    if bet_amount <= 0:
+        return jsonify({"status": "error", "message": "Cantidad inválida"}), 400
+
+    telegram_id = session["telegram_id"]
+    success = database.descontar_bits(telegram_id, bet_amount)
+    if not success:
+        bits = database.obtener_bits(telegram_id)
+        return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": bits}), 400
+
+    # Generate result with uniform probability (configurable from backend)
+    import random
+    result = str(random.randint(0, 99)).zfill(2)
+
+    # XP for participation
+    UserProfileManager.add_xp(telegram_id, "loto_play")
+    database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
+
+    bits_actuales = database.obtener_bits(telegram_id)
+    return jsonify({
+        "status": "ok",
+        "result": result,
+        "chosen": chosen,
+        "won": result == chosen,
+        "bits": bits_actuales
+    })
+
+@app.route('/api/loto/result', methods=["POST"])
+def loto_result():
+    """Credit winnings after the animation completes."""
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "Usuario no autenticado"}), 401
+
+    data = request.get_json()
+    win_amount = int(data.get("win_amount", 0))
+
+    if win_amount <= 0:
+        return jsonify({"status": "error", "message": "Sin ganancia"}), 400
+
+    telegram_id = session["telegram_id"]
+    database.registrar_ganancia(telegram_id, win_amount)
+    database.incrementar_stat(telegram_id, 'wins_total', 1)
+    database.incrementar_stat(telegram_id, 'loto_ganados', 1)
+
+    profile_updates = UserProfileManager.add_xp(telegram_id, "loto_win")
+
+    try:
+        new_trophies = check_and_unlock_trophies(telegram_id)
+        if profile_updates is None:
+            profile_updates = {}
+        profile_updates['new_trophies'] = new_trophies
+    except Exception:
+        pass
+
+    bits_actuales = database.obtener_bits(telegram_id)
+    return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates})
+
+# =====================================================
 # SLOT MACHINE API (SECURE ENGINE)
 # =====================================================
 @app.route('/api/spin', methods=["POST"])

@@ -208,11 +208,28 @@ button[type="submit"]:hover {
   text-decoration: none;
   color: var(--text-primary);
   letter-spacing: .02em;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.brand:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .brand-icon {
   font-size: 1.5rem;
   filter: drop-shadow(0 0 8px rgba(212, 175, 55, .5));
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.brand:active .brand-icon {
+  transform: scale(.9) rotate(-10deg);
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, .8));
 }
 
 .brand-name {
@@ -2340,6 +2357,174 @@ select.input-modern option {
 .room-meta {
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+/* ========================================================
+   ELITE PROFILE MENU (user_menu.html)
+======================================================== */
+.elite-menu-container {
+  margin-left: auto;
+}
+
+.elite-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 14px 6px 6px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.elite-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.elite-avatar-wrap {
+  width: 38px;
+  height: 38px;
+}
+
+.elite-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  position: relative;
+  z-index: 2;
+}
+
+.elite-avatar-img.placeholder {
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.elite-quick-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.elite-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.elite-rank {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.elite-chevron {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  transition: transform var(--transition-fast);
+}
+
+.elite-menu-container.show .elite-chevron {
+  transform: rotate(180deg);
+}
+
+.elite-dropdown {
+  min-width: 240px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.elite-drop-header {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rank-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold-lt);
+}
+
+.xp-label-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.xp-label-mini span:last-child {
+  font-weight: 700;
+  color: #fff;
+}
+
+.xp-bar-bg-mini {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.xp-bar-fill-mini {
+  height: 100%;
+  background: linear-gradient(90deg, #d4af37, #f8e594);
+  border-radius: 2px;
+}
+
+.elite-drop-bits {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.elite-drop-bits .bits-val {
+  color: var(--gold-lt);
+}
+
+.elite-drop-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 8px 0;
+}
+
+.elite-drop-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.elite-drop-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gold-lt);
+}
+
+.item-icon {
+  font-size: 1.1rem;
 }
 
 .btn-join {
