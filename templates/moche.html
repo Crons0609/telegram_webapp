@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+
+<head>
+
+    <!-- ================= CORE META ================= -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta name="theme-color" content="#0b0f14">
+    <meta name="color-scheme" content="dark light">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>Moche Premium | Casino Premium</title>
+
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/moche.css">
+    <link rel="stylesheet" href="/static/css/perfil.css">
+
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+
+    <!-- SortableJS para Drag & Drop interactivo -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    <!-- Global Sound Manager & Profile Manager -->
+    <script src="/static/js/soundManager.js"></script>
+    <script defer src="/static/js/perfil.js"></script>
+
+    <script>
+        // Variables iniciales del usuario y bits
+        window.USER_DATA = {
+            telegram_id: "{{ telegram_id }}",
+            nombre: "{{ nombre }}",
+            bits: parseInt("{{ bits }}") || 0,
+            room_id: "{{ room_id }}" // Vacío si es juego local/offline
+        };
+        document.documentElement.classList.remove("no-js");
+    </script>
+
+</head>
+
+<body class="moche-body">
+
+    <!-- ================= TOP BAR ================= -->
+    <header class="game-header">
+        <a href="/" class="btn-back">
+            <span>←</span> Volver
+        </a>
+        <div style="display:flex; align-items:center;">
+            {% include 'user_menu.html' %}
+        </div>
+    </header>
+
+    <!-- ================= DIFFICULTY MODAL ================= -->
+    <div id="difficulty-modal" class="diff-modal">
+        <div class="diff-modal-inner">
+            <h1 class="diff-title">🃏 Moche Premium</h1>
+            <p class="diff-subtitle">Selecciona la dificultad para comenzar</p>
+
+            <div class="diff-grid">
+
+                <button class="diff-card" data-level="easy">
+                    <span class="diff-tier-badge tier-bronze">BRONCE</span>
+                    <span class="diff-icon">🥉</span>
+                    <span class="diff-name">Mesa Bronce</span>
+                    <span class="diff-meta">1-2 Bots · 50 Bits</span>
+                    <span class="diff-desc">Elegante iniciación al juego</span>
+                </button>
+
+                <button class="diff-card" data-level="medium">
+                    <span class="diff-tier-badge tier-silver">PLATA</span>
+                    <span class="diff-icon">🥈</span>
+                    <span class="diff-name">Mesa Plata</span>
+                    <span class="diff-meta">2-3 Bots · 150 Bits</span>
+                    <span class="diff-desc">Progreso y estrategia</span>
+                </button>
+
+                <button class="diff-card" data-level="hard">
+                    <span class="diff-tier-badge tier-gold">ORO</span>
+                    <span class="diff-icon">🥇</span>
+                    <span class="diff-name">Mesa Oro</span>
+                    <span class="diff-meta">3 Bots · 350 Bits</span>
+                    <span class="diff-desc">Alto nivel · Estatus</span>
+                </button>
+
+                <button class="diff-card" data-level="pro">
+                    <span class="diff-tier-badge tier-diamond">DIAMANTE</span>
+                    <span class="diff-icon">💎</span>
+                    <span class="diff-name">Mesa Diamante</span>
+                    <span class="diff-meta">3 Bots · 700 Bits</span>
+                    <span class="diff-desc">Sala VIP · Exclusividad total</span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= GAME AREA ================= -->
+    <main id="moche-game-container" class="moche-container">
+
+        <!-- MENSAJES Y ALERTAS UIs -->
+        <div id="game-overlay" class="game-overlay hidden">
+            <div class="overlay-content">
+                <h2 id="overlay-title">Título</h2>
+                <p id="overlay-message">Mensaje del sistema</p>
+                <button id="overlay-btn" class="btn-action">Continuar</button>
+            </div>
+        </div>
+
+        <!-- SALA DE ESPERA (MULTIPLAYER LOBBY) -->
+        <div id="waiting-room-overlay" class="diff-modal hidden">
+            <div class="diff-modal-inner" style="max-width: 500px;">
+                <h1 class="diff-title" id="wr-title">Sala de Espera</h1>
+                <p class="diff-subtitle" id="wr-subtitle">Esperando a que se unan los jugadores...</p>
+
+                <div id="wr-code-container" class="hidden"
+                    style="background: rgba(201,162,39,0.1); border: 1px solid #c9a227; padding: 15px; border-radius: 10px; margin-top: 15px;">
+                    <span
+                        style="color: #c9a227; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Código
+                        de Invitación</span>
+                    <div id="wr-room-code"
+                        style="font-size: 2rem; font-family: monospace; font-weight: bold; letter-spacing: 5px; color: #fff; margin-top: 5px;">
+                    </div>
+                </div>
+
+                <div id="wr-players-list"
+                    style="margin: 20px 0; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; border: 1px solid var(--border-subtle);">
+                    <!-- Llenado por JS -->
+                    <p style="text-align:center; color: #888;">Cargando jugadores...</p>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                    <button id="wr-btn-leave" class="btn-secondary"
+                        onclick="window.location.href='/'">Abandonar</button>
+                    <!-- Only Host sees Start, others see Ready -->
+                    <button id="wr-btn-action" class="btn-primary hidden">Prepararse</button>
+                </div>
+                <!-- Telegram Share Button -->
+                <button id="wr-btn-share" class="btn-outline hidden" style="width:100%; margin-top: 15px;">🔗 Compartir
+                    Enlace por Telegram</button>
+            </div>
+        </div>
+
+        <!-- MESA PRINCIPAL (CRUZ) -->
+        <div class="moche-table-wrapper">
+            <div class="moche-table" id="moche-table" data-difficulty="easy">
+
+                <!-- AMBIENT LIGHT LAYER -->
+                <div class="table-ambient-light" aria-hidden="true"></div>
+
+                <!-- PARTICLE LAYER -->
+                <div class="table-particles" aria-hidden="true">
+                    <span class="particle p1"></span>
+                    <span class="particle p2"></span>
+                    <span class="particle p3"></span>
+                    <span class="particle p4"></span>
+                    <span class="particle p5"></span>
+                    <span class="particle p6"></span>
+                    <span class="particle p7"></span>
+                    <span class="particle p8"></span>
+                </div>
+
+                <!-- LAYER PARA FICHAS ANIMADAS -->
+                <div id="chips-animation-layer"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100;">
+                </div>
+
+                <!-- BOT 2 (Arriba) -->
+                <div class="player-zone bot-zone bot-top" id="bot-2">
+                    <div class="player-info" data-player-id="" onclick="window.showMocheOpponentProfile(this)">Bot 2
+                        (Frente)</div>
+                    <div class="cards-container bot-cards" id="bot-2-cards"></div>
+                    <!-- Cartas bajadas por el Bot 2 -->
+                    <div class="bajadas-container bot-bajadas" id="bot-2-bajadas"></div>
+                </div>
+
+                <!-- MIDDLE ROW (Bot 1, Centro, Bot 3) -->
+                <div class="middle-row">
+
+                    <!-- BOT 1 (Izquierda) -->
+                    <div class="player-zone bot-zone bot-left" id="bot-1">
+                        <div class="player-info" data-player-id="" onclick="window.showMocheOpponentProfile(this)">Bot 1
+                            (Izq)</div>
+                        <div class="cards-container bot-cards" id="bot-1-cards"></div>
+                        <div class="bajadas-container bot-bajadas" id="bot-1-bajadas"></div>
+                    </div>
+
+                    <!-- CENTRO (Mazo y Descarte) -->
+                    <div class="center-zone">
+                        <div class="deck-area">
+                            <div class="card card-back mazo-card" id="deck-pile">
+                                <span class="deck-count" id="deck-count">52</span>
+                            </div>
+                            <div class="pile-label">Mazo</div>
+                        </div>
+
+                        <!-- 🏆 POZO CENTRAL DE APUESTAS -->
+                        <div class="pot-zone" id="pot-zone">
+                            <div class="pot-chips" id="pot-chips">
+                                <!-- Fichas generadas por JS -->
+                            </div>
+                            <div class="pending-pot-chips" id="pending-pot-chips"></div>
+                            <div class="pot-amount" id="pot-amount">0 Bits</div>
+                            <div class="pot-label">Premio</div>
+                        </div>
+
+                        <div class="discard-area">
+                            <div class="card empty-slot" id="discard-pile">
+                                <!-- Carta descartada irá aquí -->
+                            </div>
+                            <div class="pile-label">Descarte</div>
+                        </div>
+                    </div>
+
+                    <!-- BOT 3 (Derecha) -->
+                    <div class="player-zone bot-zone bot-right" id="bot-3">
+                        <div class="player-info" data-player-id="" onclick="window.showMocheOpponentProfile(this)">Bot 3
+                            (Der)</div>
+                        <div class="cards-container bot-cards" id="bot-3-cards"></div>
+                        <div class="bajadas-container bot-bajadas" id="bot-3-bajadas"></div>
+                    </div>
+
+                </div>
+
+                <!-- JUGADOR HUMANO BAJADAS (En la mesa) -->
+                <div class="player-zone human-table-zone" id="human-table-zone">
+                    <div class="bajadas-container human-bajadas" id="human-bajadas">
+                        <!-- Los mochés validados en la mesa irán aquí -->
+                    </div>
+                </div>
+
+            </div> <!-- /moche-table -->
+        </div> <!-- /moche-table-wrapper -->
+
+        <!-- PANEL FIJO DEL JUGADOR AL FONDO (Mano, Controles, Carta Robada) -->
+        <div class="player-zone human-zone fixed-human-panel" id="human-player">
+            <div id="turn-indicator" class="turn-indicator">
+                <span id="turn-text">Esperando...</span>
+                <div id="turn-timer" class="turn-timer hidden">
+                    <div id="turn-timer-bar" class="turn-timer-bar"></div>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <div class="player-info">Tú (Jugador 1)</div>
+
+                <!-- 🎰 BOTONES DE APUESTA (FICHAS) -->
+                <div class="betting-controls hidden" id="betting-controls">
+                    <img src="/static/img/chip_50.png" class="btn-bet chip-img-btn" data-amount="50" alt="Apostar 50"
+                        title="Apostar 50 Bits">
+                    <img src="/static/img/chip_150.png" class="btn-bet chip-img-btn" data-amount="150" alt="Apostar 150"
+                        title="Apostar 150 Bits">
+                    <img src="/static/img/chip_350.png" class="btn-bet chip-img-btn" data-amount="350" alt="Apostar 350"
+                        title="Apostar 350 Bits">
+                    <img src="/static/img/chip_700.png" class="btn-bet chip-img-btn" data-amount="700" alt="Apostar 700"
+                        title="Apostar 700 Bits">
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-action hidden" id="btn-intercambio">Pasar Carta (Intercambio)</button>
+                    <button class="btn-action hidden" id="btn-listo"
+                        style="background: linear-gradient(135deg, #1a6b3a, #00c853);">✅ ¡Todos Listos!
+                        Comenzar</button>
+                    <button class="btn-action hidden" id="btn-tomar"
+                        style="background: linear-gradient(135deg, #0055aa, #0099ff); color:#fff;">🎴 Tomar
+                        Descarte</button>
+                    <button class="btn-action hidden" id="btn-pasar">Pasar Turno</button>
+                    <button class="btn-action hidden" id="btn-bajar">Bajar Moche</button>
+                    <button class="btn-action hidden" id="btn-cerrar">Cerrar Partida!</button>
+                    <button class="btn-action hidden" id="btn-moche-color"
+                        style="background: linear-gradient(135deg, #7b00ff, #e040fb); color:#fff; animation: pulse-glow 1s ease infinite alternate;">
+                        🎉 ¡Moche de Color! Botar Todo
+                    </button>
+
+                </div>
+            </div>
+
+            <div class="drawn-card-container hidden" id="drawn-card-zone">
+                <div class="pile-label">Carta Robada</div>
+                <div class="drawn-slot" id="drawn-slot">
+                    <!-- La carta robada aparecerá aquí temporalmente -->
+                </div>
+            </div>
+
+            <div class="cards-container human-cards" id="human-cards">
+                <!-- Las cartas del jugador se renderizarán aquí -->
+            </div>
+        </div>
+
+        <!-- ================= QUICK MESSAGES ================= -->
+        <div id="quick-chat">
+            <button id="chat-btn" class="chat-fab" title="Mensajes rápidos">💬</button>
+            <div id="chat-menu" class="chat-menu hidden">
+                <button class="chat-phrase" data-msg="👏 ¡Buena jugada!">👏 ¡Buena jugada!</button>
+                <button class="chat-phrase" data-msg="👀 Te estoy observando">👀 Te estoy observando</button>
+                <button class="chat-phrase" data-msg="😅 Casi gano...">😅 Casi gano...</button>
+                <button class="chat-phrase" data-msg="🍀 ¡Buena suerte!">🍀 ¡Buena suerte!</button>
+                <button class="chat-phrase" data-msg="😬 Ups...">😬 Ups...</button>
+                <button class="chat-phrase" data-msg="💀 Eso dolió">💀 Eso dolió</button>
+            </div>
+        </div>
+
+        <!-- Toast de mensaje -->
+        <div id="chat-toast" class="chat-toast hidden"></div>
+
+        <!-- Modal de Decisión de Apuesta (Raise) -->
+        <div id="raise-modal" class="modal-overlay hidden" style="z-index: 2000;">
+            <div class="modal-box diff-modal-inner" style="max-width: 400px; text-align: center;">
+                <h2 class="diff-title" style="color: #ffd700; margin-bottom: 10px;">¡Aumento de Apuesta!</h2>
+                <p id="raise-message" class="diff-subtitle" style="margin-bottom: 10px;">[Jugador] ha subido la apuesta
+                    en <strong id="raise-amount-text">150</strong> Bits.</p>
+                <!-- NEW: Collective Confirmation Live Status -->
+                <div id="raise-status-container"
+                    style="margin-bottom: 20px; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 10px;">
+                    <h4
+                        style="color: #ccc; font-size: 0.9em; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
+                        Consenso Requerido</h4>
+                    <ul id="raise-status-list"
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+                        <!-- JS injected list items: "Bot 1: ⏳", etc -->
+                    </ul>
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="btn-raise-accept" class="btn-primary"
+                        style="background: linear-gradient(135deg, #1a6b3a, #00c853); font-weight: bold; width: 45%;">Igualar</button>
+                    <button id="btn-raise-reject" class="btn-secondary"
+                        style="background: linear-gradient(135deg, #aa0000, #ff3333); color: white; border: none; font-weight: bold; width: 45%;">No
+                        Aceptar (Retirarse)</button>
+                </div>
+                <div class="loading-bar-container"
+                    style="margin-top: 15px; background: #333; height: 4px; width: 100%; border-radius: 2px; overflow: hidden;">
+                    <div id="raise-timer-bar"
+                        style="background: #ffd700; height: 100%; width: 100%; transition: width linear;"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="/static/js/moche.js"></script>
+
+    <!-- ═══ PROFILE MODAL (shared) ════════════════════════════════════════ -->
+    <div id="profile-modal" class="modal-overlay hidden">
+        <div class="modal-content profile-content">
+            <header class="modal-header">
+                <h2 style="color:#f8e594;">Perfil del Jugador</h2>
+                <button class="btn-close" onclick="UserProfileManager.closeModal()">×</button>
+            </header>
+            <div class="modal-body" id="profile-content-area">
+                <!-- Inyectado dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ OPPONENT PROFILE MODAL ══════════════════════════════════════════ -->
+    <div id="opponent-profile-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 style="color:#f8e594;">👤 Perfil del Oponente</h2>
+                <button class="btn-close"
+                    onclick="document.getElementById('opponent-profile-modal').classList.add('hidden')">×</button>
+            </header>
+            <div class="modal-body" id="opponent-profile-content">
+                <!-- Cargado dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ OPPONENT PROFILE HANDLER ══════════════════════════════════════ -->
+    <script>
+        // Global handler: opens opponent profile when player-info clicked
+        window.showMocheOpponentProfile = function (el) {
+            if (!el) return;
+            var pid = el.getAttribute('data-player-id');
+            if (!pid) return; // offline bot — no public profile
+            var modal = document.getElementById('opponent-profile-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                var area = document.getElementById('opponent-profile-content');
+                if (area) {
+                    area.innerHTML = '<p style="text-align:center;padding:40px;">Cargando perfil...</p>';
+                }
+            }
+            if (window.UserProfileManager) {
+                window.UserProfileManager.openPublicProfile(pid);
+            }
+        };
+
+        // Observe changes to data-player-id to set cursor style dynamically
+        document.querySelectorAll('.player-info').forEach(function (el) {
+            var obs = new MutationObserver(function () {
+                el.style.cursor = el.getAttribute('data-player-id') ? 'pointer' : 'default';
+                if (el.getAttribute('data-player-id')) {
+                    el.title = 'Ver perfil';
+                }
+            });
+            obs.observe(el, { attributes: true, attributeFilter: ['data-player-id'] });
+        });
+    </script>
+
+    <!-- ═══ PREMIUM VISUAL HOOKS ═══════════════════════════════════════════ -->
+    <script>
+        (function () {
+            'use strict';
+
+            /* ── Win flash on overlay shown ──────────────────────────────────── */
+            const table = document.getElementById('moche-table');
+            const overlay = document.getElementById('game-overlay');
+            const obsOpts = { attributes: true, attributeFilter: ['class'] };
+
+            if (table && overlay) {
+                const observer = new MutationObserver(function () {
+                    const isVisible = !overlay.classList.contains('hidden');
+                    const title = document.getElementById('overlay-title');
+                    const isWin = isVisible && title && (
+                        title.textContent.includes('¡Ganaste') ||
+                        title.textContent.includes('¡Victoria') ||
+                        title.textContent.includes('¡Moche') ||
+                        title.textContent.includes('Ganó')
+                    );
+                    if (isWin) {
+                        table.classList.remove('win-flash');
+                        void table.offsetWidth; // force reflow
+                        table.classList.add('win-flash');
+                        setTimeout(function () {
+                            table.classList.remove('win-flash');
+                        }, 950);
+                    }
+                });
+                observer.observe(overlay, obsOpts);
+            }
+
+            /* ── Body tier class for global styling hooks ────────────────────── */
+            document.querySelectorAll('.diff-card').forEach(function (card) {
+                card.addEventListener('click', function () {
+                    const lvl = card.dataset.level;
+                    document.body.dataset.tier = lvl;
+                });
+            });
+        })();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <!-- ======================================================
+         META & SEO AVANZADO
+    ======================================================= -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta name="theme-color" content="#0b0f14">
+    <meta name="description"
+        content="Slot Machine premium del Zona Jackpot 777. Disfruta animaciones 3D fluidas y una experiencia de casino digital de alto nivel.">
+    <meta name="robots" content="index, follow">
+
+    <title>Slot Machine | Casino Premium</title>
+
+    <!-- Preconnect & Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap"
+        rel="stylesheet">
+
+    <!-- Performance -->
+    <link rel="preload" href="{{ url_for('static', filename='style.css') }}" as="style">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- JS & Profile UI -->
+    <link rel="stylesheet" href="/static/css/perfil.css">
+    <script defer src="/static/js/soundManager.js"></script>
+    <script defer src="/static/js/perfil.js"></script>
+    <script defer src="{{ url_for('static', filename='slotmachine.js') }}"></script>
+</head>
+
+<body class="slot-page">
+    <div class="slot-dynamic-bg"></div>
+
+    <!-- ======================================================
+         ACCESSIBILITY
+    ======================================================= -->
+    <a href="#main-content" class="skip-link">
+        Saltar al contenido principal
+    </a>
+
+    <!-- ======================================================
+         HEADER
+    ======================================================= -->
+    <header class="slot-header" role="banner">
+        <div class="container slot-header-container">
+
+            <a href="{{ url_for('home') }}" class="btn-back" style="text-decoration: none;">
+                <span>←</span> Volver
+            </a>
+
+            <div class="slot-header-info">
+                <h1 class="slot-title">
+                    <span class="gradient-text">Slot Machine</span>
+                </h1>
+                <p class="slot-subtitle">
+                    Vive la experiencia premium y prueba tu suerte
+                </p>
+                <div style="margin-top: 15px; display: flex; align-items: center; justify-content: center;">
+                    {% include 'user_menu.html' %}
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ======================================================
+         MAIN GAME AREA
+    ======================================================= -->
+    <main id="main-content" class="slot-main" role="main">
+
+        <section class="slot-machine" aria-labelledby="slot-heading">
+
+            <!-- Heading accesible invisible -->
+            <h2 id="slot-heading" class="visually-hidden">
+                Máquina tragamonedas interactiva
+            </h2>
+
+            <div class="slot-cabine">
+                <!-- ==================================================
+                     REELS CONTAINER (3D READY)
+                =================================================== -->
+                <div class="slot-screen-glass">
+                    <div class="reels" role="group" aria-label="Rodillos de la máquina tragamonedas">
+                        <div class="led-lights"></div>
+                        <div class="payline"></div>
+
+                        <div class="reel" data-reel="1">
+                            <div class="reel-track"></div>
+                        </div>
+                        <div class="reel" data-reel="2">
+                            <div class="reel-track"></div>
+                        </div>
+                        <div class="reel" data-reel="3">
+                            <div class="reel-track"></div>
+                        </div>
+                        <div class="reel" data-reel="4">
+                            <div class="reel-track"></div>
+                        </div>
+                        <div class="reel" data-reel="5">
+                            <div class="reel-track"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================================================
+                 COIN DISPENSER TRAY
+            =================================================== -->
+                <div class="coin-dispenser" id="coin-dispenser" aria-hidden="true">
+                    <div class="dispenser-outlet">
+                        <div class="dispenser-slot"></div>
+                    </div>
+                    <div class="coin-tray" id="coin-tray">
+                        <span class="tray-label">PRIZE TRAY</span>
+                    </div>
+                </div>
+
+                <!-- ==================================================
+                 CONTROLS
+            =================================================== -->
+                <div class="controls" role="group" aria-label="Controles de la tragamonedas">
+                    <div class="bet-controls">
+                        <button class="btn bet-btn-circle" id="btn-decrease" data-action="decrease-bet"
+                            aria-label="Reducir apuesta">➖</button>
+
+                        <div class="bet-display">
+                            <label for="bet-amount" class="visually-hidden">Apuesta</label>
+                            <input type="number" id="bet-amount" class="bet-input-clean" value="10" min="10" step="10"
+                                aria-label="Cantidad a apostar" readonly>
+                        </div>
+
+                        <button class="btn bet-btn-circle" id="btn-increase" data-action="increase-bet"
+                            aria-label="Aumentar apuesta">➕</button>
+                    </div>
+
+                    <div class="action-controls">
+                        <button class="btn btn-primary spin-button" type="button" data-action="spin">
+                            <span class="spin-icon">🎰</span> Girar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================================================
+                 RESULT AREA
+            =================================================== -->
+            <div class="result-container" role="status" aria-live="polite" aria-atomic="true">
+                <p class="result-message"></p>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ======================================================
+         FOOTER
+    ======================================================= -->
+    <footer class="slot-footer" role="contentinfo">
+        <div class="container">
+            <p>
+                © 2026 Zona Jackpot 777 — Plataforma Premium
+            </p>
+        </div>
+    </footer>
+
+
+    <!-- ================= PROFILE MODAL ================= -->
+    <div id="profile-modal" class="modal-overlay hidden">
+        <div class="modal-content profile-content">
+            <header class="modal-header">
+                <h2 style="color: #c9a227;">Perfil del Jugador</h2>
+                <button class="btn-close" onclick="UserProfileManager.closeModal()">×</button>
+            </header>
+            <div class="modal-body" id="profile-content-area">
+                <!-- Inyectado dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

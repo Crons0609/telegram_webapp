@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es" class="no-js">
+
+<head>
+  <!-- CORE META -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="color-scheme" content="dark light" />
+
+  <!-- SEO (interno) -->
+  <title>Panel de Administración | Casino Premium</title>
+  <meta name="description" content="Panel de administración para la gestión de recargas de Bits." />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Styles -->
+  <link rel="preload" href="/static/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="/static/style.css">
+  </noscript>
+
+  <!-- Small inline script to remove no-js class (keeps CSS-only fallback) -->
+  <script>document.documentElement.classList.remove('no-js');</script>
+</head>
+
+<body class="admin-page">
+  <!-- Skip link -->
+  <a class="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand(); // Expandir la WebApp a pantalla completa en el Admin Bot
+      }
+    });
+  </script>
+
+  <!-- HEADER -->
+  <header class="admin-header" role="banner">
+    <div class="container admin-header-content">
+      <a href="/" class="btn-back" style="text-decoration:none; margin-right: 20px;">← Volver al Lobby</a>
+      <div class="admin-title-group">
+        <h1 class="admin-title">
+          <span class="admin-icon" aria-hidden="true">⚙️</span>
+          Panel de Administración
+        </h1>
+        <p class="admin-subtitle">Gestión segura de recargas de Bits</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main id="contenido-principal" class="admin-main container" role="main">
+    <section class="admin-card" aria-labelledby="form-title">
+      <header class="card-header">
+        <h2 id="form-title">Recargar Bits a Usuarios</h2>
+        <p id="form-intro" class="section-intro">Introduce el Telegram ID del usuario y la cantidad de Bits a asignar.
+        </p>
+      </header>
+
+      <!-- Formulario: usar HTTPS + POST en servidor; mantener validación del lado servidor -->
+      <form method="POST" class="admin-form" novalidate aria-describedby="form-intro" autocomplete="off"
+        onsubmit="return window.adminConfirmSubmit ? window.adminConfirmSubmit(event) : true;">
+
+        <!-- TELEGRAM ID -->
+        <div class="form-group">
+          <label for="telegram_id">Telegram ID del usuario</label>
+          <input id="telegram_id" name="telegram_id" type="text" inputmode="numeric" pattern="\d{5,20}" maxlength="20"
+            required aria-required="true" aria-describedby="telegram-help telegram-error" placeholder="Ej. 123456789"
+            autocomplete="off" title="Introduce solo dígitos (5–20).">
+          <small id="telegram-help" class="form-help">Identificador numérico único del usuario en Telegram.</small>
+          <p id="telegram-error" class="form-error visually-hidden" role="alert" aria-live="assertive"></p>
+        </div>
+
+        <!-- CANTIDAD -->
+        <div class="form-group">
+          <label for="cantidad">Cantidad de Bits</label>
+          <input id="cantidad" name="cantidad" type="number" inputmode="numeric" min="10" step="10" required
+            aria-required="true" aria-describedby="cantidad-help cantidad-error" placeholder="Ej. 100">
+          <small id="cantidad-help" class="form-help">Número entero positivo de Bits a asignar.</small>
+          <p id="cantidad-error" class="form-error visually-hidden" role="alert" aria-live="assertive"></p>
+        </div>
+
+        <!-- CONTRASEÑA DE ADMIN -->
+        <div class="form-group">
+          <label for="password">Contraseña de Administrador</label>
+          <input id="password" name="password" type="password" required aria-required="true" placeholder="••••••••">
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" aria-label="Confirmar recarga de Bits">
+            Recargar Bits
+          </button>
+
+          <button type="button" class="btn-ghost" onclick="document.querySelector('.admin-form').reset();"
+            aria-label="Limpiar formulario">
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <!-- OPTIONAL: área para mostrar mensajes del sistema (render servidor) -->
+      {% if mensaje %}
+      <div class="system-message" role="status" aria-live="polite" aria-atomic="true">
+        <p>{{ mensaje }}</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- USER LIST SECTION -->
+    <section class="admin-card" aria-labelledby="users-title" style="margin-top: 30px;">
+      <header class="card-header">
+        <h2 id="users-title">Usuarios Registrados</h2>
+        <p class="section-intro">Lista de usuarios activos para copiar su Telegram ID rápidamente.</p>
+      </header>
+
+      <div class="table-responsive" style="overflow-x: auto; margin-top: 20px;">
+        <table class="admin-table" style="width: 100%; text-align: left; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-strong);">
+              <th style="padding: 12px; color: var(--gold-1);">ID Telegram</th>
+              <th style="padding: 12px; color: var(--gold-1);">Nombre</th>
+              <th style="padding: 12px; color: var(--gold-1);">Usuario</th>
+              <th style="padding: 12px; color: var(--gold-1);">Bits Actuales</th>
+              <th style="padding: 12px; color: var(--gold-1);">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in usuarios %}
+            <tr style="border-bottom: 1px solid var(--border-subtle); background: var(--bg-glass);">
+              <td style="padding: 12px; font-family: monospace;">{{ u.telegram_id }}</td>
+              <td style="padding: 12px;">{{ u.nombre }}</td>
+              <td style="padding: 12px; color: var(--text-secondary);">{% if u.username %}@{{ u.username }}{% else
+                %}N/A{% endif %}</td>
+              <td style="padding: 12px; font-weight: bold; color: var(--gold-1);">{{ u.bits }}</td>
+              <td style="padding: 12px;">
+                <button type="button" class="btn-outline" style="padding: 6px 12px; font-size: 0.85rem;"
+                  onclick="document.getElementById('telegram_id').value = '{{ u.telegram_id }}'; window.scrollTo({top: 0, behavior: 'smooth'});">
+                  Seleccionar
+                </button>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" style="padding: 20px; text-align: center; color: var(--text-secondary);">
+                No hay usuarios registrados todavía.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TOP 10 LEADERBOARDS -->
+    <div class="admin-grid-leaderboards"
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 30px;">
+
+      <!-- TOP RECARGAS -->
+      <section class="admin-card" aria-labelledby="top-recharges-title">
+        <header class="card-header">
+          <h2 id="top-recharges-title">🔥 Top 10 Recargas</h2>
+          <p class="section-intro">Usuarios con mayor inversión total.</p>
+        </header>
+        <div class="table-responsive">
+          <table class="admin-table" style="width: 100%; text-align: left; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-strong);">
+                <th style="padding: 10px; color: var(--gold-1);">Usuario</th>
+                <th style="padding: 10px; color: var(--gold-1); text-align: right;">Total Recargado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in top_recargas %}
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 10px;">
+                  <div style="font-weight: bold;">{{ u.nombre }}</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">ID: {{ u.telegram_id }}</div>
+                </td>
+                <td style="padding: 10px; text-align: right; font-weight: bold; color: var(--gold-1);">{{
+                  u.total_recargas }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="2" style="padding: 20px; text-align: center; color: var(--text-secondary);">Sin datos.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TOP GANADORES -->
+      <section class="admin-card" aria-labelledby="top-winners-title">
+        <header class="card-header">
+          <h2 id="top-winners-title">🏆 Top 10 Ganadores</h2>
+          <p class="section-intro">Usuarios con más bits ganados en juegos.</p>
+        </header>
+        <div class="table-responsive">
+          <table class="admin-table" style="width: 100%; text-align: left; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-strong);">
+                <th style="padding: 10px; color: var(--gold-1);">Usuario</th>
+                <th style="padding: 10px; color: var(--gold-1); text-align: right;">Total Ganado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for u in top_ganadores %}
+              <tr style="border-bottom: 1px solid var(--border-subtle);">
+                <td style="padding: 10px;">
+                  <div style="font-weight: bold;">{{ u.nombre }}</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">ID: {{ u.telegram_id }}</div>
+                </td>
+                <td style="padding: 10px; text-align: right; font-weight: bold; color: var(--gold-1);">{{
+                  u.total_ganados }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="2" style="padding: 20px; text-align: center; color: var(--text-secondary);">Sin datos.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- AUDIT / QUICK LINKS -->
+    <aside class="admin-aside" aria-label="Accesos rápidos de administración">
+      <nav>
+        <ul>
+          <li><a href="/admin/logs">Ver registros</a></li>
+          <li><a href="/admin/users">Buscar usuario</a></li>
+        </ul>
+      </nav>
+    </aside>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="admin-footer" role="contentinfo">
+    <div class="container">
+      <p>© <time datetime="2026">2026</time> · Panel de Administración</p>
+    </div>
+  </footer>
+
+  <!-- Minimal inline script para validación UI/confirm accesible -->
+  <script>
+    (function () {
+      // Exponer función para el onsubmit del formulario (puedes moverla a /static/script.js)
+      window.adminConfirmSubmit = function (event) {
+        var form = event.target;
+        var telegram = form.telegram_id;
+        var amount = form.cantidad;
+
+        // Limpieza UI de errores
+        function hideError(id) { document.getElementById(id).classList.add('visually-hidden'); }
+        function showError(id, msg) { var el = document.getElementById(id); el.textContent = msg; el.classList.remove('visually-hidden'); }
+
+        hideError('telegram-error'); hideError('cantidad-error');
+
+        // Validación básica cliente (no sustituye validación servidor)
+        var idValid = /^\d{5,20}$/.test(telegram.value.trim());
+        if (!idValid) {
+          showError('telegram-error', 'Telegram ID inválido. Introduce solo dígitos (5–20).');
+          telegram.focus();
+          event.preventDefault();
+          return false;
+        }
+
+        var qty = Number(amount.value);
+        if (!Number.isInteger(qty) || qty < 1) {
+          showError('cantidad-error', 'Introduce una cantidad válida (entero mayor que 0).');
+          amount.focus();
+          event.preventDefault();
+          return false;
+        }
+
+        // Confirmación accesible antes de enviar (puedes reemplazar por modal accesible)
+        var confirmMsg = 'Vas a recargar ' + qty + ' Bits al usuario ' + telegram.value + '. ¿Confirmar?';
+        if (!confirm(confirmMsg)) {
+          event.preventDefault();
+          return false;
+        }
+
+        // Dejar que el formulario se envíe
+        return true;
+      };
+    })();
+  </script>
+</body>
+
+</html>
