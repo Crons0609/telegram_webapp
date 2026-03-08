@@ -1,11 +1,10 @@
 <!-- ==========================================
-     GLOBAL ELITE USER MENU (DROPDOWN)
+     GLOBAL ELITE USER MENU (DIRECT TO PROFILE)
 =========================================== -->
 {% if global_profile %}
-<div class="elite-menu-container dropdown">
-    <!-- Trigger Button -->
-    <button class="elite-menu-btn dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false"
-        onclick="toggleDropdown('elite-dropdown', event)">
+<div class="elite-menu-container">
+    <button class="elite-menu-btn" type="button" aria-label="Abrir Perfil Élite"
+        onclick="UserProfileManager.openModal('default')">
         <!-- Avatar Wrapper with Frame -->
         <div class="elite-avatar-wrap avatar-wrapper">
             <div class="avatar-frame frame-{{ global_profile.avatar_frame }}"></div>
@@ -22,65 +21,8 @@
             <span class="elite-name">{{ global_profile.nombre }}</span>
             <span class="elite-rank">{{ global_profile.rank.icon }} Nivel {{ global_profile.progress.level }}</span>
         </div>
-        <div class="elite-chevron">▼</div>
     </button>
-
-    <!-- Dropdown Content -->
-    <div class="dropdown-menu elite-dropdown" id="elite-dropdown">
-        <!-- Header Info within Dropdown -->
-        <div class="elite-drop-header">
-            <div class="elite-drop-level">
-                <span class="rank-name">{{ global_profile.rank.icon }} {{ global_profile.rank.full_name }}</span>
-            </div>
-
-            <div class="elite-drop-xp">
-                <div class="xp-label-mini">
-                    <span>XP</span>
-                    <span>{{ global_profile.xp }}</span>
-                </div>
-                <div class="xp-bar-bg-mini">
-                    <!-- width set by JS below to avoid IDE CSS parser errors with Jinja syntax -->
-                    <div class="xp-bar-fill-mini" id="elite-xp-fill"
-                        data-percent="{{ global_profile.progress.percent }}"></div>
-                </div>
-            </div>
-
-            <div class="elite-drop-bits">
-                <span class="bits-icon">💰</span> Saldo: <strong class="bits-val" id="global-bits-display">{{
-                    global_profile.bits }}</strong> Bits
-            </div>
-        </div>
-
-        <div class="elite-drop-divider"></div>
-
-        <!-- Options -->
-        <button class="elite-drop-item" onclick="window.openRecargarBits()">
-            <span class="item-icon">🪙</span> Recargar Bits
-        </button>
-
-        <button class="elite-drop-item" onclick="UserProfileManager.openModal('default')">
-            <span class="item-icon">👑</span> Mi Perfil Élite
-        </button>
-
-        <button class="elite-drop-item" onclick="UserProfileManager.openModal('themes')">
-            <span class="item-icon">🎨</span> Cambiar Tema
-        </button>
-
-        {% if global_profile.progress.level >= 10 %}
-        <!-- Future or Special Option for Elite Users -->
-        <div class="elite-drop-divider"></div>
-        <div class="elite-badge-vip">🌟 VIP Habilitado</div>
-        {% endif %}
-    </div>
 </div>
-
-<!-- Apply XP bar width via JS (avoids CSS-parser lint errors on Jinja template syntax) -->
-<script>
-    (function () {
-        var fill = document.getElementById('elite-xp-fill');
-        if (fill) fill.style.width = (fill.dataset.percent || 0) + '%';
-    })();
-</script>
 
 {% else %}
 <button class="btn-outline" type="button" data-action="login">

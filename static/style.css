@@ -2543,3 +2543,58 @@ select.input-modern option {
   color: #000;
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
 }
+
+/* ======================================================
+   MOBILE NAVBAR ADJUSTMENTS
+====================================================== */
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 0;
+  }
+
+  .nav-actions {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .brand {
+    padding: 6px 8px;
+    gap: 0;
+  }
+
+  .brand-name {
+    display: none;
+  }
+
+  .nav-actions .btn-secondary.dropdown-toggle {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .elite-menu-btn {
+    padding: 4px 10px 4px 4px;
+    gap: 6px;
+  }
+
+  .elite-avatar-wrap {
+    width: 32px;
+    height: 32px;
+  }
+
+  .elite-quick-info {
+    max-width: 85px;
+  }
+
+  .elite-name {
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    display: block;
+  }
+
+  .elite-rank {
+    font-size: 0.65rem;
+  }
+}
