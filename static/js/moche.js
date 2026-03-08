@@ -953,7 +953,135 @@ function renderMesa() {
         DOM.drawnCardZone.classList.add('hidden');
         DOM.drawnSlot.classList.remove('has-card');
     }
+    // Apply fan layout to human hand after rendering
+    applyFanLayout();
 }
+
+/* ============================================================
+   FAN LAYOUT — rotates human hand cards in an arc
+   ============================================================ */
+function applyFanLayout() {
+    const container = DOM.humanCards;
+    if (!container) return;
+    const cards = Array.from(container.children);
+    const n = cards.length;
+    if (n === 0) return;
+
+    const MAX_ARC = 22;  // degrees from center to the outermost card
+    const MAX_TY = 14;  // px — how far the center card rises (arc depth)
+
+    container.classList.add('fan-active');
+
+    cards.forEach((card, i) => {
+        // Normalized position: -1 (leftmost) … 0 (center) … +1 (rightmost)
+        const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1;
+        const deg = t * MAX_ARC;
+        // Parabolic arc: center cards rise, edge cards stay lower
+        const ty = -MAX_TY * (1 - t * t);
+
+        card.style.setProperty('--fan-rotate', `${deg}deg`);
+        card.style.setProperty('--fan-ty', `${ty}px`);
+        card.style.zIndex = String(i + 1); // edge cards below center
+    });
+}
+
+/* ============================================================
+   DRAG-TO-DISCARD — touch gesture to drag a card to discard
+   ============================================================ */
+(function initDragToDiscard() {
+    let _clone = null;
+    let _srcCard = null;
+    let _srcIdx = null;
+    let _overDiscard = false;
+
+    function getDiscardRect() {
+        return DOM.discardPile ? DOM.discardPile.getBoundingClientRect() : null;
+    }
+
+    function createClone(cardEl, startX, startY) {
+        const rect = cardEl.getBoundingClientRect();
+        _clone = cardEl.cloneNode(true);
+        _clone.className = 'card-drag-clone ' + (cardEl.className);
+        _clone.style.width = rect.width + 'px';
+        _clone.style.height = rect.height + 'px';
+        _clone.style.left = (startX - rect.width / 2) + 'px';
+        _clone.style.top = (startY - rect.height / 2) + 'px';
+        document.body.appendChild(_clone);
+    }
+
+    function moveClone(x, y) {
+        if (!_clone) return;
+        const w = parseFloat(_clone.style.width);
+        const h = parseFloat(_clone.style.height);
+        _clone.style.left = (x - w / 2) + 'px';
+        _clone.style.top = (y - h / 2) + 'px';
+
+        // Check if hovering over discard pile
+        const dr = getDiscardRect();
+        if (dr) {
+            const inside = x >= dr.left && x <= dr.right && y >= dr.top && y <= dr.bottom;
+            if (inside !== _overDiscard) {
+                _overDiscard = inside;
+                DOM.discardPile.classList.toggle('drag-over', inside);
+            }
+        }
+    }
+
+    function endDrag(dropped) {
+        if (_clone) { _clone.remove(); _clone = null; }
+        if (_srcCard) { _srcCard.classList.remove('dragging'); }
+        DOM.discardPile && DOM.discardPile.classList.remove('drag-over');
+
+        if (dropped && _overDiscard && _srcIdx !== null) {
+            // Trigger the same discard logic as clicking the card
+            seleccionarCartaHumano(_srcIdx);
+            // If only one card is now selected and we can discard, do it
+            setTimeout(() => {
+                if (STATE.selectedCardsIndices.length > 0 &&
+                    STATE.phase === 'JUEGO' &&
+                    STATE.turnOrder[STATE.currentTurnIndex] === getMyId()) {
+                    descartarCarta();
+                }
+            }, 60);
+        }
+
+        _srcCard = null; _srcIdx = null; _overDiscard = false;
+    }
+
+    // Attach to the human cards container (delegated)
+    DOM.humanCards && DOM.humanCards.addEventListener('touchstart', (e) => {
+        // Only during JUEGO phase and it's the human's turn
+        if (STATE.phase !== 'JUEGO' || STATE.turnOrder[STATE.currentTurnIndex] !== getMyId()) return;
+        if (!STATE.hasDrawn) return; // must have drawn before discarding
+
+        const cardEl = e.target.closest('.card.interactive');
+        if (!cardEl || !DOM.humanCards.contains(cardEl)) return;
+
+        _srcIdx = parseInt(cardEl.dataset.index);
+        if (isNaN(_srcIdx)) return;
+
+        _srcCard = cardEl;
+        const t = e.touches[0];
+        createClone(cardEl, t.clientX, t.clientY);
+        cardEl.classList.add('dragging');
+        e.preventDefault();    // stop scroll interference
+    }, { passive: false });
+
+    DOM.humanCards && DOM.humanCards.addEventListener('touchmove', (e) => {
+        if (!_clone) return;
+        const t = e.touches[0];
+        moveClone(t.clientX, t.clientY);
+        e.preventDefault();
+    }, { passive: false });
+
+    DOM.humanCards && DOM.humanCards.addEventListener('touchend', (e) => {
+        endDrag(true);
+    }, { passive: true });
+
+    DOM.humanCards && DOM.humanCards.addEventListener('touchcancel', () => {
+        endDrag(false);
+    }, { passive: true });
+})();
 
 function initLocalCardDrag(player) {
     if (!window.sortableHumanCards) {
