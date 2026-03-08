@@ -7,14 +7,7 @@
   const tg = window.Telegram?.WebApp;
   tg?.ready(); // Inform Telegram that WebApp is ready
 
-  // Interceptar enlace de invitación (Deep Linking con startapp)
   const startParam = tg?.initDataUnsafe?.start_param;
-  if (startParam && startParam.startsWith('room_')) {
-    const roomId = startParam.replace('room_', '');
-    window.location.replace(`/moche?room=${roomId}`);
-    return; // Detener ejecución mientras redirige
-  }
-
   const user = tg?.initDataUnsafe?.user;
 
   if (user) {
@@ -31,10 +24,16 @@
         photo_url: user.photo_url || "" // Enviar foto
       })
     }).then(() => {
-      // Option to reload page to reflect user data if not present?
-      // Since backend handles session, simple reload might work, but let's avoid infinite loops.
-      // We'll rely on the backend session taking over on next page loads.
+      // Si entró por enlace de invitación a una sala de moche, lo redirigimos ahora que ya hay sesión
+      if (startParam && startParam.startsWith('room_')) {
+        const roomId = startParam.replace('room_', '');
+        window.location.replace(`/moche?room=${roomId}`);
+      }
     });
+  } else if (startParam && startParam.startsWith('room_')) {
+    // Fallback por si lo abren en web normal
+    const roomId = startParam.replace('room_', '');
+    window.location.replace(`/moche?room=${roomId}`);
   }
 
   /* =====================================================

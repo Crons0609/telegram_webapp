@@ -1,0 +1,21 @@
+304:        btnAction.onclick = () => { socket.emit('start_moche_game'); };
+308:        btnAction.onclick = () => { socket.emit('toggle_ready'); };
+2450:                if (isMultiplayer && socket) {
+2451:                    socket.emit('propose_raise', {
+2473:    if (isMultiplayer && socket) {
+2474:        socket.on('player_bet_increase', (data) => {
+2485:        socket.on('propose_raise', (data) => manejarPropuestaAumento(data.player_id, data.amount));
+2486:        socket.on('raise_response', (data) => procesarRespuestaRaise(data.player_id, data.accepted));
+2487:        socket.on('raise_resolved', (data) => resolverRaise(data.status, data.amount, data.proposer, data.acceptors, data.rejectorId));
+2620:    if (isMultiplayer && socket) {
+2621:        socket.emit('raise_response', {
+2640:    if (isMultiplayer && socket) {
+2641:        socket.emit('raise_response', {
+2684:                if (isMultiplayer && socket) {
+2685:                    socket.emit('raise_resolved', resolveData);
+2707:                    if (isMultiplayer && socket) {
+2708:                        socket.emit('raise_resolved', resolveData);
+3104:            if (isMultiplayer && socket) {
+3105:                socket.emit('quick_message', {
+3115:    if (isMultiplayer && socket) {
+3116:        socket.on('quick_message', (data) => {

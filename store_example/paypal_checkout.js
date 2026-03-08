@@ -61,14 +61,26 @@ function renderPaypalButtons() {
     });
 }
 
-// Asegurarnos de renderizar cuando el Script inyectado de Paypal esté listo.
-document.addEventListener('DOMContentLoaded', () => {
+// Asegurarnos de renderizar cuando el Script inyectado de Paypal esté verdaderamente listo.
+function initPaypalWhenReady() {
     if (window.paypal) {
         renderPaypalButtons();
     } else {
-        const script = document.getElementById('paypal-script');
-        if (script) {
-            script.addEventListener('load', renderPaypalButtons);
-        }
+        // Poll every 100ms until PayPal SDK loads
+        const interval = setInterval(() => {
+            if (window.paypal) {
+                clearInterval(interval);
+                renderPaypalButtons();
+            }
+        }, 100);
+
+        // Stop polling after 10 seconds to avoid infinite loop
+        setTimeout(() => clearInterval(interval), 10000);
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPaypalWhenReady);
+} else {
+    initPaypalWhenReady();
+}

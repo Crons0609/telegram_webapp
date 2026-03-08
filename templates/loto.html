@@ -622,13 +622,13 @@
         /* =========================================================
            CONSTANTS  (2D world — pixels are logical units)
            ========================================================= */
-        const PAYOUT = 75;          // win multiplier
+        const PAYOUT = 70;          // win multiplier (RTP 70% with 10 bet)
 
         /* =========================================================
            STATE
            ========================================================= */
         let state = 'IDLE'; // IDLE | MIXING | EXTRACT1 | EXTRACT2 | RESULT
-        let betAmount = 25;
+        let betAmount = 10;
         let chosenD1 = 0, chosenD2 = 0;
         let winningResult = '00';
         let winD1 = 0, winD2 = 0;
@@ -741,10 +741,11 @@
                 color: BALL_COLORS_CSS[digit],
                 x: cx + r * Math.cos(angle),
                 y: cy + r * Math.sin(angle),
-                vx: (Math.random() - 0.5) * 120,
-                vy: (Math.random() - 0.5) * 120,
+                vx: 0, // initially still
+                vy: 0, // initially still
                 extracted: false,
                 winBall: false,
+                extractTimer: 0, // Used for exponential suction curve
                 extractX: 0,
                 extractY: 0,
             };
@@ -767,10 +768,11 @@
                     const r = INNER_PX * 0.4 * Math.cbrt(Math.random());
                     b.x = sg.cx + r * Math.cos(angle);
                     b.y = sg.cy + r * Math.sin(angle);
-                    b.vx = (Math.random() - 0.5) * 120;
-                    b.vy = (Math.random() - 0.5) * 120;
+                    b.vx = 0; // reset to still
+                    b.vy = 0; // reset to still
                     b.extracted = false;
                     b.winBall = false;
+                    b.extractTimer = 0;
                 });
                 sg.extractBall = null;
                 sg.extractPhase = 'idle';
@@ -778,82 +780,152 @@
         }
 
         /* =========================================================
-           PHYSICS UPDATE  (dt in seconds)
+           PHYSICS — Pressurized Air Lottery Machine
+           =========================================================
+           Architecture:
+             • IDLE  → balls perfectly still (settled at bottom)
+             • MIXING → continuous air turbulence + upward base force
+                        speed ramps up over 2.5 s (motor start)
+             • EXTRACT → ambient balls slow; winning ball gets 3× suction
+             SPATIAL GRID for O(n) ball-ball collision detection.
            ========================================================= */
-        const GRAVITY = 0;           // no gravitypull — blower simulated by impulses
-        const SPEED_CAP = 400;       // px/s max
-        const DAMPING = 0.998;       // per-frame velocity retention
-        let impulseTimer = 0;
+
+        const DAMPING = 0.985;  // velocity retention per frame
+        const BASE_AIR_UP = 320;    // pixels/s² upward base force
+        const TURBULENCE_H = 380;    // max lateral turbulence amplitude
+        const TURBULENCE_V = 200;    // extra vertical turbulence
+        const NOISE_SCALE = 0.0012; // time/position scale for pseudo-noise
+        const MAX_SPEED = 520;    // hard cap pixels/s in full mix
+        const EXTRACT_SPEED = 1600;   // nozzle suction pixels/s (3×)
+        const RESTITUTION = 0.72;   // wall bounce energy retention
+        const BALL_BOUNCE = 0.78;   // ball-ball relative energy retention
+
+        // Lightweight pseudo-noise (value noise, avoids Math.random every frame)
+        const _noiseSeed = Array.from({ length: 512 }, () => Math.random() * 2 - 1);
+        function vNoise(x, y) {
+            const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+            return _noiseSeed[(xi * 3 + yi * 7) & 511];
+        }
+
+        // Spatial grid helpers
+        function buildGrid(balls, cellSize) {
+            const grid = new Map();
+            for (const b of balls) {
+                if (b.extracted) continue;
+                const cx = Math.floor(b.x / cellSize);
+                const cy = Math.floor(b.y / cellSize);
+                const key = (cx << 16) ^ cy;
+                if (!grid.has(key)) grid.set(key, []);
+                grid.get(key).push(b);
+            }
+            return grid;
+        }
 
         function physicsUpdate(dt) {
-            impulseTimer += dt;
-            const doImpulse = impulseTimer > 0.18;
-            if (doImpulse) impulseTimer = 0;
+            // Speed cap: ramps up from 0→MAX_SPEED over 2.5 s once mixing starts
+            let speedCap = 0;
+            let airRatio = 0;
+            if (state === 'MIXING') {
+                airRatio = Math.min(mixTimer / 2.5, 1);
+                speedCap = MAX_SPEED * (1 - Math.pow(1 - airRatio, 3)); // ease-out
+            } else if (state === 'EXTRACT1' || state === 'EXTRACT2') {
+                airRatio = 0.65; // keep balls moving at reduced speed
+                speedCap = MAX_SPEED * 0.55;
+            }
+            // IDLE → speedCap stays 0, all balls forced to zero velocity below
+
+            const globalT = animTime; // seconds elapsed — drives noise field
 
             sphereGroups.forEach(sg => {
                 const { cx, cy, balls } = sg;
+                const cellSize = BALL_PX * 2.2;
 
-                // Blower impulse every ~0.18 s
-                if (doImpulse && (state === 'MIXING' || state === 'IDLE')) {
-                    balls.forEach(b => {
-                        if (b.extracted) return;
-                        b.vx += (Math.random() - 0.5) * 160;
-                        b.vy += (Math.random() - 0.5) * 160;
-                    });
-                }
+                // ── 1. Apply forces & integrate ──
+                for (const b of balls) {
+                    if (b.extracted) continue;
 
-                // Integrate + boundary
-                balls.forEach(b => {
-                    if (b.extracted) return;
-                    b.vx *= DAMPING;
-                    b.vy *= DAMPING;
+                    if (speedCap === 0) {
+                        // IDLE — snap to zero
+                        b.vx = 0; b.vy = 0;
+                        continue;
+                    }
 
-                    // Speed cap
+                    // Continuous air turbulence (evaluated every frame — no impulse timer)
+                    // Noise fields shift with time so the pattern never repeats
+                    const nx = vNoise(b.x * NOISE_SCALE + globalT * 0.7, b.y * NOISE_SCALE);
+                    const ny = vNoise(b.x * NOISE_SCALE, b.y * NOISE_SCALE + globalT * 0.9);
+                    const nz = vNoise(globalT * 1.3, b.digit * 0.17);
+
+                    // Base upward air jet (pushes everything up, like the blower)
+                    const airUp = BASE_AIR_UP * airRatio * (0.7 + 0.3 * ny);
+                    // Chaotic lateral + vertical noise
+                    const turbX = nx * TURBULENCE_H * airRatio;
+                    const turbY = nz * TURBULENCE_V * airRatio;
+
+                    b.vx = (b.vx + turbX * dt) * DAMPING;
+                    b.vy = (b.vy - airUp * dt + turbY * dt) * DAMPING; // negative = up
+
+                    // Hard speed cap (prevent tunnelling at startup)
                     const spd = Math.hypot(b.vx, b.vy);
-                    if (spd > SPEED_CAP) { b.vx = b.vx / spd * SPEED_CAP; b.vy = b.vy / spd * SPEED_CAP; }
+                    if (spd > speedCap) {
+                        const scale = speedCap / spd;
+                        b.vx *= scale; b.vy *= scale;
+                    }
 
                     b.x += b.vx * dt;
                     b.y += b.vy * dt;
 
-                    // Circular boundary (the sphere wall)
-                    const dx = b.x - cx, dy = b.y - cy;
-                    const dist = Math.hypot(dx, dy);
+                    // ── Spherical wall ──
+                    const ddx = b.x - cx, ddy = b.y - cy;
+                    const dist = Math.hypot(ddx, ddy);
                     if (dist > INNER_PX) {
-                        const nx = dx / dist, ny = dy / dist;
-                        // Push back
-                        b.x = cx + nx * INNER_PX;
-                        b.y = cy + ny * INNER_PX;
-                        // Reflect velocity
-                        const dot = b.vx * nx + b.vy * ny;
-                        b.vx -= 2 * dot * nx * 0.75;
-                        b.vy -= 2 * dot * ny * 0.75;
-                        if (Math.abs(dot) > 30) playBounce();
+                        const inv = 1 / dist;
+                        const wnx = ddx * inv, wny = ddy * inv;
+                        b.x = cx + wnx * INNER_PX;
+                        b.y = cy + wny * INNER_PX;
+                        const dot = b.vx * wnx + b.vy * wny;
+                        b.vx -= (1 + RESTITUTION) * dot * wnx;
+                        b.vy -= (1 + RESTITUTION) * dot * wny;
+                        if (Math.abs(dot) > 40) playBounce();
                     }
-                });
+                }
 
-                // Ball-to-ball elastic collision
-                for (let i = 0; i < balls.length; i++) {
-                    if (balls[i].extracted) continue;
-                    for (let j = i + 1; j < balls.length; j++) {
-                        if (balls[j].extracted) continue;
-                        const bi = balls[i], bj = balls[j];
-                        const dx = bj.x - bi.x, dy = bj.y - bi.y;
-                        const dist = Math.hypot(dx, dy);
-                        const minDist = BALL_PX * 2;
-                        if (dist < minDist && dist > 0.001) {
-                            const nx = dx / dist, ny = dy / dist;
-                            // Separate
-                            const overlap = (minDist - dist) * 0.5;
-                            bi.x -= nx * overlap; bi.y -= ny * overlap;
-                            bj.x += nx * overlap; bj.y += ny * overlap;
-                            // Swap velocity components along normal
-                            const dvx = bi.vx - bj.vx, dvy = bi.vy - bj.vy;
-                            const dot = dvx * nx + dvy * ny;
-                            if (dot > 0) {
-                                bi.vx -= dot * nx * 0.8;
-                                bi.vy -= dot * ny * 0.8;
-                                bj.vx += dot * nx * 0.8;
-                                bj.vy += dot * ny * 0.8;
+                // ── 2. Ball-ball collision (spatial grid, O(n)) ──
+                if (speedCap === 0) return;
+                const grid = buildGrid(balls, cellSize);
+                const minDist = BALL_PX * 2;
+
+                for (const b of balls) {
+                    if (b.extracted) continue;
+                    const gx = Math.floor(b.x / cellSize);
+                    const gy = Math.floor(b.y / cellSize);
+
+                    // Check 3×3 neighbourhood
+                    for (let ox = -1; ox <= 1; ox++) {
+                        for (let oy = -1; oy <= 1; oy++) {
+                            const key = ((gx + ox) << 16) ^ (gy + oy);
+                            const bucket = grid.get(key);
+                            if (!bucket) continue;
+                            for (const other of bucket) {
+                                if (other === b || other.extracted) continue;
+                                const dx = other.x - b.x, dy = other.y - b.y;
+                                const d2 = dx * dx + dy * dy;
+                                if (d2 >= minDist * minDist || d2 < 0.0001) continue;
+                                const d = Math.sqrt(d2);
+                                const inv = 1 / d;
+                                const cnx = dx * inv, cny = dy * inv;
+                                const overlap = (minDist - d) * 0.5;
+                                // Separate
+                                b.x -= cnx * overlap; b.y -= cny * overlap;
+                                other.x += cnx * overlap; other.y += cny * overlap;
+                                // Impulse along normal
+                                const dvx = b.vx - other.vx, dvy = b.vy - other.vy;
+                                const dot = dvx * cnx + dvy * cny;
+                                if (dot > 0) {
+                                    const j = dot * (1 + BALL_BOUNCE) * 0.5;
+                                    b.vx -= j * cnx; b.vy -= j * cny;
+                                    other.vx += j * cnx; other.vy += j * cny;
+                                }
                             }
                         }
                     }
@@ -948,6 +1020,9 @@
             ctx2d.arc(cx, cy, R - 1, 0, Math.PI * 2);
             ctx2d.clip();
 
+            // Air-jet streaks (rendered below balls)
+            updateAndDrawJets(sg, 0.016); // use fixed tiny dt for draw-only step
+
             // Draw balls
             sg.balls.forEach(b => {
                 if (b.extracted && !b.winBall) return;
@@ -1034,16 +1109,71 @@
         }
 
         /* =========================================================
-           EXTRACTION ANIMATION UPDATE
+           AIR-JET PARTICLES  (visual streaks inside sphere)
+           ========================================================= */
+        // Pre-allocated particle pool to avoid GC pressure during animation
+        const JET_POOL = Array.from({ length: 20 }, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0 }));
+
+        function spawnJets(sg) {
+            if (state !== 'MIXING') return;
+            const { cx, cy } = sg;
+            const baseY = cy + SPHERE_PX * 0.75; // air jets come from bottom
+            for (let i = 0; i < 2; i++) {
+                const p = JET_POOL.find(p => !p.active);
+                if (!p) break;
+                p.active = true;
+                p.x = cx + (Math.random() - 0.5) * SPHERE_PX * 0.6;
+                p.y = baseY;
+                p.vx = (Math.random() - 0.5) * 60;
+                p.vy = -(100 + Math.random() * 200);
+                p.maxLife = 0.25 + Math.random() * 0.2;
+                p.life = p.maxLife;
+            }
+        }
+
+        function updateAndDrawJets(sg, dt) {
+            const { cx, cy } = sg;
+            for (const p of JET_POOL) {
+                if (!p.active) continue;
+                p.life -= dt;
+                if (p.life <= 0) { p.active = false; continue; }
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                // Contain inside sphere — kill if exits
+                if (Math.hypot(p.x - cx, p.y - cy) > SPHERE_PX - 2) { p.active = false; continue; }
+                const t = p.life / p.maxLife;
+                ctx2d.beginPath();
+                ctx2d.arc(p.x, p.y, 1.5 * t, 0, Math.PI * 2);
+                ctx2d.fillStyle = `rgba(140,200,255,${0.45 * t})`;
+                ctx2d.fill();
+            }
+        }
+
+        /* =========================================================
+           EXTRACTION ANIMATION UPDATE  — 3× nozzle suction
            ========================================================= */
         function updateExtraction(dt, sgIdx) {
             const sg = sphereGroups[sgIdx];
             if (!sg || !sg.extractBall || sg.extractPhase !== 'rising') return false;
             const b = sg.extractBall;
-            const spd = 6;
-            b.x = lerp(b.x, sg.extractTargetX, spd * dt);
-            b.y = lerp(b.y, sg.extractTargetY, spd * dt);
-            return Math.abs(b.y - sg.extractTargetY) < 3;
+
+            b.extractTimer += dt;
+
+            // Velocity-based suction: starts slow, accelerates exponentially (3× avg speed)
+            // mimics pressurized air sucking the ball up the nozzle tube.
+            const t = b.extractTimer;
+            const accel = EXTRACT_SPEED * Math.pow(t * 2.2, 2.2); // exponential ramp
+
+            const dx = sg.extractTargetX - b.x;
+            const dy = sg.extractTargetY - b.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 2) return true;
+
+            const step = Math.min(accel * dt, dist);
+            b.x += (dx / dist) * step;
+            b.y += (dy / dist) * step;
+
+            return dist < 4;
         }
 
         /* =========================================================
@@ -1069,9 +1199,16 @@
             lastTime = ts;
             animTime += rawDt;
 
-            // Physics only when needed
-            if (state === 'MIXING' || state === 'IDLE') {
+            // Physics when needed
+            if (state === 'MIXING' || state === 'IDLE' || state === 'EXTRACT1' || state === 'EXTRACT2') {
                 physicsUpdate(rawDt);
+            }
+
+            // Spawn air-jet particles from the bottom of spheres every 0.08s
+            _jetTimer = (_jetTimer || 0) + rawDt;
+            if (_jetTimer > 0.08 && state === 'MIXING') {
+                _jetTimer = 0;
+                sphereGroups.forEach(sg => spawnJets(sg));
             }
 
             // ── Draw ──

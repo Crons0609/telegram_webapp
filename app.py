@@ -147,10 +147,32 @@ def handle_rooms():
     room_id = manager.create_room(telegram_id, nombre, is_private, bet_amount, total_slots, difficulty, avatar, marco)
     return jsonify({"status": "ok", "room_id": room_id})
 
-# --- SOCKET.IO LOBBY EVENTS ---
+@app.route('/api/moche/matchmake', methods=['POST'])
+def moche_matchmake():
+    telegram_id = session.get("telegram_id", "guest")
+    nombre = session.get("nombre", "Invitado")
+    
+    user = database.obtener_usuario(telegram_id)
+    avatar = user["photo_url"] if user else None
+    marco = user["marco_actual"] if user else None
+    
+    public_rooms = manager.get_public_rooms()
+    if public_rooms:
+        room_id = public_rooms[0]["id"]
+        success, msg = manager.join_room(room_id, telegram_id, nombre, avatar, marco)
+        if success:
+            session['current_room'] = room_id
+            return jsonify({"status": "ok", "room_id": room_id})
+            
+    # Auto create if not found
+    room_id = manager.create_room(telegram_id, nombre, False, 50, 4, "easy", avatar, marco)
+    session['current_room'] = room_id
+    return jsonify({"status": "ok", "room_id": room_id})
 
-@socketio.on('join_moche_room')
-def on_join_moche_room(data):
+# --- SUPABASE MOCHE API OVERHAUL ---
+@app.route('/api/moche/join', methods=['POST'])
+def moche_join():
+    data = request.get_json()
     room_id = data.get('room_id')
     player_id = session.get('telegram_id', 'guest')
     player_name = session.get('nombre', 'Invitado')
@@ -161,148 +183,110 @@ def on_join_moche_room(data):
     
     success, msg = manager.join_room(room_id, player_id, player_name, avatar, marco)
     if not success:
-        emit('room_error', {'message': msg})
-        return
+        return jsonify({"status": "error", "message": msg}), 400
         
-    join_room(room_id)
-    # Save room_id to session side explicitly for disconnects
     session['current_room'] = room_id
-    
-    emit('room_update', manager.get_room(room_id), to=room_id)
+    return jsonify({"status": "ok", "message": msg})
 
-@socketio.on('toggle_ready')
-def on_toggle_ready(data):
+@app.route('/api/moche/ready', methods=['POST'])
+def moche_ready():
     room_id = session.get('current_room')
     player_id = session.get('telegram_id')
     if room_id and player_id:
         if manager.toggle_ready(room_id, player_id):
-            emit('room_update', manager.get_room(room_id), to=room_id)
+            return jsonify({"status": "ok"})
+    return jsonify({"status": "error", "message": "No en sala"}), 400
 
-@socketio.on('start_moche_game')
-def on_start_moche_game():
+@app.route('/api/moche/start', methods=['POST'])
+def moche_start():
     room_id = session.get('current_room')
     player_id = session.get('telegram_id')
-    
     if not room_id or not player_id:
-        return
-        
+        return jsonify({"status": "error", "message": "Sesión inválida"}), 400
+    
+    room = manager.get_room(room_id)
+    if not room:
+        return jsonify({"status": "error", "message": "Sala no encontrada"}), 400
+
+    if str(room['host']) != str(player_id):
+        return jsonify({"status": "error", "message": "Solo el anfitrión puede iniciar"}), 400
+
+    bet_amount = room['bet_amount']
+    import database
+
+    # 1. Verificar balance de todos los jugadores reales
+    for p in room['players']:
+        if not p.get('is_bot', False):
+            perfil = database.obtener_perfil_completo(p['id'])
+            if not perfil or perfil.get('bits', 0) < bet_amount:
+                return jsonify({"status": "error", "message": f"{p['name']} no tiene suficientes bits ({bet_amount})."}), 400
+
+    # 2. Iniciar el juego
     success, msg = manager.start_game(room_id, player_id)
     if not success:
-        emit('room_error', {'message': msg})
-        return
+        return jsonify({"status": "error", "message": msg}), 400
         
-    # Send personalized state to each player in the room
-    room = manager.get_room(room_id)
-    for p in room["players"]:
-        player_state = manager.get_public_state_for_player(room_id, p["id"])
-        # Flask-SocketIO allows targeting a user directly if we track their SID or if they join a room named as their ID.
-        # Alternatively we can broadcast the internal states, which is what we'll do: emit to the whole room, 
-        # but the client-side will know its own ID and we can just broadcast the full initial structure (hiding cards).
-        # To make it truly secure, we should send to `request.sid`. For simplicity in this demo, since players
-        # authenticate with telegram_id, we will broadcast a generic "game_started" event, and each client
-        # will immediately request their specific state via a callback or follow-up event.
-        
-    emit('game_started', {'room_id': room_id}, to=room_id)
+    # 3. Descontar bits
+    for p in room['players']:
+        if not p.get('is_bot', False):
+            database.actualizar_bits(p['id'], -bet_amount)
 
-@socketio.on('request_game_state')
-def on_request_game_state():
+    return jsonify({"status": "ok"})
+
+@app.route('/api/moche/leave', methods=['POST'])
+def moche_leave():
+    room_id = session.get('current_room')
+    player_id = session.get('telegram_id')
+    if room_id and player_id:
+        session.pop('current_room', None)
+        manager.leave_room(room_id, player_id)
+    return jsonify({"status": "ok"})
+
+@app.route('/api/moche/kick', methods=['POST'])
+def moche_kick():
+    data = request.get_json()
+    room_id = session.get('current_room')
+    host_id = session.get('telegram_id')
+    target_id = data.get('target_id')
+    if room_id and host_id and target_id:
+        success, msg = manager.kick_player(room_id, host_id, target_id)
+        if success:
+            return jsonify({"status": "ok"})
+        return jsonify({"status": "error", "message": msg}), 400
+    return jsonify({"status": "error"}), 400
+
+@app.route('/api/moche/state', methods=['GET'])
+def moche_state():
     room_id = session.get('current_room')
     player_id = session.get('telegram_id')
     if room_id and player_id:
         player_state = manager.get_public_state_for_player(room_id, player_id)
         if player_state:
-            emit('game_state_sync', player_state)
+            return jsonify({"status": "ok", "state": player_state})
+    return jsonify({"status": "error"}), 400
 
-@socketio.on('sync_state')
-def on_sync_state(data):
-    room_id = data.get('room_id')
-    state = data.get('STATE')
-    # Validamos que se envió un estado
-    if not isinstance(state, dict):
-        return
-        
-    s_current_room = session.get('current_room')
-    if room_id == s_current_room:
-        # Enviar game_state a todos los demás en la sala
-        emit('game_state_sync', {'STATE': state, 'phase': state.get('phase', 'JUEGO'), 'hasDrawn': state.get('hasDrawn', False)}, to=room_id, include_self=False)
-
-@socketio.on('leave_moche_room')
-def on_leave_moche_room(data):
+@app.route('/api/moche/action', methods=['POST'])
+def moche_action():
+    # Will be expanded later in moche_engine for server-authoritative steps
+    data = request.get_json()
     room_id = session.get('current_room')
     player_id = session.get('telegram_id')
-    if room_id and player_id:
-        # First leave socket io room
-        leave_room(room_id)
-        session.pop('current_room', None)
-        
-        # Then update engine
-        result = manager.leave_room(room_id, player_id)
-        if result == "host_left":
-            # Emit closure event to all remaining players
-            emit('room_closed', {'message': 'El creador ha cerrado la sala de espera.'}, to=room_id)
-            # SocketIO will eventually clean up the room, or clients will disconnect and leave
-        elif manager.get_room(room_id):
-            emit('room_update', manager.get_room(room_id), to=room_id)
-
-@socketio.on('disconnect')
-def on_disconnect():
-    room_id = session.get('current_room')
-    player_id = session.get('telegram_id')
-    if room_id and player_id:
-        result = manager.leave_room(room_id, player_id)
-        if result == "host_left":
-            emit('room_closed', {'message': 'El creador se ha desconectado. Sala cerrada.'}, to=room_id)
-        elif manager.get_room(room_id):
-            emit('room_update', manager.get_room(room_id), to=room_id)
-
-@socketio.on('kick_moche_player')
-def on_kick_moche_player(data):
-    room_id = session.get('current_room')
-    host_id = session.get('telegram_id')
-    target_id = data.get('target_id')
     
-    if room_id and host_id and target_id:
-        success, msg = manager.kick_player(room_id, host_id, target_id)
-        if success:
-            # Emit custom event to the room so that the target's client can react
-            # (they will receive it, identify they are the target, and leave)
-            emit('kicked_from_room', {'target_id': target_id, 'message': 'Has sido expulsado de la sala'}, to=room_id)
-            emit('room_update', manager.get_room(room_id), to=room_id)
+    if not room_id or not player_id:
+        return jsonify({"status": "error"}), 400
+        
+    action = data.get("action")
+    payload = data.get("payload", {})
+    
+    # Placeholder: currently we just update game_state directly for prototyping,
+    # but we will enforce server-side turn validation shortly.
+    state = payload.get('STATE')
+    if state and isinstance(state, dict):
+        # We allow host or anyone to sync (for now until full server engine is active)
+        manager.update_game_state(room_id, state)
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "error", "message": "Estado inválido"}), 400
 
-
-@socketio.on('quick_message')
-def on_quick_message(data):
-    """Broadcast a quick chat message to all players in the room except the sender."""
-    room_id = data.get('room_id') or session.get('current_room')
-    sender = data.get('sender', session.get('nombre', 'Jugador'))
-    msg = data.get('msg', '')
-    if room_id and msg:
-        emit('quick_message', {'sender': sender, 'msg': msg}, to=room_id, include_self=False)
-
-@socketio.on('player_bet_increase')
-def on_player_bet_increase(data):
-    room_id = data.get('room_id') or session.get('current_room')
-    if room_id:
-        emit('player_bet_increase', data, to=room_id, include_self=False)
-
-@socketio.on('propose_raise')
-def on_propose_raise(data):
-    room_id = data.get('room_id') or session.get('current_room')
-    if room_id:
-        emit('propose_raise', data, to=room_id, include_self=False)
-
-@socketio.on('raise_response')
-def on_raise_response(data):
-    room_id = data.get('room_id') or session.get('current_room')
-    if room_id:
-        # El Host (cliente 1) debe escuchar esto y decidir cuándo resolver
-        emit('raise_response', data, to=room_id, include_self=False)
-
-@socketio.on('raise_resolved')
-def on_raise_resolved(data):
-    room_id = data.get('room_id') or session.get('current_room')
-    if room_id:
-        emit('raise_resolved', data, to=room_id, include_self=False)
 
 
 # =====================================================
@@ -344,9 +328,9 @@ def loto_play():
         bits = database.obtener_bits(telegram_id)
         return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": bits}), 400
 
-    # Generate result with uniform probability (configurable from backend)
-    import random
-    result = str(random.randint(0, 99)).zfill(2)
+    # Generate result with cryptographically secure RNG
+    import secrets
+    result = str(secrets.randbelow(100)).zfill(2)
 
     # XP for participation
     UserProfileManager.add_xp(telegram_id, "loto_play")

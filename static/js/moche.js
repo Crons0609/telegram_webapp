@@ -9,160 +9,254 @@ window.Telegram.WebApp.expand();
 // ==========================================
 // CONFIGURACIÓN Y ESTADO GLOBAL
 // ==========================================
-let socket = null;
+// ==========================================
+// CONFIGURACIÓN Y ESTADO GLOBAL
+// ==========================================
+let supabaseClient = null;
+let mocheChannel = null;
 let isMultiplayer = false;
+
+// Configuración de Supabase
+const SUPABASE_URL = "https://xwkfzntmdkfztaeeuxkd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_14fF1qcKEF2Dj9bnD9U6pw_kbrZSIBe";
 
 function getMyId() {
     return (isMultiplayer && window.USER_DATA && window.USER_DATA.telegram_id) ? window.USER_DATA.telegram_id.toString() : 'human';
 }
 
-function syncStateToNetwork() {
-    if (isMultiplayer && socket) {
-        socket.emit('sync_state', { room_id: window.USER_DATA.room_id, STATE });
+async function syncStateToNetwork() {
+    if (isMultiplayer && window.USER_DATA.room_id) {
+        // En lugar de Socket.IO, enviamos una acción REST al backend para validar, 
+        // pero por ahora el servidor confía en el estado y lo actualiza en DB
+        fetch('/api/moche/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'sync',
+                payload: { STATE }
+            })
+        });
     }
+}
+
+async function fetchRoomData(roomId) {
+    if (!supabaseClient) return null;
+    try {
+        const { data: roomData, error: roomError } = await supabaseClient
+            .from('rooms')
+            .select('*')
+            .eq('id', roomId)
+            .single();
+
+        if (roomError || !roomData) return null;
+
+        const { data: playersData } = await supabaseClient
+            .from('room_players')
+            .select('*')
+            .eq('room_id', roomId);
+
+        // Convertir formato para mantener compatibilidad con UI anterior
+        return {
+            id: roomData.id,
+            host: roomData.host_id,
+            is_private: roomData.is_private,
+            bet_amount: roomData.bet_amount,
+            total_slots: roomData.max_players,
+            difficulty: roomData.difficulty,
+            bots_count: roomData.bots_count || 0,
+            status: roomData.status,
+            players: (playersData || []).map(p => ({
+                id: p.player_id,
+                name: p.player_name,
+                avatar: p.avatar,
+                frame: p.frame,
+                is_host: p.is_host,
+                ready: p.ready
+            }))
+        };
+    } catch (e) { console.error(e); return null; }
+}
+
+async function fetchGameState(roomId) {
+    if (!supabaseClient) return null;
+    const { data: gsData } = await supabaseClient
+        .from('game_state')
+        .select('game_data')
+        .eq('room_id', roomId)
+        .single();
+    if (gsData) return gsData.game_data;
+    return null;
 }
 
 if (window.USER_DATA && window.USER_DATA.room_id) {
     isMultiplayer = true;
-    socket = io();
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    socket.on('connect', () => {
-        socket.emit('join_moche_room', { room_id: window.USER_DATA.room_id });
-    });
-
-    socket.on('room_update', (room) => {
+    // Al cargar la página, obtener datos de la sala
+    fetchRoomData(window.USER_DATA.room_id).then(room => {
         if (!room) {
+            alert('Sala cerrada o no encontrada.');
             window.location.href = '/';
             return;
         }
         window.CURRENT_ROOM_DATA = room;
         actualizarSalaDeEspera(room);
+
+        if (room.status === 'playing') {
+            startLocalGameUI();
+        }
     });
 
-    socket.on('room_error', (data) => {
-        alert(data.message);
-        window.location.href = '/';
-    });
-    socket.on('game_started', (data) => {
-        // Enforce difficulty overlay hidden
-        document.getElementById('difficulty-modal').classList.add('hidden');
-        document.getElementById('waiting-room-overlay').classList.add('hidden');
-
-        // Sounds
-        if (window.CasinoAudio) {
-            window.CasinoAudio.initAudioContext();
-            window.CasinoAudio.playBGM('bgm_moche');
-        }
-
-        // Request the actual state
-        socket.emit('request_game_state');
-    });
-
-    socket.on('game_state_sync', (data) => {
-        // Manejar estructura inicial (data.state) o P2P (data.STATE)
-        const serverState = data.state || data.STATE;
-        if (!serverState) return;
-
-        // Sync difficulty details from server response if available (sent initially)
-        if (data.difficulty) {
-            STATE.difficulty = data.difficulty;
-            const tableEl = document.getElementById('moche-table');
-            if (tableEl && tableEl.dataset.difficulty !== data.difficulty) {
-                tableEl.dataset.difficulty = data.difficulty;
-            }
-        }
-        if (data.bots_count !== undefined) {
-            STATE.numBots = data.bots_count;
-        }
-
-        STATE.deck = serverState.deck;
-        STATE.discardPile = serverState.discardPile;
-        STATE.turnOrder = serverState.turnOrder;
-        STATE.currentTurnIndex = serverState.currentTurnIndex;
-        STATE.phase = serverState.phase;
-        STATE.hasDrawn = serverState.hasDrawn;
-        STATE.drawnCardRef = serverState.drawnCardRef;
-        STATE.mustUseDiscard = serverState.mustUseDiscard;
-        STATE.latestDiscardEnlarged = serverState.latestDiscardEnlarged;
-        STATE.apuestaActual = data.bet_amount || STATE.apuestaActual;
-
-        STATE.players = {};
-        const uiOffsets = ['human', 'bot1', 'bot2', 'bot3'];
-        let idx = 0;
-
-        // Hide all bot zones first
-        ['bot-1', 'bot-2', 'bot-3'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-
-        const levelEmojis = { easy: '🟢', medium: '🟡', hard: '🔴', pro: '🔥' };
-        const emoji = levelEmojis[STATE.difficulty || 'easy'];
-
-        for (let pid of STATE.turnOrder) {
-            const serverPlayer = serverState.players[pid];
-            if (!serverPlayer) continue;
-
-            const isMe = String(pid) === getMyId();
-            const mappedId = isMe ? 'human' : uiOffsets[++idx];
-
-            STATE.players[pid] = {
-                id: pid,
-                name: serverPlayer.name,
-                cards: serverPlayer.cards,
-                bajadas: serverPlayer.bajadas,
-                ui_zone: mappedId,
-                is_bot: serverPlayer.is_bot || false
-            };
-
-            // Show active bot zones and update name
-            if (!isMe) {
-                const zoneId = mappedId.replace('bot', 'bot-');
-                const zoneEl = document.getElementById(zoneId);
-                if (zoneEl) {
-                    zoneEl.style.display = '';
-                    const infoEl = zoneEl.querySelector('.player-info');
-                    if (infoEl) infoEl.textContent = `${emoji} ${serverPlayer.name}`;
+    // Suscribirse a cambios en tiempo real
+    mocheChannel = supabaseClient.channel('moche_room_' + window.USER_DATA.room_id)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'room_players', filter: `room_id=eq.${window.USER_DATA.room_id}` }, payload => {
+            fetchRoomData(window.USER_DATA.room_id).then(room => {
+                if (room) {
+                    window.CURRENT_ROOM_DATA = room;
+                    actualizarSalaDeEspera(room);
                 }
+            });
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${window.USER_DATA.room_id}` }, payload => {
+            if (payload.eventType === 'DELETE') {
+                alert('La sala ha sido cerrada por el anfitrión.');
+                window.location.href = '/';
+                return;
+            }
+            fetchRoomData(window.USER_DATA.room_id).then(room => {
+                if (room) {
+                    window.CURRENT_ROOM_DATA = room;
+                    actualizarSalaDeEspera(room);
+                    if (room.status === 'playing' && document.getElementById('waiting-room-overlay').classList.contains('hidden') === false) {
+                        startLocalGameUI();
+                    }
+                }
+            });
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'game_state', filter: `room_id=eq.${window.USER_DATA.room_id}` }, payload => {
+            handleServerStateSync(payload.new.game_data);
+        })
+        .on('broadcast', { event: 'moche_events' }, payload => {
+            const data = payload.payload;
+            if (data.type === 'quick_message') {
+                if (data.payload.sender && data.payload.msg) {
+                    showChatToast(`💬 ${data.payload.sender}: ${data.payload.msg}`, document.getElementById('chat-toast'));
+                }
+            } else if (data.type === 'player_bet_increase') {
+                if (data.payload.player_id !== getMyId()) {
+                    STATE.apuestaActual = data.payload.new_total;
+                    const pZone = getZoneByPlayerId(data.payload.player_id);
+                    animarFichasAlCentro(data.payload.amount, pZone, false);
+                    if (window.CasinoAudio) window.CasinoAudio.playSfx('chip_drop');
+                }
+            } else if (data.type === 'propose_raise') {
+                manejarPropuestaAumento(data.payload.player_id, data.payload.amount);
+            } else if (data.type === 'raise_response') {
+                procesarRespuestaRaise(data.payload.player_id, data.payload.accepted);
+            } else if (data.type === 'raise_resolved') {
+                resolverRaise(data.payload.status, data.payload.amount, data.payload.proposer, data.payload.acceptors, data.payload.rejectorId);
+            }
+        })
+        .subscribe();
+}
+
+function startLocalGameUI() {
+    document.getElementById('difficulty-modal').classList.add('hidden');
+    document.getElementById('waiting-room-overlay').classList.add('hidden');
+
+    if (window.CasinoAudio) {
+        window.CasinoAudio.initAudioContext();
+        window.CasinoAudio.playBGM('bgm_moche');
+    }
+    fetchGameState(window.USER_DATA.room_id).then(state => {
+        if (state) handleServerStateSync(state);
+    });
+}
+
+function handleServerStateSync(serverState) {
+    if (!serverState) return;
+
+    STATE.deck = serverState.deck;
+    STATE.discardPile = serverState.discardPile;
+    STATE.turnOrder = serverState.turnOrder;
+    STATE.currentTurnIndex = serverState.currentTurnIndex;
+    STATE.phase = serverState.phase;
+    STATE.hasDrawn = serverState.hasDrawn;
+    STATE.drawnCardRef = serverState.drawnCardRef;
+    STATE.mustUseDiscard = serverState.mustUseDiscard;
+    STATE.latestDiscardEnlarged = serverState.latestDiscardEnlarged;
+    // Si la DB tiene info de apuesta/dificultad, lo actualiza el fetchRoomData, no el game_state normalmente
+    // Pero asumiendo que el server oculta cartas de rivales (si es proxy):
+
+    // Asegurarse de que serverState.players es un objeto
+    if (!serverState.players) return;
+
+    STATE.players = {};
+    const uiOffsets = ['human', 'bot1', 'bot2', 'bot3'];
+    let idx = 0;
+
+    ['bot-1', 'bot-2', 'bot-3'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    const levelEmojis = { easy: '🟢', medium: '🟡', hard: '🔴', pro: '🔥' };
+    const emoji = window.CURRENT_ROOM_DATA ? levelEmojis[window.CURRENT_ROOM_DATA.difficulty || 'easy'] : '🟢';
+
+    for (let pid of STATE.turnOrder) {
+        const serverPlayer = serverState.players[pid];
+        if (!serverPlayer) continue;
+
+        const isMe = String(pid) === getMyId();
+        const mappedId = isMe ? 'human' : uiOffsets[++idx];
+
+        STATE.players[pid] = {
+            id: pid,
+            name: serverPlayer.name,
+            cards: serverPlayer.cards,
+            bajadas: serverPlayer.bajadas,
+            ui_zone: mappedId,
+            is_bot: serverPlayer.is_bot || false
+        };
+
+        if (!isMe) {
+            const zoneId = mappedId.replace('bot', 'bot-');
+            const zoneEl = document.getElementById(zoneId);
+            if (zoneEl) {
+                zoneEl.style.display = '';
+                const infoEl = zoneEl.querySelector('.player-info');
+                if (infoEl) infoEl.textContent = `${emoji} ${serverPlayer.name}`;
             }
         }
+    }
 
-        if (window.USER_DATA && window.USER_DATA.bits !== undefined) {
-            updateBitsUI(window.USER_DATA.bits);
-        }
+    if (window.USER_DATA && window.USER_DATA.bits !== undefined) {
+        updateBitsUI(window.USER_DATA.bits);
+    }
 
-        // Evitar que la interfaz se descoordine iniciando en la fase incorrecta
-        if (STATE.phase === 'INTERCAMBIO') {
-            iniciarFaseIntercambio();
-        } else if (STATE.phase === 'BAJADA_INICIAL') {
-            iniciarBajadaInicial();
-        } else if (STATE.phase === 'JUEGO') {
-            procesarTurno();
-        } else if (STATE.phase === 'INTERCEPT') {
-            procesarCircuito();
-        }
+    if (STATE.phase === 'INTERCAMBIO') {
+        iniciarFaseIntercambio();
+    } else if (STATE.phase === 'BAJADA_INICIAL') {
+        iniciarBajadaInicial();
+    } else if (STATE.phase === 'JUEGO') {
+        procesarTurno();
+    } else if (STATE.phase === 'INTERCEPT') {
+        procesarCircuito();
+    }
 
-        actualizarBotonesJuego();
-        renderMesa();
-    });
-
-    socket.on('kicked_from_room', (data) => {
-        if (data.target_id === getMyId()) {
-            alert(data.message);
-            window.location.href = '/';
-        }
-    });
-
-    socket.on('room_closed', (data) => {
-        alert(data.message);
-        window.location.href = '/';
-    });
-
+    actualizarBotonesJuego();
+    renderMesa();
 }
 
 window.kickPlayer = function (targetId) {
     if (confirm("¿Seguro que quieres expulsar a este jugador?")) {
-        socket.emit('kick_moche_player', { target_id: targetId });
+        fetch('/api/moche/kick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_id: targetId })
+        }).then(r => r.json()).then(res => {
+            if (res.status === 'error') alert(res.message);
+        });
     }
 };
 
@@ -228,11 +322,11 @@ function actualizarSalaDeEspera(room) {
         const allOthersReady = room.players.every(p => p.id === me.id || p.ready);
         const hasMinimumPlayers = room.players.length >= 2 || room.total_slots > 0;
         btnAction.disabled = !allOthersReady;
-        btnAction.onclick = () => { socket.emit('start_moche_game'); };
+        btnAction.onclick = () => { fetch('/api/moche/start', { method: 'POST' }); };
     } else {
         btnAction.innerText = me && me.ready ? 'Cancelar Listo' : '¡Estoy Listo!';
         btnAction.disabled = false;
-        btnAction.onclick = () => { socket.emit('toggle_ready'); };
+        btnAction.onclick = () => { fetch('/api/moche/ready', { method: 'POST' }); };
     }
 
     // ── SHARE BUTTON ───────────────────────────────────────────────────────────
@@ -2373,12 +2467,18 @@ function initBettingButtons() {
             animarFichaHaciaMesa(btn, () => {
                 // Al llegar la ficha a la mesa, dispara logica
                 iniciarPropuestaAumento(getMyId(), amount);
-
-                if (isMultiplayer && socket) {
-                    socket.emit('propose_raise', {
-                        room_id: window.USER_DATA.room_id,
-                        player_id: getMyId(),
-                        amount: amount
+                if (isMultiplayer && mocheChannel) {
+                    mocheChannel.send({
+                        type: 'broadcast',
+                        event: 'moche_events',
+                        payload: {
+                            type: 'propose_raise',
+                            payload: {
+                                room_id: window.USER_DATA.room_id,
+                                player_id: getMyId(),
+                                amount: amount
+                            }
+                        }
                     });
                 }
             });
@@ -2395,23 +2495,6 @@ function initBettingButtons() {
         DOM.btnRaiseReject.addEventListener('click', () => {
             responderAumento(false);
         });
-    }
-
-    if (isMultiplayer && socket) {
-        socket.on('player_bet_increase', (data) => {
-            // Este evento solía descontar directo, ahora usamos propose_raise.
-            // (Lo dejamos por si se llama desde algun otro lado viejo)
-            if (data.player_id !== getMyId()) {
-                STATE.apuestaActual = data.new_total;
-                const pZone = getZoneByPlayerId(data.player_id);
-                animarFichasAlCentro(data.amount, pZone, false);
-                if (window.CasinoAudio) window.CasinoAudio.playSfx('chip_drop');
-            }
-        });
-
-        socket.on('propose_raise', (data) => manejarPropuestaAumento(data.player_id, data.amount));
-        socket.on('raise_response', (data) => procesarRespuestaRaise(data.player_id, data.accepted));
-        socket.on('raise_resolved', (data) => resolverRaise(data.status, data.amount, data.proposer, data.acceptors, data.rejectorId));
     }
 }
 
@@ -2543,12 +2626,18 @@ function responderAumento(accepted) {
     if (!STATE.pendingRaise) return;
 
     const myId = getMyId();
-
-    if (isMultiplayer && socket) {
-        socket.emit('raise_response', {
-            room_id: window.USER_DATA.room_id,
-            player_id: myId,
-            accepted: accepted
+    if (isMultiplayer && mocheChannel) {
+        mocheChannel.send({
+            type: 'broadcast',
+            event: 'moche_events',
+            payload: {
+                type: 'raise_response',
+                payload: {
+                    room_id: window.USER_DATA.room_id,
+                    player_id: myId,
+                    accepted: accepted
+                }
+            }
         });
     } else {
         procesarRespuestaRaise(myId, accepted);
@@ -2563,12 +2652,18 @@ function botEvaluarAumento(botId, amount) {
     if (STATE.difficulty === 'hard' || STATE.difficulty === 'pro') acceptProb = 0.7;
 
     const accepted = Math.random() < acceptProb;
-
-    if (isMultiplayer && socket) {
-        socket.emit('raise_response', {
-            room_id: window.USER_DATA.room_id,
-            player_id: botId,
-            accepted: accepted
+    if (isMultiplayer && mocheChannel) {
+        mocheChannel.send({
+            type: 'broadcast',
+            event: 'moche_events',
+            payload: {
+                type: 'raise_response',
+                payload: {
+                    room_id: window.USER_DATA.room_id,
+                    player_id: botId,
+                    accepted: accepted
+                }
+            }
         });
     } else {
         procesarRespuestaRaise(botId, accepted);
@@ -2608,8 +2703,12 @@ function procesarRespuestaRaise(playerId, accepted) {
 
             // Pequeño delay para que vean la cruz roja (❌) antes de que se cierre
             setTimeout(() => {
-                if (isMultiplayer && socket) {
-                    socket.emit('raise_resolved', resolveData);
+                if (isMultiplayer && mocheChannel) {
+                    mocheChannel.send({
+                        type: 'broadcast',
+                        event: 'moche_events',
+                        payload: { type: 'raise_resolved', payload: resolveData }
+                    });
                 } else {
                     resolverRaise('cancelled', pr.amount, pr.proposer, resolveData.acceptors, playerId);
                 }
@@ -2631,8 +2730,12 @@ function procesarRespuestaRaise(playerId, accepted) {
                 };
 
                 setTimeout(() => {
-                    if (isMultiplayer && socket) {
-                        socket.emit('raise_resolved', resolveData);
+                    if (isMultiplayer && mocheChannel) {
+                        mocheChannel.send({
+                            type: 'broadcast',
+                            event: 'moche_events',
+                            payload: { type: 'raise_resolved', payload: resolveData }
+                        });
                     } else {
                         resolverRaise('accepted', pr.amount, pr.proposer, resolveData.acceptors);
                     }
@@ -3028,24 +3131,22 @@ function initQuickChat() {
                 window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
             }
             // Emit to all players in the room if online
-            if (isMultiplayer && socket) {
-                socket.emit('quick_message', {
-                    room_id: window.USER_DATA.room_id,
-                    sender: myName,
-                    msg: msg
+            if (isMultiplayer && mocheChannel) {
+                mocheChannel.send({
+                    type: 'broadcast',
+                    event: 'moche_events',
+                    payload: {
+                        type: 'quick_message',
+                        payload: {
+                            room_id: window.USER_DATA.room_id,
+                            sender: myName,
+                            msg: msg
+                        }
+                    }
                 });
             }
         });
     });
-
-    // Listen for quick messages from other players
-    if (isMultiplayer && socket) {
-        socket.on('quick_message', (data) => {
-            if (data && data.sender && data.msg) {
-                showChatToast(`💬 ${data.sender}: ${data.msg}`, toast);
-            }
-        });
-    }
 }
 
 let _toastTimer = null;
