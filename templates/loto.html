@@ -610,28 +610,19 @@
         </div>
     </div>
 
-    <!-- THREE.JS + CANNON-ES (CDN) -->
-    <script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
-  }
-}
-</script>
+    <!-- 2D Canvas Physics Engine (replaces Three.js + Cannon-ES) -->
 
-    <script type="module">
-        import * as THREE from 'three';
-        import * as CANNON from 'cannon-es';
+    <script>
+        /* =============================================================
+           LOTO INSTANTÁNEO  — Canvas 2D Physics Engine
+           No Three.js / Cannon-ES. Uses requestAnimationFrame + simple
+           Newtonian 2D simulation inside two circular containers.
+           ============================================================= */
 
         /* =========================================================
-           CONSTANTS
+           CONSTANTS  (2D world — pixels are logical units)
            ========================================================= */
-        const SPHERE_R = 3.2;
-        const BALL_R = 0.38;
-        const INNER_R = SPHERE_R - BALL_R - 0.05;
-        const TUBE_R = 0.55;
-        const PAYOUT = 75; // bet multiplier for a win
+        const PAYOUT = 75;          // win multiplier
 
         /* =========================================================
            STATE
@@ -643,12 +634,7 @@
         let winD1 = 0, winD2 = 0;
         let bits = parseInt(document.getElementById('bits-display').textContent) || 0;
         let history = [];
-        let animTime = 0;
-        let mixProgress = 0;
-        const MIX_DURATION = 5.0; // seconds
-        let extractTimer = 0;
-        let extractPhase = 0; // 0=rising, 1=paused, 2=done
-        let slowFactor = 1;
+        let data_won = false;
 
         /* =========================================================
            AUDIO (Web Audio API)
@@ -659,15 +645,17 @@
             return audioCtx;
         }
         function playTone(freq, type, dur, vol = 0.2, delay = 0) {
-            const ctx = getAudio();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.type = type; osc.frequency.value = freq;
-            gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
-            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + dur);
-            osc.start(ctx.currentTime + delay);
-            osc.stop(ctx.currentTime + delay + dur);
+            try {
+                const ctx = getAudio();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.type = type; osc.frequency.value = freq;
+                gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + dur);
+                osc.start(ctx.currentTime + delay);
+                osc.stop(ctx.currentTime + delay + dur);
+            } catch (e) { }
         }
         function playBounce() { playTone(180 + Math.random() * 80, 'triangle', 0.08, 0.06); }
         function playMotor(on) {
@@ -685,468 +673,476 @@
         function playLose() { playTone(150, 'sawtooth', 0.4, 0.15); }
 
         /* =========================================================
-           THREE.JS SETUP
+           CANVAS SETUP
            ========================================================= */
         const canvas = document.getElementById('loto-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1;
+        const ctx2d = canvas.getContext('2d');
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0b0614);
-        scene.fog = new THREE.FogExp2(0x0b0614, 0.035);
+        // Logical container radii (in px, set dynamically on resize)
+        let W = 0, H = 0;
+        let SPHERE_PX = 0;   // visual radius of each sphere
+        let BALL_PX = 0;     // ball radius
+        let INNER_PX = 0;    // max ball center distance from sphere center
+        let sphereCenters = [];  // [{x,y}, {x,y}]
 
-        const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
-        const CAM_DEFAULT = new THREE.Vector3(0, 1.5, 14);
-        camera.position.copy(CAM_DEFAULT);
-        camera.lookAt(0, 0, 0);
+        function onResize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * Math.min(devicePixelRatio, 2);
+            canvas.height = H * Math.min(devicePixelRatio, 2);
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx2d.scale(Math.min(devicePixelRatio, 2), Math.min(devicePixelRatio, 2));
 
-        /* ---- Lights ---- */
-        const ambient = new THREE.AmbientLight(0x200040, 0.6);
-        scene.add(ambient);
+            // Sphere radius = 38% of the smaller dimension, capped
+            SPHERE_PX = Math.min(W * 0.38, H * 0.26, 180);
+            BALL_PX = Math.max(SPHERE_PX * 0.108, 12);
+            INNER_PX = SPHERE_PX - BALL_PX - 2;
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        sunLight.position.set(5, 10, 8);
-        sunLight.castShadow = true;
-        scene.add(sunLight);
-
-        // Purple fill
-        const purpleLight = new THREE.PointLight(0x9b30ff, 3, 20);
-        purpleLight.position.set(-3, 4, 3);
-        scene.add(purpleLight);
-
-        // Blue accent
-        const blueLight = new THREE.PointLight(0x00c8ff, 3, 20);
-        blueLight.position.set(3, 4, 3);
-        scene.add(blueLight);
-
-        /* ---- Floor ---- */
-        const floorGeo = new THREE.PlaneGeometry(40, 40);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0020, roughness: 0.9, metalness: 0.1 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2; floor.position.y = -4.5;
-        floor.receiveShadow = true; scene.add(floor);
-
-        /* =========================================================
-           SPHERE FACTORY
-           ========================================================= */
-        function createSphereGroup(xOffset) {
-            const group = new THREE.Group();
-            group.position.x = xOffset;
-
-            // Glass shell (outer)
-            const shellGeo = new THREE.SphereGeometry(SPHERE_R, 64, 64);
-            const shellMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff,
-                transmission: 0.92,
-                roughness: 0.04,
-                metalness: 0.0,
-                thickness: 0.6,
-                ior: 1.45,
-                transparent: true,
-                opacity: 0.25,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-                envMapIntensity: 1.2,
-            });
-            const shell = new THREE.Mesh(shellGeo, shellMat);
-            group.add(shell);
-
-            // Inner glow sphere
-            const glowGeo = new THREE.SphereGeometry(SPHERE_R * 0.98, 32, 32);
-            const glowMat = new THREE.MeshBasicMaterial({
-                color: 0x4a0080, transparent: true, opacity: 0.08, side: THREE.BackSide, depthWrite: false
-            });
-            group.add(new THREE.Mesh(glowGeo, glowMat));
-
-            // Interior point light
-            const innerLight = new THREE.PointLight(0x9b30ff, 2.5, SPHERE_R * 2.5);
-            group.add(innerLight);
-
-            // Tube (top extraction nozzle)
-            const tubeGeo = new THREE.CylinderGeometry(TUBE_R, TUBE_R * 1.2, 2.0, 16, 1, true);
-            const tubeMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff, transmission: 0.85, roughness: 0.05, transparent: true, opacity: 0.3,
-                side: THREE.DoubleSide, depthWrite: false
-            });
-            const tube = new THREE.Mesh(tubeGeo, tubeMat);
-            tube.position.y = SPHERE_R + 0.9;
-            group.add(tube);
-
-            // Tube cap ring
-            const ringGeo = new THREE.TorusGeometry(TUBE_R * 1.1, 0.07, 12, 60);
-            const ringMat = new THREE.MeshStandardMaterial({ color: 0x9b30ff, emissive: 0x9b30ff, emissiveIntensity: 1, metalness: 0.8, roughness: 0.2 });
-            [SPHERE_R + 0.05, SPHERE_R + 1.85].forEach(y => {
-                const r = new THREE.Mesh(ringGeo, ringMat); r.position.y = y; group.add(r);
-            });
-
-            // Base stand
-            const baseGeo = new THREE.CylinderGeometry(SPHERE_R * 0.6, SPHERE_R * 0.8, 0.4, 24);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x220044, metalness: 0.9, roughness: 0.2 });
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.position.y = -(SPHERE_R + 0.15); group.add(base);
-
-            return { group, shell, innerLight };
+            const yCenter = H * 0.42;
+            const gap = W * 0.08;
+            const totalW = 2 * SPHERE_PX * 2 + gap;
+            const startX = (W - totalW) / 2 + SPHERE_PX;
+            sphereCenters = [
+                { x: startX, y: yCenter },
+                { x: startX + SPHERE_PX * 2 + gap, y: yCenter }
+            ];
+            // Reposition balls if they exist
+            if (sphereGroups.length) resetBallPositions();
         }
+        window.addEventListener('resize', onResize);
 
         /* =========================================================
-           BALL FACTORY (canvas texture for digit)
+           BALL COLORS
            ========================================================= */
-        const BALL_COLORS = [
-            0xff2255, 0xff6600, 0xffcc00, 0x22dd44, 0x00bbff,
-            0x9933ff, 0xff3399, 0x00ffcc, 0xff4444, 0x44aaff
+        const BALL_COLORS_CSS = [
+            '#ff2255', '#ff6600', '#ffcc00', '#22dd44', '#00bbff',
+            '#9933ff', '#ff3399', '#00ffcc', '#ff4444', '#44aaff'
         ];
 
-        function makeBallTexture(digit) {
-            const size = 256;
-            const cv = document.createElement('canvas');
-            cv.width = cv.height = size;
-            const ctx = cv.getContext('2d');
-            // Base color
-            const grad = ctx.createRadialGradient(size * .38, size * .35, size * .05, size / 2, size / 2, size * .5);
-            grad.addColorStop(0, 'rgba(255,255,255,0.35)');
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad; ctx.fillRect(0, 0, size, size);
-            // Number
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `bold ${size * .44}px 'Orbitron', monospace`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 10;
-            ctx.fillText(String(digit), size / 2, size / 2 + 4);
-            return new THREE.CanvasTexture(cv);
+        /* =========================================================
+           SPHERE GROUPS — data model
+           sphereGroups[i] = {
+             cx, cy,             // center from sphereCenters
+             balls: [{x,y,vx,vy,digit,color,extracted,winBall}],
+             extractBall: null | ball,
+             extractPhase: 'idle'|'rising'|'done',
+             extractTargetY: 0,
+             winDigit: null
+           }
+           ========================================================= */
+        let sphereGroups = [];
+
+        function makeBall(digit, cx, cy) {
+            const angle = Math.random() * Math.PI * 2;
+            const r = INNER_PX * 0.4 * Math.cbrt(Math.random());
+            return {
+                digit,
+                color: BALL_COLORS_CSS[digit],
+                x: cx + r * Math.cos(angle),
+                y: cy + r * Math.sin(angle),
+                vx: (Math.random() - 0.5) * 120,
+                vy: (Math.random() - 0.5) * 120,
+                extracted: false,
+                winBall: false,
+                extractX: 0,
+                extractY: 0,
+            };
         }
 
-        function createBall(digit, color) {
-            const geo = new THREE.SphereGeometry(BALL_R, 32, 32);
-            const tex = makeBallTexture(digit);
-            const mat = new THREE.MeshStandardMaterial({
-                color, map: tex,
-                metalness: 0.4, roughness: 0.25,
-                emissive: new THREE.Color(color), emissiveIntensity: 0.12,
+        function buildSphereGroups() {
+            sphereGroups = sphereCenters.map(({ x, y }) => {
+                const balls = [];
+                for (let d = 0; d < 10; d++) balls.push(makeBall(d, x, y));
+                return { cx: x, cy: y, balls, extractBall: null, extractPhase: 'idle', winDigit: null };
             });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.castShadow = true;
-            mesh.userData.digit = digit;
-            return mesh;
+        }
+
+        function resetBallPositions() {
+            sphereGroups.forEach((sg, i) => {
+                sg.cx = sphereCenters[i].x;
+                sg.cy = sphereCenters[i].y;
+                sg.balls.forEach(b => {
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = INNER_PX * 0.4 * Math.cbrt(Math.random());
+                    b.x = sg.cx + r * Math.cos(angle);
+                    b.y = sg.cy + r * Math.sin(angle);
+                    b.vx = (Math.random() - 0.5) * 120;
+                    b.vy = (Math.random() - 0.5) * 120;
+                    b.extracted = false;
+                    b.winBall = false;
+                });
+                sg.extractBall = null;
+                sg.extractPhase = 'idle';
+            });
         }
 
         /* =========================================================
-           CANNON-ES PHYSICS WORLD
+           PHYSICS UPDATE  (dt in seconds)
            ========================================================= */
-        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.8, 0) });
-        world.broadphase = new CANNON.SAPBroadphase(world);
-        world.allowSleep = false;
+        const GRAVITY = 0;           // no gravitypull — blower simulated by impulses
+        const SPEED_CAP = 400;       // px/s max
+        const DAMPING = 0.998;       // per-frame velocity retention
+        let impulseTimer = 0;
 
-        // Sphere shell containers (two)
-        const SPHERE_OFFSETS = [-4.5, 4.5];
+        function physicsUpdate(dt) {
+            impulseTimer += dt;
+            const doImpulse = impulseTimer > 0.18;
+            if (doImpulse) impulseTimer = 0;
 
-        const sphereData = SPHERE_OFFSETS.map((xOff, idx) => {
-            // Visual group
-            const { group, shell, innerLight } = createSphereGroup(xOff);
-            scene.add(group);
+            sphereGroups.forEach(sg => {
+                const { cx, cy, balls } = sg;
 
-            // Physics: inner container (inverted sphere made of a hollow compound)
-            // We use a large static sphere body as the container walls
-            const containerBody = new CANNON.Body({ mass: 0 });
-            const containerShape = new CANNON.Sphere(INNER_R);
-            containerBody.addShape(containerShape);
-            containerBody.position.set(xOff, 0, 0);
-            // Invert friction so balls bounce inside
-            containerBody.material = new CANNON.Material('container');
-            world.addBody(containerBody);
+                // Blower impulse every ~0.18 s
+                if (doImpulse && (state === 'MIXING' || state === 'IDLE')) {
+                    balls.forEach(b => {
+                        if (b.extracted) return;
+                        b.vx += (Math.random() - 0.5) * 160;
+                        b.vy += (Math.random() - 0.5) * 160;
+                    });
+                }
 
-            // Balls
-            const ballMat = new CANNON.Material('ball');
-            const contactMat = new CANNON.ContactMaterial(ballMat, ballMat, { restitution: 0.65, friction: 0.3 });
-            const wallContact = new CANNON.ContactMaterial(ballMat, containerBody.material, { restitution: 0.55, friction: 0.2 });
-            world.addContactMaterial(contactMat);
-            world.addContactMaterial(wallContact);
+                // Integrate + boundary
+                balls.forEach(b => {
+                    if (b.extracted) return;
+                    b.vx *= DAMPING;
+                    b.vy *= DAMPING;
 
-            const balls = [];
-            for (let d = 0; d < 10; d++) {
-                // Physics body
-                const body = new CANNON.Body({
-                    mass: 1,
-                    shape: new CANNON.Sphere(BALL_R),
-                    material: ballMat,
-                    linearDamping: 0.05,
-                    angularDamping: 0.05,
-                });
-                // Scatter initial positions
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.random() * Math.PI;
-                const r = (INNER_R - BALL_R) * 0.55 * Math.cbrt(Math.random());
-                body.position.set(
-                    xOff + r * Math.sin(phi) * Math.cos(theta),
-                    r * Math.sin(phi) * Math.sin(theta) - 1.5,
-                    r * Math.cos(phi)
-                );
-                body.velocity.set((Math.random() - .5) * 2, (Math.random() - .5) * 2, (Math.random() - .5) * 2);
-                world.addBody(body);
+                    // Speed cap
+                    const spd = Math.hypot(b.vx, b.vy);
+                    if (spd > SPEED_CAP) { b.vx = b.vx / spd * SPEED_CAP; b.vy = b.vy / spd * SPEED_CAP; }
 
-                // Mesh
-                const mesh = createBall(d, BALL_COLORS[d]);
-                scene.add(mesh);
+                    b.x += b.vx * dt;
+                    b.y += b.vy * dt;
 
-                // Collision sound
-                body.addEventListener('collide', (e) => {
-                    const v = e.contact.getImpactVelocityAlongNormal();
-                    if (Math.abs(v) > 1.5 && (state === 'MIXING' || state === 'IDLE')) playBounce();
-                });
-
-                balls.push({ body, mesh, digit: d, extracted: false });
-            }
-
-            return { group, shell, balls, containerBody, innerLight, xOff, winBall: null, extractMesh: null, winDigit: null };
-        });
-
-        /* =========================================================
-           CUSTOM RENDERER: keep balls inside sphere
-           ========================================================= */
-        function enforceSpherewall() {
-            sphereData.forEach(({ containerBody, balls }) => {
-                const center = containerBody.position;
-                balls.forEach(({ body }) => {
-                    const dx = body.position.x - center.x;
-                    const dy = body.position.y - center.y;
-                    const dz = body.position.z - center.z;
-                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                    const maxR = INNER_R - BALL_R;
-                    if (dist > maxR) {
-                        const nx = dx / dist, ny = dy / dist, nz = dz / dist;
-                        body.position.set(center.x + nx * maxR, center.y + ny * maxR, center.z + nz * maxR);
+                    // Circular boundary (the sphere wall)
+                    const dx = b.x - cx, dy = b.y - cy;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > INNER_PX) {
+                        const nx = dx / dist, ny = dy / dist;
+                        // Push back
+                        b.x = cx + nx * INNER_PX;
+                        b.y = cy + ny * INNER_PX;
                         // Reflect velocity
-                        const vDot = body.velocity.x * nx + body.velocity.y * ny + body.velocity.z * nz;
-                        body.velocity.x -= 2 * vDot * nx;
-                        body.velocity.y -= 2 * vDot * ny;
-                        body.velocity.z -= 2 * vDot * nz;
-                        // Dampen
-                        body.velocity.scale(0.8, body.velocity);
+                        const dot = b.vx * nx + b.vy * ny;
+                        b.vx -= 2 * dot * nx * 0.75;
+                        b.vy -= 2 * dot * ny * 0.75;
+                        if (Math.abs(dot) > 30) playBounce();
                     }
                 });
-            });
-        }
 
-        /* =========================================================
-           MIXING IMPULSES
-           ========================================================= */
-        function applyMixImpulses(intensity) {
-            sphereData.forEach(({ containerBody, balls }) => {
-                const c = containerBody.position;
-                balls.forEach(({ body, extracted }) => {
-                    if (extracted) return;
-                    const dx = body.position.x - c.x, dy = body.position.y - c.y, dz = body.position.z - c.z;
-                    const f = intensity * (2 + Math.random() * 3);
-                    body.applyForce(
-                        new CANNON.Vec3(
-                            (Math.random() - .5) * f - dx * .5,
-                            (Math.random() - .5) * f - dy * .5 + f * .3,
-                            (Math.random() - .5) * f - dz * .5
-                        ),
-                        body.position
-                    );
-                });
+                // Ball-to-ball elastic collision
+                for (let i = 0; i < balls.length; i++) {
+                    if (balls[i].extracted) continue;
+                    for (let j = i + 1; j < balls.length; j++) {
+                        if (balls[j].extracted) continue;
+                        const bi = balls[i], bj = balls[j];
+                        const dx = bj.x - bi.x, dy = bj.y - bi.y;
+                        const dist = Math.hypot(dx, dy);
+                        const minDist = BALL_PX * 2;
+                        if (dist < minDist && dist > 0.001) {
+                            const nx = dx / dist, ny = dy / dist;
+                            // Separate
+                            const overlap = (minDist - dist) * 0.5;
+                            bi.x -= nx * overlap; bi.y -= ny * overlap;
+                            bj.x += nx * overlap; bj.y += ny * overlap;
+                            // Swap velocity components along normal
+                            const dvx = bi.vx - bj.vx, dvy = bi.vy - bj.vy;
+                            const dot = dvx * nx + dvy * ny;
+                            if (dot > 0) {
+                                bi.vx -= dot * nx * 0.8;
+                                bi.vy -= dot * ny * 0.8;
+                                bj.vx += dot * nx * 0.8;
+                                bj.vy += dot * ny * 0.8;
+                            }
+                        }
+                    }
+                }
             });
         }
 
         /* =========================================================
            EXTRACTION ANIMATION
            ========================================================= */
-        let extractBall1 = null, extractBall2 = null;
-        let e1Phase = 'idle', e2Phase = 'idle';
-        let e1Y = 0, e2Y = 0;
-
-        function chooseWinBall(sIdx) {
-            const sd = sphereData[sIdx];
-            const remaining = sd.balls.filter(b => !b.extracted);
-            if (!remaining.length) return null;
-            const chosen = remaining.find(b => b.digit === (sIdx === 0 ? winD1 : winD2)) || remaining[0];
+        function chooseWinBall(sgIdx) {
+            const sg = sphereGroups[sgIdx];
+            const targetDigit = sgIdx === 0 ? winD1 : winD2;
+            const pool = sg.balls.filter(b => !b.extracted);
+            let chosen = pool.find(b => b.digit === targetDigit) || pool[0];
+            if (!chosen) return;
             chosen.extracted = true;
-            chosen.body.sleep(); // stop physics
-            sd.winBall = chosen;
-            return chosen;
+            chosen.winBall = true;
+            sg.extractBall = chosen;
+            sg.extractPhase = 'rising';
+            // Target: above the sphere
+            sg.extractTargetX = sg.cx;
+            sg.extractTargetY = sg.cy - SPHERE_PX - BALL_PX * 2;
         }
 
         /* =========================================================
-           CAMERA ANIMATION
+           DRAW ROUTINES
            ========================================================= */
-        let camTarget = CAM_DEFAULT.clone();
-        let camLookTarget = new THREE.Vector3(0, 0, 0);
-        const camLookCurrent = new THREE.Vector3(0, 0, 0);
+        let animTime = 0;
 
-        function setCameraFocus(x, y) {
-            camTarget.set(x, y + 1.5, 6);
-            camLookTarget.set(x, y, 0);
-        }
-        function resetCamera() {
-            camTarget.copy(CAM_DEFAULT);
-            camLookTarget.set(0, 0, 0);
-        }
+        function lerp(a, b, t) { return a + (b - a) * t; }
 
-        /* =========================================================
-           TUBE EXIT POSITIONS
-           ========================================================= */
-        function getTubeTop(sIdx) {
-            return { x: SPHERE_OFFSETS[sIdx], yStart: SPHERE_R + 0.4, yEnd: SPHERE_R + 2.2 };
-        }
+        function drawSphere(sg, idx) {
+            const { cx, cy } = sg;
+            const R = SPHERE_PX;
 
-        /* =========================================================
-           MAIN GAME LOGIC
-           ========================================================= */
-        async function startGame() {
-            if (state !== 'IDLE') return;
+            // Rotating glow halo
+            const hue = (animTime * 40 + idx * 180) % 360;
+            const glow = ctx2d.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 1.15);
+            glow.addColorStop(0, `hsla(${hue},90%,60%,0.0)`);
+            glow.addColorStop(0.7, `hsla(${hue},90%,60%,0.06)`);
+            glow.addColorStop(1, `hsla(${hue},90%,60%,0.18)`);
+            ctx2d.beginPath();
+            ctx2d.arc(cx, cy, R * 1.15, 0, Math.PI * 2);
+            ctx2d.fillStyle = glow;
+            ctx2d.fill();
 
-            const chosen = String(chosenD1) + String(chosenD2);
-            const response = await fetch('/api/loto/play', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bet: betAmount, chosen })
+            // Glass sphere — dark fill
+            const bg = ctx2d.createRadialGradient(cx - R * 0.25, cy - R * 0.25, R * 0.1, cx, cy, R);
+            bg.addColorStop(0, 'rgba(60,0,100,0.55)');
+            bg.addColorStop(1, 'rgba(0,10,40,0.60)');
+            ctx2d.beginPath();
+            ctx2d.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx2d.fillStyle = bg;
+            ctx2d.fill();
+
+            // Glass rim
+            ctx2d.beginPath();
+            ctx2d.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx2d.strokeStyle = `rgba(155,48,255,${0.4 + 0.2 * Math.sin(animTime * 3)})`;
+            ctx2d.lineWidth = 2.5;
+            ctx2d.stroke();
+
+            // Inner specular highlight
+            const spec = ctx2d.createRadialGradient(cx - R * 0.3, cy - R * 0.35, 0, cx - R * 0.15, cy - R * 0.2, R * 0.65);
+            spec.addColorStop(0, 'rgba(255,255,255,0.18)');
+            spec.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx2d.beginPath();
+            ctx2d.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx2d.fillStyle = spec;
+            ctx2d.fill();
+
+            // Top tube (extraction nozzle)
+            const tubeW = BALL_PX * 1.4;
+            const tubeTop = cy - R - BALL_PX * 3;
+            const tubeBottom = cy - R + 2;
+            const tubeGrad = ctx2d.createLinearGradient(cx - tubeW, tubeTop, cx + tubeW, tubeTop);
+            tubeGrad.addColorStop(0, 'rgba(155,48,255,0.5)');
+            tubeGrad.addColorStop(0.5, 'rgba(200,200,255,0.2)');
+            tubeGrad.addColorStop(1, 'rgba(155,48,255,0.5)');
+            ctx2d.beginPath();
+            ctx2d.roundRect(cx - tubeW, tubeTop, tubeW * 2, tubeBottom - tubeTop, 4);
+            ctx2d.fillStyle = tubeGrad;
+            ctx2d.fill();
+            ctx2d.strokeStyle = 'rgba(155,48,255,0.7)';
+            ctx2d.lineWidth = 1.5;
+            ctx2d.stroke();
+
+            // Clip-path for balls: only draw inside sphere
+            ctx2d.save();
+            ctx2d.beginPath();
+            ctx2d.arc(cx, cy, R - 1, 0, Math.PI * 2);
+            ctx2d.clip();
+
+            // Draw balls
+            sg.balls.forEach(b => {
+                if (b.extracted && !b.winBall) return;
+                if (b.winBall) return; // drawn separately
+                drawBall(b);
             });
-            const data = await response.json();
-            if (data.status !== 'ok') {
-                showStatus(data.message || 'Error', 2000);
-                return;
-            }
 
-            winningResult = data.result;
-            winD1 = parseInt(winningResult[0]);
-            winD2 = parseInt(winningResult[1]);
-            bits = data.bits;
-            updateBitsDisplay();
+            ctx2d.restore();
 
-            document.getElementById('play-btn').disabled = true;
-            document.getElementById('digit-1').textContent = '?';
-            document.getElementById('digit-2').textContent = '?';
-            document.getElementById('digit-display').classList.remove('visible');
-            document.getElementById('digit-1').classList.remove('lit');
-            document.getElementById('digit-2').classList.remove('lit');
+            // Draw extracting/extracted win ball (above sphere, no clip)
+            if (sg.extractBall) drawBall(sg.extractBall);
+        }
 
-            state = 'MIXING';
-            mixProgress = 0;
-            animTime = 0;
-            e1Phase = 'idle'; e2Phase = 'idle';
-            extractBall1 = null; extractBall2 = null;
-            playMotor(true);
-            showStatus('🎱 Mezclando bolas...', 0);
+        function drawBall(b) {
+            const r = BALL_PX;
+            // Sphere shading
+            const grad = ctx2d.createRadialGradient(b.x - r * 0.3, b.y - r * 0.35, r * 0.05, b.x, b.y, r);
+            grad.addColorStop(0, lighten(b.color, 0.45));
+            grad.addColorStop(0.55, b.color);
+            grad.addColorStop(1, darken(b.color, 0.5));
+            ctx2d.beginPath();
+            ctx2d.arc(b.x, b.y, r, 0, Math.PI * 2);
+            ctx2d.fillStyle = grad;
+            ctx2d.fill();
+
+            // Number text
+            ctx2d.fillStyle = '#fff';
+            ctx2d.font = `bold ${Math.round(r * 1.1)}px 'Orbitron', monospace`;
+            ctx2d.textAlign = 'center';
+            ctx2d.textBaseline = 'middle';
+            ctx2d.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx2d.shadowBlur = 4;
+            ctx2d.fillText(String(b.digit), b.x, b.y + 1);
+            ctx2d.shadowBlur = 0;
+        }
+
+        // Simple color helpers
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+            return [r, g, b];
+        }
+        function lighten(hex, t) {
+            const [r, g, b] = hexToRgb(hex);
+            return `rgb(${Math.round(r + (255 - r) * t)},${Math.round(g + (255 - g) * t)},${Math.round(b + (255 - b) * t)})`;
+        }
+        function darken(hex, t) {
+            const [r, g, b] = hexToRgb(hex);
+            return `rgb(${Math.round(r * (1 - t))},${Math.round(g * (1 - t))},${Math.round(b * (1 - t))})`;
         }
 
         /* =========================================================
-           ANIMATION LOOP
+           DRAWING BACKGROUND
            ========================================================= */
-        const clock = new THREE.Clock();
-        let lastPhysicsTime = 0;
+        function drawBackground() {
+            ctx2d.fillStyle = '#0b0614';
+            ctx2d.fillRect(0, 0, W, H);
 
-        function animate() {
-            requestAnimationFrame(animate);
-            const rawDt = clock.getDelta();
-            const dt = Math.min(rawDt, 0.05) * slowFactor;
+            // Subtle starfield (static — only redrawn each frame cheaply with very few dots)
+            // Pre-generated at init
+        }
 
-            // ── Physics step ──
+        let stars = [];
+        function buildStars() {
+            stars = [];
+            for (let i = 0; i < 60; i++) {
+                stars.push({
+                    x: Math.random(),
+                    y: Math.random(),
+                    r: Math.random() * 1.2 + 0.3,
+                    a: Math.random() * 0.6 + 0.1,
+                    speed: Math.random() * 0.0003 + 0.0001
+                });
+            }
+        }
+
+        function drawStars() {
+            stars.forEach(s => {
+                s.a = 0.1 + 0.5 * (0.5 + 0.5 * Math.sin(animTime * s.speed * 1000));
+                ctx2d.beginPath();
+                ctx2d.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+                ctx2d.fillStyle = `rgba(255,255,255,${s.a})`;
+                ctx2d.fill();
+            });
+        }
+
+        /* =========================================================
+           EXTRACTION ANIMATION UPDATE
+           ========================================================= */
+        function updateExtraction(dt, sgIdx) {
+            const sg = sphereGroups[sgIdx];
+            if (!sg || !sg.extractBall || sg.extractPhase !== 'rising') return false;
+            const b = sg.extractBall;
+            const spd = 6;
+            b.x = lerp(b.x, sg.extractTargetX, spd * dt);
+            b.y = lerp(b.y, sg.extractTargetY, spd * dt);
+            return Math.abs(b.y - sg.extractTargetY) < 3;
+        }
+
+        /* =========================================================
+           MAIN STATE MACHINE + RENDER LOOP
+           ========================================================= */
+        let mixTimer = 0;
+        const MIX_DURATION = 5.0;
+        let lastTime = null;
+        let rafId = null;
+        let isVisible = true;
+
+        document.addEventListener('visibilitychange', () => {
+            isVisible = !document.hidden;
+            if (isVisible && !rafId) rafId = requestAnimationFrame(frame);
+        });
+
+        function frame(ts) {
+            if (!isVisible && state === 'IDLE') { rafId = requestAnimationFrame(frame); return; }
+            rafId = requestAnimationFrame(frame);
+
+            if (lastTime === null) lastTime = ts;
+            const rawDt = Math.min((ts - lastTime) / 1000, 0.05);
+            lastTime = ts;
+            animTime += rawDt;
+
+            // Physics only when needed
             if (state === 'MIXING' || state === 'IDLE') {
-                world.step(1 / 60, rawDt, 3);
-                enforceSpherewall();
+                physicsUpdate(rawDt);
             }
 
-            // ── Sync meshes from physics ──
-            sphereData.forEach(sd => {
-                sd.balls.forEach(({ body, mesh, extracted }) => {
-                    if (!extracted) {
-                        mesh.position.copy(body.position);
-                        mesh.quaternion.copy(body.quaternion);
-                    }
-                });
-            });
+            // ── Draw ──
+            ctx2d.save();
+            ctx2d.setTransform(1, 0, 0, 1, 0, 0);
+            ctx2d.scale(Math.min(devicePixelRatio, 2), Math.min(devicePixelRatio, 2));
 
-            // ── State machine ──
+            drawBackground();
+            drawStars();
+
+            sphereGroups.forEach((sg, i) => drawSphere(sg, i));
+
+            ctx2d.restore();
+
+            // ── States ──
             if (state === 'MIXING') {
-                mixProgress += rawDt / MIX_DURATION;
-                const intensity = 4 + Math.sin(mixProgress * Math.PI * 2) * 2;
-                if (Math.random() < 0.5) applyMixImpulses(intensity);
-
-                // Rotating glow
-                sphereData.forEach(sd => {
-                    sd.innerLight.intensity = 2 + Math.sin(animTime * 3) * 0.8;
-                    sd.group.rotation.y += rawDt * 0.15;
-                });
-
-                if (mixProgress >= 1) {
-                    // Start extracting sphere 1
+                mixTimer += rawDt;
+                if (mixTimer >= MIX_DURATION) {
+                    // Move to EXTRACT1
                     state = 'EXTRACT1';
-                    slowFactor = 0.35; // slow motion
-                    extractBall1 = chooseWinBall(0);
-                    e1Phase = 'rising';
-                    e1Y = extractBall1 ? extractBall1.mesh.position.y : 0;
-                    setCameraFocus(SPHERE_OFFSETS[0], SPHERE_R + 1);
+                    mixTimer = 0;
+                    chooseWinBall(0);
                     showStatus('✨ Extrayendo primer dígito...', 0);
                     playExtract();
                 }
-            }
-            else if (state === 'EXTRACT1') {
-                if (e1Phase === 'rising' && extractBall1) {
-                    const target = getTubeTop(0);
-                    const tx = target.x, ty = target.yEnd;
-                    const b1 = extractBall1.mesh;
-                    b1.position.x += (tx - b1.position.x) * 6 * dt;
-                    b1.position.z += (0 - b1.position.z) * 6 * dt;
-                    b1.position.y += (ty - b1.position.y) * 4 * dt;
-                    if (Math.abs(b1.position.y - ty) < 0.1) {
-                        e1Phase = 'paused';
-                        // Show digit 1
-                        document.getElementById('digit-1').textContent = String(winD1);
-                        document.getElementById('digit-1').classList.add('lit');
-                        document.getElementById('digit-display').classList.add('visible');
-                        setTimeout(() => {
-                            // Extract sphere 2
-                            state = 'EXTRACT2';
-                            extractBall2 = chooseWinBall(1);
-                            e2Phase = 'rising';
-                            e2Y = extractBall2 ? extractBall2.mesh.position.y : 0;
-                            setCameraFocus(SPHERE_OFFSETS[1], SPHERE_R + 1);
-                            showStatus('✨ Extrayendo segundo dígito...', 0);
-                            playExtract();
-                        }, 900 / slowFactor);
-                    }
+            } else if (state === 'EXTRACT1') {
+                const done = updateExtraction(rawDt, 0);
+                if (done && sphereGroups[0].extractPhase === 'rising') {
+                    sphereGroups[0].extractPhase = 'done';
+                    document.getElementById('digit-1').textContent = String(winD1);
+                    document.getElementById('digit-1').classList.add('lit');
+                    document.getElementById('digit-display').classList.add('visible');
+                    setTimeout(() => {
+                        state = 'EXTRACT2';
+                        chooseWinBall(1);
+                        showStatus('✨ Extrayendo segundo dígito...', 0);
+                        playExtract();
+                    }, 900);
+                }
+            } else if (state === 'EXTRACT2') {
+                const done = updateExtraction(rawDt, 1);
+                if (done && sphereGroups[1].extractPhase === 'rising') {
+                    sphereGroups[1].extractPhase = 'done';
+                    document.getElementById('digit-2').textContent = String(winD2);
+                    document.getElementById('digit-2').classList.add('lit');
+                    setTimeout(() => {
+                        showResult(winningResult, data_won);
+                        state = 'RESULT';
+                    }, 900);
                 }
             }
-            else if (state === 'EXTRACT2') {
-                if (e2Phase === 'rising' && extractBall2) {
-                    const target = getTubeTop(1);
-                    const tx = target.x, ty = target.yEnd;
-                    const b2 = extractBall2.mesh;
-                    b2.position.x += (tx - b2.position.x) * 6 * dt;
-                    b2.position.z += (0 - b2.position.z) * 6 * dt;
-                    b2.position.y += (ty - b2.position.y) * 4 * dt;
-                    if (Math.abs(b2.position.y - ty) < 0.1) {
-                        e2Phase = 'paused';
-                        document.getElementById('digit-2').textContent = String(winD2);
-                        document.getElementById('digit-2').classList.add('lit');
-                        setTimeout(() => {
-                            slowFactor = 1;
-                            resetCamera();
-                            showResult(winningResult, data_won);
-                            state = 'RESULT';
-                        }, 900);
-                    }
-                }
-            }
-
-            // ── Camera smooth follow ──
-            camera.position.lerp(camTarget, 5 * rawDt);
-            camLookCurrent.lerp(camLookTarget, 5 * rawDt);
-            camera.lookAt(camLookCurrent);
-
-            // ── Lights pulse ──
-            animTime += rawDt;
-            purpleLight.intensity = 2.5 + Math.sin(animTime * 1.7) * 0.8;
-            blueLight.intensity = 2.5 + Math.cos(animTime * 1.3) * 0.8;
-
-            renderer.render(scene, camera);
         }
 
-        // Store won flag accessible in timeout closure
-        let data_won = false;
+        /* =========================================================
+           GAME STATE HELPERS
+           ========================================================= */
+        function updateBitsDisplay() {
+            document.getElementById('bits-display').textContent = bits;
+            // Also update home screen bits counter if page is shared (it isn't, but just in case)
+        }
+        function showStatus(msg, dur) {
+            const el = document.getElementById('status-msg');
+            el.textContent = msg; el.classList.add('visible');
+            if (dur > 0) setTimeout(hideStatus, dur);
+        }
+        function hideStatus() {
+            document.getElementById('status-msg').classList.remove('visible');
+        }
+        function updateChosenDisplay() {
+            document.getElementById('chosen-display').textContent = String(chosenD1) + String(chosenD2);
+        }
 
         /* =========================================================
            RESULT
@@ -1162,11 +1158,10 @@
                 document.getElementById('result-sub').textContent = `Tu número ${chosen} era el correcto`;
                 document.getElementById('result-win-amount').textContent = `+${winAmt} 🪙 Bits`;
                 playWin();
-                // Credit
                 fetch('/api/loto/result', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ win_amount: winAmt })
-                }).then(r => r.json()).then(d => { if (d.bits) { bits = d.bits; updateBitsDisplay(); } });
+                }).then(r => r.json()).then(d => { if (d.bits !== undefined) { bits = d.bits; updateBitsDisplay(); } });
                 addHistory(result, true);
             } else {
                 document.getElementById('result-title').textContent = 'Sin suerte esta vez';
@@ -1191,7 +1186,7 @@
 
         function resetGame() {
             state = 'IDLE';
-            slowFactor = 1;
+            mixTimer = 0;
             document.getElementById('result-overlay').classList.remove('visible');
             document.getElementById('digit-display').classList.remove('visible');
             document.getElementById('digit-1').textContent = '?';
@@ -1200,86 +1195,13 @@
             document.getElementById('digit-2').classList.remove('lit');
             document.getElementById('play-btn').disabled = false;
 
-            // Reset physics for all balls
-            sphereData.forEach(sd => {
-                sd.winBall = null;
-                sd.balls.forEach(b => {
-                    b.extracted = false;
-                    b.body.wakeUp();
-                    const r = (INNER_R - BALL_R) * 0.5 * Math.cbrt(Math.random());
-                    const theta = Math.random() * Math.PI * 2, phi = Math.random() * Math.PI;
-                    b.body.position.set(
-                        sd.xOff + r * Math.sin(phi) * Math.cos(theta),
-                        r * Math.sin(phi) * Math.sin(theta) - 1.5,
-                        r * Math.cos(phi)
-                    );
-                    b.body.velocity.set((Math.random() - .5) * 4, (Math.random() - .5) * 4, (Math.random() - .5) * 4);
-                    b.body.angularVelocity.set(0, 0, 0);
-                    b.mesh.position.copy(b.body.position);
-                });
-                sd.group.rotation.y = 0;
-            });
-            resetCamera();
+            // Rebuild balls
+            buildSphereGroups();
         }
 
         /* =========================================================
-           UI HELPERS
+           PLAY LOGIC
            ========================================================= */
-        function updateBitsDisplay() {
-            document.getElementById('bits-display').textContent = bits;
-        }
-        function showStatus(msg, dur) {
-            const el = document.getElementById('status-msg');
-            el.textContent = msg; el.classList.add('visible');
-            if (dur > 0) setTimeout(hideStatus, dur);
-        }
-        function hideStatus() {
-            document.getElementById('status-msg').classList.remove('visible');
-        }
-        function updateChosenDisplay() {
-            document.getElementById('chosen-display').textContent = String(chosenD1) + String(chosenD2);
-        }
-
-        /* =========================================================
-           RESIZE
-           ========================================================= */
-        function onResize() {
-            const w = window.innerWidth, h = window.innerHeight;
-            renderer.setSize(w, h);
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
-        }
-        window.addEventListener('resize', onResize);
-        onResize();
-
-        /* =========================================================
-           UI EVENTS
-           ========================================================= */
-        // Digit pickers
-        document.getElementById('d1-up').addEventListener('click', () => { chosenD1 = (chosenD1 + 1) % 10; document.getElementById('d1-val').textContent = chosenD1; updateChosenDisplay(); });
-        document.getElementById('d1-down').addEventListener('click', () => { chosenD1 = (chosenD1 + 9) % 10; document.getElementById('d1-val').textContent = chosenD1; updateChosenDisplay(); });
-        document.getElementById('d2-up').addEventListener('click', () => { chosenD2 = (chosenD2 + 1) % 10; document.getElementById('d2-val').textContent = chosenD2; updateChosenDisplay(); });
-        document.getElementById('d2-down').addEventListener('click', () => { chosenD2 = (chosenD2 + 9) % 10; document.getElementById('d2-val').textContent = chosenD2; updateChosenDisplay(); });
-
-        // Bet chips
-        document.getElementById('bet-chips').addEventListener('click', e => {
-            const btn = e.target.closest('.chip-btn');
-            if (!btn || state !== 'IDLE') return;
-            document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            betAmount = parseInt(btn.dataset.amount);
-            document.getElementById('bet-label').textContent = betAmount;
-        });
-
-        // Play
-        document.getElementById('play-btn').addEventListener('click', () => {
-            if (state !== 'IDLE') return;
-            data_won = false; // reset
-            // We need to temporarily store the won result before showResult is called
-            // The API returns won; we patch via module-level variable below
-            startGameWithWonFlag();
-        });
-
         async function startGameWithWonFlag() {
             if (state !== 'IDLE') return;
             const chosen = String(chosenD1) + String(chosenD2);
@@ -1308,22 +1230,46 @@
             document.getElementById('digit-2').classList.remove('lit');
 
             state = 'MIXING';
-            mixProgress = 0;
-            animTime = 0;
-            e1Phase = 'idle'; e2Phase = 'idle';
-            extractBall1 = null; extractBall2 = null;
+            mixTimer = 0;
             playMotor(true);
             showStatus('🎱 Mezclando bolas...', 0);
+
+            // Reset sphere groups fresh for this round
+            buildSphereGroups();
         }
 
-        // Play again
+        /* =========================================================
+           UI EVENTS
+           ========================================================= */
+        document.getElementById('d1-up').addEventListener('click', () => { chosenD1 = (chosenD1 + 1) % 10; document.getElementById('d1-val').textContent = chosenD1; updateChosenDisplay(); });
+        document.getElementById('d1-down').addEventListener('click', () => { chosenD1 = (chosenD1 + 9) % 10; document.getElementById('d1-val').textContent = chosenD1; updateChosenDisplay(); });
+        document.getElementById('d2-up').addEventListener('click', () => { chosenD2 = (chosenD2 + 1) % 10; document.getElementById('d2-val').textContent = chosenD2; updateChosenDisplay(); });
+        document.getElementById('d2-down').addEventListener('click', () => { chosenD2 = (chosenD2 + 9) % 10; document.getElementById('d2-val').textContent = chosenD2; updateChosenDisplay(); });
+
+        document.getElementById('bet-chips').addEventListener('click', e => {
+            const btn = e.target.closest('.chip-btn');
+            if (!btn || state !== 'IDLE') return;
+            document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            betAmount = parseInt(btn.dataset.amount);
+            document.getElementById('bet-label').textContent = betAmount;
+        });
+
+        document.getElementById('play-btn').addEventListener('click', () => {
+            if (state !== 'IDLE') return;
+            data_won = false;
+            startGameWithWonFlag();
+        });
+
         document.getElementById('result-play-again').addEventListener('click', resetGame);
 
         /* =========================================================
-           START RENDER LOOP
+           BOOT
            ========================================================= */
-        // Remove old startGame bind since we use startGameWithWonFlag
-        animate();
+        onResize();
+        buildStars();
+        buildSphereGroups();
+        rafId = requestAnimationFrame(frame);
     </script>
 </body>
 

@@ -2598,3 +2598,170 @@ select.input-modern option {
     font-size: 0.65rem;
   }
 }
+
+/* ========================================================
+   BITS COUNTER — Hero
+======================================================== */
+.bits-counter-hero {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(248, 212, 72, 0.08);
+  border: 1px solid rgba(248, 212, 72, 0.3);
+  border-radius: 50px;
+  padding: 10px 22px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f8d448;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: bitsCounterPulse 3s ease-in-out infinite;
+}
+
+.bits-counter-icon {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 6px rgba(248, 212, 72, 0.6));
+}
+
+.bits-counter-label {
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 500;
+}
+
+.bits-counter-value {
+  color: #f8d448;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px rgba(248, 212, 72, 0.5);
+}
+
+@keyframes bitsCounterPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(248, 212, 72, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 18px rgba(248, 212, 72, 0.2);
+  }
+}
+
+/* ========================================================
+   RELOAD BUTTONS ROW — Telegram Bits & PayPal Bits
+======================================================== */
+.hero-reload-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+.btn-reload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: var(--transition-base);
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.btn-reload:active {
+  transform: scale(0.95);
+}
+
+.btn-reload-telegram {
+  background: linear-gradient(135deg, #229ed9, #0a78b0);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(34, 158, 217, 0.4);
+}
+
+.btn-reload-telegram:hover {
+  box-shadow: 0 4px 28px rgba(34, 158, 217, 0.6);
+}
+
+.btn-reload-paypal {
+  background: linear-gradient(135deg, #003087, #009cde);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0, 48, 135, 0.45);
+}
+
+.btn-reload-paypal:hover {
+  box-shadow: 0 4px 28px rgba(0, 156, 222, 0.55);
+}
+
+/* ========================================================
+   RESPONSIVE — Mobile-first tweaks (≤ 480px)
+======================================================== */
+@media (max-width: 480px) {
+  .hero-cta {
+    font-size: clamp(0.9rem, 4vw, 1.05rem);
+    padding: 16px 28px;
+  }
+
+  .hero-title {
+    font-size: clamp(1.8rem, 7vw, 2.6rem);
+  }
+
+  .bits-counter-hero {
+    font-size: 0.82rem;
+    padding: 8px 16px;
+  }
+
+  .hero-reload-row {
+    flex-direction: row;
+    gap: 9px;
+  }
+
+  .btn-reload {
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    flex: 1;
+  }
+
+  /* Games grid — single column on very small screens */
+  .games-grid {
+    padding: 0 12px;
+  }
+
+  .game-card-inner {
+    min-height: 170px;
+    padding: 20px 18px;
+  }
+
+  /* Benefits stacked */
+  .benefits-grid {
+    padding: 0 12px;
+  }
+
+  /* Tap target minimum */
+  .game-card-btn,
+  .picker-btn,
+  .chip-btn {
+    min-height: 44px;
+  }
+
+  /* Navbar compact */
+  .nav-container {
+    padding: 0 12px;
+    flex-wrap: nowrap;
+  }
+}
+
+/* ========================================================
+   PERFORMANCE: apply will-change only during animation
+======================================================== */
+.hero-cta.is-pressed,
+.game-card-inner:active,
+.btn-reload:active {
+  will-change: transform;
+}

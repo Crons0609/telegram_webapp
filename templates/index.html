@@ -113,9 +113,21 @@
         🎰 JUGAR AHORA
       </button>
 
-      <!-- Sub actions -->
-      <div class="hero-cta-sub reveal reveal-d3">
-        <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
+      <!-- Bits counter -->
+      <div class="bits-counter-hero reveal reveal-d3" id="bits-counter-hero">
+        <span class="bits-counter-icon">🪙</span>
+        <span class="bits-counter-label">Bits disponibles:</span>
+        <span class="bits-counter-value" id="hero-bits-value">—</span>
+      </div>
+
+      <!-- Reload buttons -->
+      <div class="hero-cta-sub hero-reload-row reveal reveal-d3">
+        <button class="btn-reload btn-reload-telegram" type="button" data-action="telegram-bits" id="btn-telegram-bits">
+          ✈️ Telegram Bits
+        </button>
+        <button class="btn-reload btn-reload-paypal" type="button" data-action="paypal-bits" id="btn-paypal-bits">
+          💳 PayPal Bits
+        </button>
       </div>
 
     </div>
@@ -193,7 +205,7 @@
             <div class="game-card-info">
               <p class="game-card-label">Lotería · Dos Esferas</p>
               <h3 class="game-card-name">Loto Instantáneo</h3>
-              <p class="game-card-desc">Dos esferas 3D, 20 bolas físicas, un número ganador entre el 00 y el 99.</p>
+              <p class="game-card-desc">Dos esferas, 20 bolas en movimiento, un número ganador entre el 00 y el 99.</p>
               <button class="game-card-btn" type="button" onclick="navigateTo('/loto')"
                 style="background:linear-gradient(135deg,#7c1fff,#00c8ff);">
                 JUGAR AHORA →

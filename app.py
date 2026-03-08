@@ -738,6 +738,35 @@ def claim_mission():
     return jsonify(result)
 
 # =====================================================
+# USER BITS BALANCE (for home screen counter)
+# =====================================================
+@app.route('/api/user/bits', methods=["GET"])
+def get_user_bits():
+    telegram_id = session.get("telegram_id")
+    if not telegram_id:
+        return jsonify({"status": "error", "message": "No autenticado", "bits": 0}), 401
+    bits = database.obtener_bits(telegram_id)
+    return jsonify({"status": "ok", "bits": bits})
+
+# =====================================================
+# PAYPAL STORE PAGE — serves store_example as static
+# =====================================================
+@app.route('/store')
+@app.route('/store/')
+def store():
+    """Serve the PayPal Bits purchasing store page."""
+    from flask import send_from_directory
+    store_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'store_example')
+    return send_from_directory(store_dir, 'index.html')
+
+@app.route('/store/<path:filename>')
+def store_static(filename):
+    """Serve static assets (JS files) for the store page."""
+    from flask import send_from_directory
+    store_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'store_example')
+    return send_from_directory(store_dir, filename)
+
+# =====================================================
 # ADMIN
 # =====================================================
 @app.route('/admin', methods=["GET", "POST"])

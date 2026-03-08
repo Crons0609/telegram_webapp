@@ -82,6 +82,7 @@
     loadTopRanking();
     initScrollReveal();
     initHeroParticles();
+    loadHeroBits();
   }
 
   /* =====================================================
@@ -119,11 +120,31 @@
   /* =====================================================
      HERO PARTICLES — lightweight CSS animation
   ===================================================== */
+  /* =====================================================
+     HERO BITS COUNTER
+  ===================================================== */
+  async function loadHeroBits() {
+    const el = document.getElementById('hero-bits-value');
+    if (!el) return;
+    try {
+      const res = await fetch('/api/user/bits');
+      const data = await res.json();
+      if (data.status === 'ok') {
+        el.textContent = Number(data.bits).toLocaleString();
+      }
+    } catch (e) { /* silent fail */ }
+  }
+
+  /* =====================================================
+     HERO PARTICLES — lightweight CSS animation
+  ===================================================== */
   function initHeroParticles() {
     const container = document.getElementById('hero-particles');
     if (!container || prefersReducedMotion) return;
 
-    const COUNT = 18;
+    // Fewer particles on small screens for performance
+    const isMobile = window.matchMedia('(max-width: 600px)').matches;
+    const COUNT = isMobile ? 10 : 18;
     for (let i = 0; i < COUNT; i++) {
       const p = document.createElement('div');
       p.className = 'hero-particle';
@@ -206,10 +227,14 @@
   ===================================================== */
   function initBitsListener() {
     const bitsDisplay = document.querySelector(".user-info strong");
+    const heroBitsVal = document.getElementById('hero-bits-value');
 
     document.addEventListener("win-update", (e) => {
       if (bitsDisplay && e.detail?.bits !== undefined) {
         bitsDisplay.textContent = e.detail.bits;
+      }
+      if (heroBitsVal && e.detail?.bits !== undefined) {
+        heroBitsVal.textContent = Number(e.detail.bits).toLocaleString();
       }
     });
   }
@@ -250,26 +275,22 @@
         }
         break;
 
-      case "recargar":
+      case "telegram-bits": {
         // Get user details
         const tgid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || window.USER_DATA?.telegram_id || "ID_DESCONOCIDO";
         const tguser = window.Telegram?.WebApp?.initDataUnsafe?.user?.username || window.USER_DATA?.username || "Usuario";
 
         const recargaMsg = `Hola, quiero recargar bits.\nID: ${tgid}\nUsuario: @${tguser}`;
         const encodedMsg = encodeURIComponent(recargaMsg);
-
-        // Link to admin support account with prefilled text (works on some clients)
         const telegramUrl = `https://t.me/antraxx_g59?text=${encodedMsg}`;
 
-        // Attempt to copy to clipboard as fallback
         try {
           navigator.clipboard.writeText(recargaMsg);
           if (window.Telegram && window.Telegram.WebApp.showAlert) {
-            window.Telegram.WebApp.showAlert("Se ha copiado el mensaje de recarga al portapapeles. Pégalo en el chat de soporte si no aparece automáticamente.");
+            window.Telegram.WebApp.showAlert("Se ha copiado el mensaje al portapapeles. Pégalo en el chat si no aparece automáticamente.");
           }
         } catch (e) { console.error('Clipboard copy failed', e); }
 
-        // Open Telegram link
         setTimeout(() => {
           if (window.Telegram?.WebApp) {
             window.Telegram.WebApp.openTelegramLink(telegramUrl);
@@ -277,6 +298,11 @@
             window.open(telegramUrl, "_blank");
           }
         }, 500);
+        break;
+      }
+
+      case "paypal-bits":
+        window.location.assign('/store');
         break;
 
       case "explorar":
