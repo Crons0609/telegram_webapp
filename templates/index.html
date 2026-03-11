@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+
+<head>
+
+  <!-- ================= CORE META ================= -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- ================= SEO ================= -->
+  <title>Zona Jackpot 777 | Casino Premium en Telegram</title>
+  <meta name="description"
+    content="El casino premium dentro de Telegram. Juega Moche, Ruleta Francesa y Slots con efectos de lujo, sistema de rangos y premios reales.">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Zona Jackpot 777">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Zona Jackpot 777 — Casino Premium">
+  <meta property="og:description" content="La experiencia de casino más premium dentro de Telegram.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/static/img/preview.jpg">
+
+  <!-- Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/perfil.css">
+
+  <!-- Inline: remove no-js immediately -->
+  <script>document.documentElement.classList.remove("no-js");</script>
+
+  <!-- Deferred scripts -->
+  <script defer src="/static/js/soundManager.js"></script>
+  <script defer src="/static/js/perfil.js"></script>
+  <script defer src="/static/js/script.js"></script>
+
+</head>
+
+<body>
+
+  <!-- Skip Link -->
+  <a href="#main-content" class="skip-link">Saltar al contenido</a>
+
+  <!-- ===================================================
+       NAVBAR — sticky glassmorphism
+  =================================================== -->
+  <nav class="navbar" aria-label="Navegación principal">
+    <div class="container nav-container">
+
+      <button class="brand brand-btn"
+        onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close(); else window.history.back();"
+        aria-label="Cerrar aplicación">
+        <span class="brand-icon" aria-hidden="true">✕</span>
+        <span class="brand-name">Cerrar</span>
+      </button>
+
+      <div class="nav-actions">
+        <!-- Dropdown Salas -->
+        <div class="dropdown">
+          <button class="btn-secondary dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false"
+            onclick="toggleDropdown('salas-dropdown')">
+            🌐 Online
+          </button>
+          <div class="dropdown-menu" id="salas-dropdown">
+            <button class="dropdown-item" onclick="openRoomCreateModal()">➕ Crear Sala</button>
+            <button class="dropdown-item" onclick="openRoomBrowserModal()">🔍 Salas Públicas</button>
+            <button class="dropdown-item" onclick="openRoomJoinModal()">🔑 Unirse por Código</button>
+            <div style="border-top:1px solid rgba(255,255,255,.08); margin:5px 0;"></div>
+            <button class="dropdown-item" onclick="UserProfileManager.openModal()"
+              style="color:#f8e594; font-weight:700;">⭐ Mi Perfil Élite</button>
+          </div>
+        </div>
+
+        {% include 'user_menu.html' %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===================================================
+       HERO — animated gradient + particles + bold CTA
+  =================================================== -->
+  <header class="hero" id="top">
+
+    <!-- CSS Particles -->
+    <div class="hero-particles" aria-hidden="true" id="hero-particles"></div>
+
+    <!-- Hero Content -->
+    <div class="hero-content-wrap">
+
+      <div class="hero-eyebrow reveal">
+        ✨ Casino Premium · Telegram Mini App
+      </div>
+
+      <h1 id="hero-title" class="hero-title reveal reveal-d1">
+        Juega.<br><span class="gradient-text">Gana. Domina.</span>
+      </h1>
+
+      <p class="hero-subtitle reveal reveal-d2">
+        La experiencia de casino más premium dentro de Telegram.
+        Slots, cartas y ruleta con efectos ultra reales.
+      </p>
+
+      <!-- Mega CTA -->
+      <button class="hero-cta reveal reveal-d3" type="button" data-action="explorar" id="hero-cta-btn">
+        🎰 JUGAR AHORA
+      </button>
+
+      <!-- Sub actions -->
+      <div class="hero-cta-sub reveal reveal-d3">
+        <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ===================================================
+       MAIN CONTENT
+  =================================================== -->
+  <main id="main-content">
+
+    <!-- =============== JUEGOS DESTACADOS =============== -->
+    <section class="games-section" aria-labelledby="games-title">
+
+      <div class="section-header reveal">
+        <h2 id="games-title">🎮 Elige tu Juego</h2>
+        <p class="section-subtitle">3 experiencias premium. Sin esperas.</p>
+      </div>
+
+      <div class="games-grid">
+
+        <!-- ── MOCHE ── -->
+        <article class="game-card game-card--moche reveal">
+          <div class="game-card-inner" data-url="/moche" role="button" tabindex="0" aria-label="Jugar Moche"
+            onclick="navigateTo('/moche')">
+            <span class="game-card-emoji" aria-hidden="true">🃏</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Cartas · Estrategia</p>
+              <h3 class="game-card-name">Moché</h3>
+              <p class="game-card-desc">Juego de cartas donde la estrategia manda. ¡Gana el pote!</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/moche')">
+                JUGAR AHORA →
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- ── RULETA ── -->
+        <article class="game-card game-card--ruleta reveal reveal-d1">
+          <div class="game-card-inner" data-url="/ruleta" role="button" tabindex="0" aria-label="Jugar Ruleta Francesa"
+            onclick="navigateTo('/ruleta')">
+            <span class="game-card-emoji" aria-hidden="true">🎡</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Ruleta · Azar puro</p>
+              <h3 class="game-card-name">Ruleta Francesa</h3>
+              <p class="game-card-desc">Apuesta en rojo, negro o tu número de la suerte. 35:1.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/ruleta')">
+                GIRAR RULETA →
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- ── SLOTS ── -->
+        <article class="game-card game-card--slot reveal reveal-d2">
+          <div class="game-card-inner" data-url="/slotmachine" role="button" tabindex="0"
+            aria-label="Jugar Slot Machine" onclick="navigateTo('/slotmachine')">
+            <span class="game-card-emoji" aria-hidden="true">🎰</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Slots · Jackpot</p>
+              <h3 class="game-card-name">Slot Machine</h3>
+              <p class="game-card-desc">5 rodillos, premios épicos y lluvia de monedas al ganar.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/slotmachine')">
+                TIRAR SLOT →
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- ── BLACKJACK ── -->
+        <article class="game-card reveal reveal-d3" style="--card-accent: linear-gradient(135deg,#1a0a2e,#2d1b69);">
+          <div class="game-card-inner" data-url="/blackjack" role="button" tabindex="0" aria-label="Jugar Blackjack"
+            onclick="navigateTo('/blackjack')"
+            style="background: linear-gradient(135deg,rgba(26,10,46,0.85),rgba(45,27,105,0.6));">
+            <span class="game-card-emoji" aria-hidden="true">🃏</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Blackjack · 21</p>
+              <h3 class="game-card-name">Blackjack VIP</h3>
+              <p class="game-card-desc">Plántate, pide, dobla o divide. Vence al crupier antes de llegar a 21.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/blackjack')"
+                style="background:linear-gradient(135deg,#7b00ff,#c39bfe); color:#fff;">
+                JUGAR BLACKJACK →
+              </button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- =============== RANKING TOP 3 =============== -->
+    <section class="ranking-section" aria-labelledby="ranking-title"
+      style="padding: 40px 0; position:relative; z-index:2;">
+      <div class="section-header reveal">
+        <h2 id="ranking-title">🏆 Salón de la Fama</h2>
+        <p class="section-subtitle">Los jugadores más elite del casino.</p>
+      </div>
+      <div id="top3-container" style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; padding:0 16px;">
+        <p class="muted">Cargando ranking...</p>
+      </div>
+    </section>
+
+    <!-- =============== BENEFICIOS =============== -->
+    <section class="benefits-section" aria-labelledby="benefits-title">
+
+      <div class="section-header reveal">
+        <h2 id="benefits-title">💎 ¿Por qué Zona Jackpot?</h2>
+      </div>
+
+      <div class="benefits-grid">
+
+        <div class="benefit-card reveal">
+          <span class="benefit-icon">⚡</span>
+          <div>
+            <p class="benefit-title">Resultados Instantáneos</p>
+            <p class="benefit-desc">Giros, cartas y pagos procesados en tiempo real.</p>
+          </div>
+        </div>
+
+        <div class="benefit-card reveal reveal-d1">
+          <span class="benefit-icon">🔒</span>
+          <div>
+            <p class="benefit-title">100% Seguro</p>
+            <p class="benefit-desc">Autenticación nativa de Telegram. Sin contraseñas.</p>
+          </div>
+        </div>
+
+        <div class="benefit-card reveal reveal-d2">
+          <span class="benefit-icon">👑</span>
+          <div>
+            <p class="benefit-title">Sistema VIP</p>
+            <p class="benefit-desc">Sube de nivel, desbloquea marcos y recompensas diarias.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =============== CTA FINAL =============== -->
+    <section class="cta-section" aria-labelledby="cta-title">
+      <div class="cta-box reveal">
+        <h2 id="cta-title" class="cta-title">
+          ¿Listo para ganar? <span class="gradient-text">Empieza ahora.</span>
+        </h2>
+        <p class="cta-desc">
+          Sin descargas. Sin registros. Solo abre y juega.
+        </p>
+        <button class="cta-btn" type="button" data-action="explorar">
+          🎰 JUGAR GRATIS
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================
+       FOOTER
+  =================================================== -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p class="footer-brand">🎰 Lobby</p>
+      <p class="footer-meta">© 2026 · Juego responsable · Soporte 24/7</p>
+    </div>
+  </footer>
+
+  <!-- ===================================================
+       MODALS
+  =================================================== -->
+
+  <!-- Room Create -->
+  <div id="room-create-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2>Crear Sala de Moche</h2>
+        <button class="btn-close" onclick="closeModal('room-create-modal')">×</button>
+      </header>
+      <div class="modal-body form-grid">
+        <div class="form-group">
+          <label>Visibilidad</label>
+          <select id="room-is-private" class="input-modern">
+            <option value="false">🌍 Pública (Cualquiera puede entrar)</option>
+            <option value="true">🔒 Privada (Solo con enlace)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nivel de Dificultad</label>
+          <select id="room-difficulty" class="input-modern">
+            <option value="easy">🟢 Fácil — 50 Bits (1-2 Bots)</option>
+            <option value="medium">🟡 Media — 150 Bits (2-3 Bots)</option>
+            <option value="hard">🔴 Difícil — 350 Bits (3 Bots)</option>
+            <option value="pro">🔥 Profesional — 700 Bits (VIP)</option>
+          </select>
+        </div>
+        <button class="btn-primary" style="width:100%; margin-top:15px;" onclick="submitCreateRoom()">
+          Crear Sala
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Browser -->
+  <div id="room-browser-modal" class="modal-overlay hidden">
+    <div class="modal-content browser-content">
+      <header class="modal-header">
+        <h2>Salas Públicas</h2>
+        <button class="btn-close" onclick="closeModal('room-browser-modal')">×</button>
+      </header>
+      <div class="modal-body" id="room-list-container">
+        <p class="muted" style="text-align:center;">Buscando salas...</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="fetchPublicRooms()">🔄 Actualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room Join -->
+  <div id="room-join-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2>Unirse a Sala Privada</h2>
+        <button class="btn-close" onclick="closeModal('room-join-modal')">×</button>
+      </header>
+      <div class="modal-body">
+        <div class="input-group">
+          <label for="room-join-code">Código de la Sala:</label>
+          <input type="text" id="room-join-code" class="form-control" placeholder="Ej: a1b2c3d4" autocomplete="off"
+            style="text-transform:uppercase;">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding-top:15px;">
+        <button class="btn-secondary" onclick="closeModal('room-join-modal')">Cancelar</button>
+        <button class="btn-primary" onclick="submitJoinPrivateRoom()">Unirse</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="modal-overlay hidden">
+    <div class="modal-content profile-content">
+      <header class="modal-header">
+        <h2 style="color:#f8e594;">Perfil del Jugador</h2>
+        <button class="btn-close" onclick="UserProfileManager.closeModal()">×</button>
+      </header>
+      <div class="modal-body" id="profile-content-area">
+        <!-- Inyectado dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "Ruleta Francesa Premium",
+  "short_name": "RuletaLV",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050406",
+  "theme_color": "#0a0810",
+  "icons": []
+}
