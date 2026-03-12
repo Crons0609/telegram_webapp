@@ -15,28 +15,36 @@
 <!-- ═══════════════════════════════════════════
      LOGIN
 ════════════════════════════════════════════ -->
-<div class="login-container">
-    <div class="login-box">
-        <div class="login-header">
-            <i class="fa-solid fa-crown text-gold" style="font-size:3rem; margin-bottom:1rem;"></i>
-            <h2>Executive Login</h2>
-            <p>Accede al sistema de administración del casino.</p>
+<div class="login-body" style="min-height: 100vh; width: 100%; display: flex;">
+    <div class="login-wrapper" style="margin: auto;">
+        <div class="login-glass">
+            <div class="login-header">
+                <div class="logo-icon"><i class="fa-solid fa-crown"></i></div>
+                <h2>Executive Login</h2>
+                <p>Accede al sistema de administración del casino.</p>
+            </div>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label>Nombre de usuario</label>
+                    <div class="input-container">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" name="username" placeholder="Tu usuario" required autocomplete="off" style="padding: 1rem 1rem 1rem 2.5rem; width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <div class="input-container">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" name="password" placeholder="Tu contraseña" required style="padding: 1rem 1rem 1rem 2.5rem; width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+                    </div>
+                </div>
+                <div id="loginError" class="login-error" style="color: var(--danger); text-align: center; margin-bottom: 1rem;"></div>
+                <button type="submit" id="loginBtn" class="btn-primary" style="width: 100%; padding: 1rem; border-radius: 8px; justify-content: center;">
+                    <span style="margin-right: 8px;">Acceder al Panel</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
         </div>
-        <form id="adminLoginForm">
-            <div class="input-group">
-                <i class="fa-solid fa-user"></i>
-                <input type="text" name="username" placeholder="Nombre de usuario" required autocomplete="off">
-            </div>
-            <div class="input-group">
-                <i class="fa-solid fa-lock"></i>
-                <input type="password" name="password" placeholder="Contraseña" required>
-            </div>
-            <div id="loginError" class="login-error"></div>
-            <button type="submit" id="loginBtn" class="btn-primary">
-                <span>Acceder al Panel</span>
-                <i class="fas fa-arrow-right"></i>
-            </button>
-        </form>
     </div>
 </div>
 
@@ -94,7 +102,10 @@
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <header class="topbar">
-            <div class="page-title">
+            <div class="page-title" style="display:flex; align-items:center;">
+                <button id="mobileMenuToggle" class="mobile-toggle" style="display:none; background:transparent; border:none; color:var(--text-main); font-size:1.5rem; margin-right:1rem; cursor:pointer;">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <h1 id="currentPageTitle">Dashboard</h1>
             </div>
             <div class="topbar-actions">

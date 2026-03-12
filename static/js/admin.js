@@ -83,6 +83,24 @@ function initAdminPanel() {
         });
     });
 
+    // 2.b Mobile Sidebar Toggle
+    const mobileToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.querySelector('.sidebar');
+    if (mobileToggle && sidebar) {
+        mobileToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+    }
+
+    // 2.c Close sidebar on mobile when a nav item is clicked
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+            }
+        });
+    });
+
     // 3. Setup Modals
     setupModals();
 
