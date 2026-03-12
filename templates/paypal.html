@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zona Jackpot 777 - Compra de Bits</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/paypal.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="glitch" data-text="ZONA JACKPOT 777">ZONA JACKPOT 777</h1>
+            <p class="subtitle">Compra bits y juega con más oportunidades</p>
+            <a href="{{ url_for('home') }}" style="display:inline-block; margin-top:15px; background:rgba(255,255,255,0.1); padding:8px 15px; border-radius:8px; color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2);">
+                <i class="fas fa-arrow-left"></i> Volver al Casino
+            </a>
+        </header>
+
+        <div class="packages" id="packages"></div>
+
+        <div class="info-section">
+            <div class="benefits">
+                <h3>🎁 Beneficios</h3>
+                <ul>
+                    <li><i class="fas fa-check-circle"></i> Bits acreditados al instante</li>
+                    <li><i class="fas fa-check-circle"></i> Pago seguro con PayPal</li>
+                    <li><i class="fas fa-check-circle"></i> Promociones exclusivas</li>
+                </ul>
+            </div>
+            <div class="testimonials">
+                <h3>💬 Lo que dicen nuestros jugadores</h3>
+                <div class="testimonial-card">
+                    <p>"¡La mejor forma de recargar! Los bits llegaron en segundos."</p>
+                    <span>- Juanito777</span>
+                </div>
+                <div class="testimonial-card">
+                    <p>"Excelentes bonificaciones, recomiendo el paquete de 20$."</p>
+                    <span>- LuckyLady</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>¿Problemas con tu compra? <a href="#">Contáctanos</a></p>
+            <p class="secure-payment"><i class="fas fa-lock"></i> Pago 100% seguro por PayPal</p>
+        </footer>
+    </div>
+
+    <script src="https://www.paypal.com/sdk/js?client-id=ARIbqolPZ_S8yK_AIsRvL1MjdvXk0i1t_QEig7OpXNiZIGNV6a0R6ixssDFdXP4VYPOl1NCNqz6STUHt&currency=USD"></script>
+    <script src="{{ url_for('static', filename='js/paypal.js') }}" defer></script>
+</body>
+</html>

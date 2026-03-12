@@ -135,7 +135,7 @@ def init_db() -> None:
             )
         """)
 
-        # Tabla de Trofeos
+        # Tabla de Trofeos Ganados por el Usuario
         conn.execute("""
             CREATE TABLE IF NOT EXISTS trophies (
                 telegram_id TEXT,
@@ -145,6 +145,36 @@ def init_db() -> None:
                 FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id)
             )
         """)
+
+        # Tabla de Configuración de Trofeos (editables por admin)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS trophies_config (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                desc TEXT NOT NULL,
+                img TEXT NOT NULL,
+                stat_name TEXT NOT NULL,
+                stat_target INTEGER NOT NULL,
+                is_active INTEGER DEFAULT 1
+            )
+        """)
+        
+        # Seed Trofeos if empty
+        t_count = conn.execute("SELECT COUNT(*) FROM trophies_config").fetchone()[0]
+        if t_count == 0:
+            initial_trophies = [
+                ("trophy_1", "Primera Victoria", "Gana tu primera partida en cualquier juego.", "/static/img/trophies/trophy_1.png", "wins_total", 1),
+                ("trophy_2", "Bronce en Combate", "Acumula 5 victorias en cualquier juego.", "/static/img/trophies/trophy_2.png", "wins_total", 5),
+                ("trophy_3", "Plata Implacable", "Alcanza 10 victorias en cualquier juego.", "/static/img/trophies/trophy_3.png", "wins_total", 10),
+                ("trophy_4", "Maestro del Moche", "Gana 10 partidas de Moche.", "/static/img/trophies/trophy_4.png", "moches_ganados", 10),
+                ("trophy_5", "Jackpot Supremo", "Obtén un Jackpot en la Slot Machine.", "/static/img/trophies/trophy_5.png", "jackpots_ganados", 1),
+                ("trophy_6", "Señor de la Ruleta", "Gana 10 rondas de Ruleta Francesa.", "/static/img/trophies/trophy_6.png", "ruletas_ganadas", 10),
+                ("trophy_7", "Racha Dorada", "Acumula 25 victorias en cualquier juego.", "/static/img/trophies/trophy_7.svg", "wins_total", 25),
+                ("trophy_8", "Rey del Casino", "Alcanza las 50 victorias acumuladas.", "/static/img/trophies/trophy_8.svg", "wins_total", 50),
+                ("trophy_9", "Leyenda Inmortal", "Supera las 100 victorias. La cima del casino.", "/static/img/trophies/trophy_9.svg", "wins_total", 100)
+            ]
+            for t in initial_trophies:
+                conn.execute("INSERT INTO trophies_config (id, name, desc, img, stat_name, stat_target) VALUES (?, ?, ?, ?, ?, ?)", t)
 
         # Tabla de Misiones (Definiciones editables por el admin)
         conn.execute("""
@@ -212,6 +242,33 @@ def init_db() -> None:
             from werkzeug.security import generate_password_hash
             default_hash = generate_password_hash("admin123")
             conn.execute("INSERT INTO admins (username, password_hash) VALUES (?, ?)", ("admin", default_hash))
+
+        # Tabla de Historial de Partidas
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS juegos_historial (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id TEXT NOT NULL,
+                juego TEXT NOT NULL,
+                apuesta INTEGER NOT NULL DEFAULT 0,
+                ganancia INTEGER NOT NULL DEFAULT 0,
+                resultado TEXT NOT NULL,
+                fecha TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id)
+            )
+        """)
+
+        # Tabla de Transacciones Financieras (USD y Bits)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS transacciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id TEXT NOT NULL,
+                bits INTEGER NOT NULL,
+                usd_amount REAL NOT NULL,
+                tipo TEXT NOT NULL,
+                fecha TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id)
+            )
+        """)
 
 def _asegurar_stats(telegram_id: str, conn):
     """Crea una fila de stats en 0 si no existe."""
@@ -552,3 +609,92 @@ def incrementar_tiempo_jugado(telegram_id: str, minutos: int) -> bool:
             WHERE telegram_id = ?
         """, (minutos, telegram_id))
         return cursor.rowcount > 0
+
+def registrar_transaccion(telegram_id: str, bits: int, usd_amount: float, tipo: str) -> bool:
+    """Registra un movimiento de dinero real y bits."""
+    with get_connection() as conn:
+        cursor = conn.execute("""
+            INSERT INTO transacciones (telegram_id, bits, usd_amount, tipo)
+            VALUES (?, ?, ?, ?)
+        """, (telegram_id, bits, usd_amount, tipo))
+        return cursor.rowcount > 0
+
+def registrar_partida(telegram_id: str, juego: str, apuesta: int, ganancia: int, resultado: str) -> bool:
+    """Registra cada partida jugada para cálculos de ganancias del casino."""
+    with get_connection() as conn:
+        cursor = conn.execute("""
+            INSERT INTO juegos_historial (telegram_id, juego, apuesta, ganancia, resultado)
+            VALUES (?, ?, ?, ?, ?)
+        """, (telegram_id, juego, apuesta, ganancia, resultado))
+        return cursor.rowcount > 0
+
+def actualizar_ultima_partida_ganada(telegram_id: str, juego: str, ganancia: int) -> bool:
+    """Actualiza la última partida de un juego a 'win' y añade la ganancia (útil para endpoints separados de bet y win)."""
+    with get_connection() as conn:
+        cursor = conn.execute("""
+            UPDATE juegos_historial 
+            SET ganancia = ?, resultado = 'win'
+            WHERE id = (
+                SELECT id FROM juegos_historial 
+                WHERE telegram_id = ? AND juego = ?
+                ORDER BY fecha DESC LIMIT 1
+            )
+        """, (ganancia, telegram_id, juego))
+        return cursor.rowcount > 0
+
+def obtener_metricas_financieras() -> dict:
+    """Obtiene el reporte financiero completo del dashboard administrativo."""
+    with get_connection() as conn:
+        # Sums and counts for transactions (Deposits and Withdrawals)
+        # Reemplazado usd_amount con bits según el requerimiento del usuario
+        tx_stats = conn.execute("""
+            SELECT 
+                COUNT(id) as total_tx,
+                SUM(CASE WHEN fecha >= datetime('now', '-1 days', 'localtime') THEN 1 ELSE 0 END) as tx_day,
+                SUM(CASE WHEN fecha >= datetime('now', '-7 days', 'localtime') THEN 1 ELSE 0 END) as tx_week,
+                SUM(CASE WHEN fecha >= datetime('now', '-30 days', 'localtime') THEN 1 ELSE 0 END) as tx_month,
+
+                COALESCE(SUM(CASE WHEN tipo IN ('deposito', 'recarga_admin') THEN bits ELSE 0 END), 0) as total_usd_invested,
+                COALESCE(SUM(CASE WHEN tipo = 'retiro' THEN bits ELSE 0 END), 0) as total_usd_paid,
+
+                COALESCE(SUM(CASE WHEN tipo IN ('deposito', 'recarga_admin') AND fecha >= datetime('now', '-1 days', 'localtime') THEN bits ELSE 0 END), 0) as usd_dep_day,
+                COALESCE(SUM(CASE WHEN tipo IN ('deposito', 'recarga_admin') AND fecha >= datetime('now', '-7 days', 'localtime') THEN bits ELSE 0 END), 0) as usd_dep_week,
+                COALESCE(SUM(CASE WHEN tipo IN ('deposito', 'recarga_admin') AND fecha >= datetime('now', '-30 days', 'localtime') THEN bits ELSE 0 END), 0) as usd_dep_month,
+
+                COALESCE(SUM(CASE WHEN tipo = 'retiro' AND fecha >= datetime('now', '-1 days', 'localtime') THEN bits ELSE 0 END), 0) as usd_withdraw_day,
+                COALESCE(SUM(CASE WHEN tipo = 'retiro' AND fecha >= datetime('now', '-7 days', 'localtime') THEN bits ELSE 0 END), 0) as usd_withdraw_week,
+                COALESCE(SUM(CASE WHEN tipo = 'retiro' AND fecha >= datetime('now', '-30 days', 'localtime') THEN bits ELSE 0 END), 0) as usd_withdraw_month
+            FROM transacciones
+        """).fetchone()
+
+        # Sums of Casino Profit in Bits (Bits played - Bits won by player) = Casino Bits Won
+        profit_stats = conn.execute("""
+            SELECT 
+                COALESCE(SUM(CASE WHEN fecha >= datetime('now', '-1 days', 'localtime') THEN apuesta - ganancia ELSE 0 END), 0) as profit_day,
+                COALESCE(SUM(CASE WHEN fecha >= datetime('now', '-7 days', 'localtime') THEN apuesta - ganancia ELSE 0 END), 0) as profit_week,
+                COALESCE(SUM(CASE WHEN fecha >= datetime('now', '-30 days', 'localtime') THEN apuesta - ganancia ELSE 0 END), 0) as profit_month
+            FROM juegos_historial
+        """).fetchone()
+
+        # Calculate Net USD earnings
+        usd_net_day = tx_stats['usd_dep_day'] - tx_stats['usd_withdraw_day']
+        usd_net_week = tx_stats['usd_dep_week'] - tx_stats['usd_withdraw_week']
+        usd_net_month = tx_stats['usd_dep_month'] - tx_stats['usd_withdraw_month']
+
+        return {
+            'total_transactions': tx_stats['total_tx'],
+            'tx_day': tx_stats['tx_day'] or 0,
+            'tx_week': tx_stats['tx_week'] or 0,
+            'tx_month': tx_stats['tx_month'] or 0,
+
+            'total_usd_invested': tx_stats['total_usd_invested'],
+            'total_usd_paid': tx_stats['total_usd_paid'],
+
+            'usd_net_day': usd_net_day,
+            'usd_net_week': usd_net_week,
+            'usd_net_month': usd_net_month,
+
+            'bits_profit_day': profit_stats['profit_day'],
+            'bits_profit_week': profit_stats['profit_week'],
+            'bits_profit_month': profit_stats['profit_month']
+        }

@@ -73,9 +73,11 @@ def get_user_missions_with_progress(telegram_id: str) -> list:
 
     result = []
     
-    for m in MISSION_DEFINITIONS:
-        base_id = m["id"]
-        current_stat = stats.get(m["type"], 0)
+    mission_defs = get_mission_definitions()
+    for m in mission_defs:
+        base_id = str(m["id"])
+        m_type = str(m["type"])
+        current_stat = stats.get(m_type, 0)
         
         # Determine which level is currently active (the first one not claimed)
         active_level_idx = 0
@@ -103,7 +105,7 @@ def get_user_missions_with_progress(telegram_id: str) -> list:
         can_claim = (current_stat >= target) and not fully_completed
         
         # Format the description
-        desc = m["desc"].format(target=target)
+        desc = str(m["desc"]).format(target=target)
         
         result.append({
             "id": f"{base_id}_lvl_{lvl_data['level']}" if not fully_completed else f"{base_id}_lvl_3",
@@ -140,7 +142,8 @@ def claim_mission_reward(telegram_id: str, formatted_mission_id: str) -> dict:
         base_id = parts[0]
         level_idx = int(parts[1]) - 1 # 0-indexed para list acceso
         
-        mission = next((m for m in MISSION_DEFINITIONS if m["id"] == base_id), None)
+        mission_defs = get_mission_definitions()
+        mission = next((m for m in mission_defs if m["id"] == base_id), None)
         if not mission or level_idx < 0 or level_idx > 2:
             return {"status": "error", "message": "Misión o nivel no encontrado"}
             
@@ -167,7 +170,8 @@ def claim_mission_reward(telegram_id: str, formatted_mission_id: str) -> dict:
         "tournaments_won": perfil.get("tournaments_won", 0),
         "juegos_diferentes": perfil.get("juegos_diferentes", 0),
     }
-    current = stats.get(mission["type"], 0)
+    m_type = str(mission["type"])
+    current = stats.get(m_type, 0)
 
     if current < lvl_data["target"]:
         return {"status": "error", "message": "Misión no completada todavía"}

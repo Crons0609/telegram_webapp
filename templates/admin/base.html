@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +10,10 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Admin CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='/static/css/admin.css') }}">
     {% block extra_head %}{% endblock %}
 </head>
+
 <body>
     <div class="admin-wrapper">
         <!-- Sidebar -->
@@ -20,7 +22,7 @@
                 <i class="fa-solid fa-crown text-gold"></i>
                 <h2>Casino Admin</h2>
             </div>
-            
+
             <div class="sidebar-user">
                 <div class="user-avatar">
                     <i class="fa-solid fa-user-shield"></i>
@@ -34,38 +36,43 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li class="nav-item">
-                        <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('admin.dashboard') }}"
+                            class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
                             <i class="fa-solid fa-chart-pie"></i>
                             <span>Dashboard</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url_for('admin.players') }}" class="nav-link {% if request.endpoint == 'admin.players' %}active{% endif %}">
+                        <a href="{{ url_for('admin.players') }}"
+                            class="nav-link {% if request.endpoint == 'admin.players' %}active{% endif %}">
                             <i class="fa-solid fa-users"></i>
                             <span>Players Manager</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url_for('admin.missions') }}" class="nav-link {% if request.endpoint == 'admin.missions' %}active{% endif %}">
+                        <a href="{{ url_for('admin.missions') }}"
+                            class="nav-link {% if request.endpoint == 'admin.missions' %}active{% endif %}">
                             <i class="fa-solid fa-bullseye"></i>
                             <span>Missions Manager</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
+                        <a href="{{ url_for('admin.trophies') }}"
+                            class="nav-link {% if request.endpoint == 'admin.trophies' %}active{% endif %}">
                             <i class="fa-solid fa-trophy"></i>
                             <span>Trophies Manager</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
+                        <a href="{{ url_for('admin.history') }}"
+                            class="nav-link {% if request.endpoint == 'admin.history' %}active{% endif %}">
                             <i class="fa-solid fa-clock-rotate-left"></i>
                             <span>Games History</span>
                         </a>
                     </li>
                 </ul>
             </nav>
-            
+
             <div class="sidebar-footer">
                 <a href="{{ url_for('admin.logout') }}" class="btn-logout">
                     <i class="fa-solid fa-right-from-bracket"></i>
@@ -91,14 +98,15 @@
             <!-- Flash Messages -->
             <div class="admin-alerts">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
-                    {% for category, message in messages %}
-                      <div class="alert alert-{{ category }}">
-                          <i class="fa-solid {% if category == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i>
-                          {{ message }}
-                      </div>
-                    {% endfor %}
-                  {% endif %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <i
+                        class="fa-solid {% if category == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
                 {% endwith %}
             </div>
 
@@ -110,7 +118,8 @@
     </div>
 
     <!-- Admin Scripts -->
-    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='/static/js/admin.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

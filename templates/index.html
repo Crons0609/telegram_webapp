@@ -47,7 +47,7 @@
   <script defer src="/static/js/perfil.js"></script>
   <script defer src="/static/js/script.js"></script>
 
-  <script>try{var t=localStorage.getItem("casino_theme");if(t)document.documentElement.setAttribute("data-casino-theme",t);}catch(e){}</script>
+  <script>try { var t = localStorage.getItem("casino_theme"); if (t) document.documentElement.setAttribute("data-casino-theme", t); } catch (e) { }</script>
 </head>
 
 <body>
@@ -63,7 +63,7 @@
 
       <button class="brand brand-btn"
         onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close(); else window.history.back();"
-        aria-label="Cerrar aplicación" 
+        aria-label="Cerrar aplicación"
         style="padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
         <span class="brand-icon" aria-hidden="true" style="margin:0; font-size:16px;">✕</span>
       </button>
@@ -104,14 +104,17 @@
       </button>
 
       <!-- Bits Counter -->
-      <div class="reveal reveal-d3" style="margin: 15px 0 5px 0; font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-1); text-shadow: 0 0 10px rgba(212,175,55,0.5);">
-        💎 Tus Bits: <strong><span id="hero-bits-display">{{ global_profile.bits if global_profile else 0 }}</span></strong>
+      <div class="reveal reveal-d3"
+        style="margin: 15px 0 5px 0; font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-1); text-shadow: 0 0 10px rgba(212,175,55,0.5);">
+        💎 Tus Bits: <strong><span id="hero-bits-display">{{ global_profile.bits if global_profile else 0
+            }}</span></strong>
       </div>
 
       <!-- Sub actions -->
       <div class="hero-cta-sub reveal reveal-d3">
         <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
-        <button class="btn-primary" type="button" onclick="window.location.href='#'" style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
+        <button class="btn-primary" type="button" onclick="window.location.href='{{ url_for('paypal_bits') }}'"
+          style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
           <span style="font-weight:900; font-style: italic;">Pay<span style="color:#003087;">Pal</span></span> Bits
         </button>
       </div>

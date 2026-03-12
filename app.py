@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import database
 from moche_engine import manager
@@ -117,6 +117,47 @@ def register():
     session["photo_url"] = photo_url
 
     return jsonify({"status": "ok"})
+
+# =====================================================
+# PAYPAL BITS
+# =====================================================
+@app.route('/paypal_bits')
+def paypal_bits():
+    telegram_id = session.get("telegram_id")
+    if not telegram_id:
+        return redirect(url_for('index'))
+    return render_template("paypal.html")
+
+@app.route('/api/paypal/capture', methods=['POST'])
+def paypal_capture():
+    telegram_id = session.get("telegram_id")
+    if not telegram_id:
+        return jsonify({"success": False, "message": "No autenticado"}), 401
+        
+    data = request.json
+    order_id = data.get('order_id')
+    amount_usd = float(data.get('amount_usd', 0))
+    bits_amount = int(data.get('bits_amount', 0))
+    
+    if amount_usd <= 0 or bits_amount <= 0:
+        return jsonify({"success": False, "message": "Cantidades inválidas"}), 400
+
+    try:
+        with database.get_connection() as conn:
+            # Añadir los bits al usuario
+            conn.execute("UPDATE usuarios SET bits = bits + ? WHERE telegram_id = ?", (bits_amount, telegram_id))
+            # Registrar la transacción
+            conn.execute(
+                "INSERT INTO transacciones (telegram_id, tipo, usd_amount, bits) VALUES (?, 'deposito', ?, ?)",
+                (telegram_id, amount_usd, bits_amount)
+            )
+        
+        # Obtener nuevo saldo para retornar
+        new_balance = database.obtener_bits(telegram_id)
+        return jsonify({"success": True, "new_bits": new_balance})
+    except Exception as e:
+        print(f"Error procesando PayPal: {e}")
+        return jsonify({"success": False, "message": "Error interno"}), 500
 
 # =====================================================
 # SLOT MACHINE
@@ -376,6 +417,7 @@ def api_spin():
     # Generate the 5-reel visual symbols from the outcome
     reel_symbols = slot_engine.generate_reels(outcome)
     # Record stats
+    database.registrar_partida(telegram_id, 'slot_machine', bet_amount, total_win, 'win' if total_win > 0 else 'loss')
     database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
     database.incrementar_stat(telegram_id, 'bits_apostados', bet_amount)
 
@@ -457,6 +499,7 @@ def bet():
         profile_updates = {}
         # Award participation XP based on source
         # For multi-game tracking, record a generic "play" action
+        database.registrar_partida(telegram_id, source, cantidad, 0, 'loss')
         database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
         database.incrementar_stat(telegram_id, 'bits_apostados', cantidad)
 
@@ -501,6 +544,7 @@ def win():
         return jsonify({"status": "error", "message": "Cantidad inválida"}), 400
 
     telegram_id = session["telegram_id"]
+    database.actualizar_ultima_partida_ganada(telegram_id, source, cantidad)
     database.registrar_ganancia(telegram_id, cantidad)
     database.incrementar_stat(telegram_id, 'bits_ganados', cantidad)
     database.actualizar_racha_victorias(telegram_id, True)
@@ -772,36 +816,8 @@ def claim_mission():
     return jsonify(result)
 
 # =====================================================
-# ADMIN
+# ADMIN (Manejado por admin_routes.py Blueprint)
 # =====================================================
-@app.route('/admin', methods=["GET", "POST"])
-def admin():
-    mensaje = ""
-
-    if request.method == "POST":
-        telegram_id = request.form["telegram_id"]
-        cantidad = int(request.form["cantidad"])
-        password = request.form.get("password")
-
-        # Contraseña de administrador (Cámbiala por una más segura en producción o usa variables de entorno)
-        ADMIN_PASSWORD = "admin"
-
-        if password == ADMIN_PASSWORD:
-            database.recargar_bits(telegram_id, cantidad)
-            mensaje = f"✅ Éxito: Se recargaron {cantidad} Bits al usuario con ID {telegram_id}"
-        else:
-            mensaje = "❌ Error: Contraseña de administrador incorrecta."
-            
-    # Obtener la lista de usuarios y los top 10
-    usuarios = database.obtener_todos_usuarios()
-    top_recargas = database.obtener_top_recargas()
-    top_ganadores = database.obtener_top_ganadores()
-
-    return render_template("admin.html", 
-                         mensaje=mensaje, 
-                         usuarios=usuarios, 
-                         top_recargas=top_recargas, 
-                         top_ganadores=top_ganadores)
 
 # =====================================================
 # MAIN
