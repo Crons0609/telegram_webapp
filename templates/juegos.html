@@ -74,119 +74,92 @@
     </div>
   </nav>
 
-  <!-- ===================================================
-       HERO — animated gradient + particles + bold CTA
-  =================================================== -->
-  <header class="hero" id="top">
-
-    <!-- CSS Particles -->
-    <div class="hero-particles" aria-hidden="true" id="hero-particles"></div>
-
-    <!-- Hero Content -->
-    <div class="hero-content-wrap">
-
-      <div class="hero-eyebrow reveal">
-        ✨ Casino Premium · Telegram Mini App
-      </div>
-
-      <h1 id="hero-title" class="hero-title reveal reveal-d1">
-        Juega.<br><span class="gradient-text">Gana. Domina.</span>
-      </h1>
-
-      <p class="hero-subtitle reveal reveal-d2">
-        La experiencia de casino más premium dentro de Telegram.
-        Slots, cartas y ruleta con efectos ultra reales.
-      </p>
-
-      <!-- Mega CTA -->
-      <button class="hero-cta reveal reveal-d3" type="button" onclick="navigateTo('/juegos')" id="hero-cta-btn">
-        🎰 JUGAR AHORA
-      </button>
-
-      <!-- Bits Counter -->
-      <div class="reveal reveal-d3" style="margin: 15px 0 5px 0; font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-1); text-shadow: 0 0 10px rgba(212,175,55,0.5);">
-        💎 Tus Bits: <strong><span id="hero-bits-display">{{ global_profile.bits if global_profile else 0 }}</span></strong>
-      </div>
-
-      <!-- Sub actions -->
-      <div class="hero-cta-sub reveal reveal-d3">
-        <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
-        <button class="btn-primary" type="button" onclick="window.location.href='#'" style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
-          <span style="font-weight:900; font-style: italic;">Pay<span style="color:#003087;">Pal</span></span> Bits
-        </button>
-      </div>
-
-    </div>
-  </header>
-
+    <!-- Espacio superior para compensar el Navbar fijo -->
+    <div style="height: 100px;"></div>
   <!-- ===================================================
        MAIN CONTENT
   =================================================== -->
   <main id="main-content">
 
-    <!-- =============== JUEGOS MOVIDOS A /JUEGOS =============== -->
-    <!-- =============== RANKING TOP 3 =============== -->
-    <section class="ranking-section" aria-labelledby="ranking-title"
-      style="padding: 40px 0; position:relative; z-index:2;">
-      <div class="section-header reveal">
-        <h2 id="ranking-title">🏆 Salón de la Fama</h2>
-        <p class="section-subtitle">Los jugadores más elite del casino.</p>
-      </div>
-      <div id="top3-container" style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; padding:0 16px;">
-        <p class="muted">Cargando ranking...</p>
-      </div>
-    </section>
-
-    <!-- =============== BENEFICIOS =============== -->
-    <section class="benefits-section" aria-labelledby="benefits-title">
+    <!-- =============== JUEGOS DESTACADOS =============== -->
+    <section class="games-section" aria-labelledby="games-title">
 
       <div class="section-header reveal">
-        <h2 id="benefits-title">💎 ¿Por qué Zona Jackpot?</h2>
+        <h2 id="games-title">🎮 Lobby de Casino</h2>
+        <p class="section-subtitle">Selecciona tu Juego</p>
       </div>
 
-      <div class="benefits-grid">
+      <div class="games-grid">
 
-        <div class="benefit-card reveal">
-          <span class="benefit-icon">⚡</span>
-          <div>
-            <p class="benefit-title">Resultados Instantáneos</p>
-            <p class="benefit-desc">Giros, cartas y pagos procesados en tiempo real.</p>
+        <!-- ── MOCHE ── -->
+        <article class="game-card game-card--moche reveal">
+          <div class="game-card-inner" data-url="/moche" role="button" tabindex="0" aria-label="Jugar Moche"
+            onclick="navigateTo('/moche')">
+            <span class="game-card-emoji" aria-hidden="true">🃏</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Cartas · Estrategia</p>
+              <h3 class="game-card-name">Moché</h3>
+              <p class="game-card-desc">Juego de cartas donde la estrategia manda. ¡Gana el pote!</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/moche')">
+                JUGAR AHORA →
+              </button>
+            </div>
           </div>
-        </div>
+        </article>
 
-        <div class="benefit-card reveal reveal-d1">
-          <span class="benefit-icon">🔒</span>
-          <div>
-            <p class="benefit-title">100% Seguro</p>
-            <p class="benefit-desc">Autenticación nativa de Telegram. Sin contraseñas.</p>
+        <!-- ── RULETA ── -->
+        <article class="game-card game-card--ruleta reveal reveal-d1">
+          <div class="game-card-inner" data-url="/ruleta" role="button" tabindex="0" aria-label="Jugar Ruleta Francesa"
+            onclick="navigateTo('/ruleta')">
+            <span class="game-card-emoji" aria-hidden="true">🎡</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Ruleta · Azar puro</p>
+              <h3 class="game-card-name">Ruleta Francesa</h3>
+              <p class="game-card-desc">Apuesta en rojo, negro o tu número de la suerte. 35:1.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/ruleta')">
+                GIRAR RULETA →
+              </button>
+            </div>
           </div>
-        </div>
+        </article>
 
-        <div class="benefit-card reveal reveal-d2">
-          <span class="benefit-icon">👑</span>
-          <div>
-            <p class="benefit-title">Sistema VIP</p>
-            <p class="benefit-desc">Sube de nivel, desbloquea marcos y recompensas diarias.</p>
+        <!-- ── SLOTS ── -->
+        <article class="game-card game-card--slot reveal reveal-d2">
+          <div class="game-card-inner" data-url="/slotmachine" role="button" tabindex="0"
+            aria-label="Jugar Slot Machine" onclick="navigateTo('/slotmachine')">
+            <span class="game-card-emoji" aria-hidden="true">🎰</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Slots · Jackpot</p>
+              <h3 class="game-card-name">Slot Machine</h3>
+              <p class="game-card-desc">5 rodillos, premios épicos y lluvia de monedas al ganar.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/slotmachine')">
+                TIRAR SLOT →
+              </button>
+            </div>
           </div>
-        </div>
+        </article>
+
+        <!-- ── BLACKJACK ── -->
+        <article class="game-card reveal reveal-d3" style="--card-accent: linear-gradient(135deg,#1a0a2e,#2d1b69);">
+          <div class="game-card-inner" data-url="/blackjack" role="button" tabindex="0" aria-label="Jugar Blackjack"
+            onclick="navigateTo('/blackjack')"
+            style="background: linear-gradient(135deg,rgba(26,10,46,0.85),rgba(45,27,105,0.6));">
+            <span class="game-card-emoji" aria-hidden="true">🃏</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Blackjack · 21</p>
+              <h3 class="game-card-name">Blackjack VIP</h3>
+              <p class="game-card-desc">Plántate, pide, dobla o divide. Vence al crupier antes de llegar a 21.</p>
+              <button class="game-card-btn" type="button" onclick="navigateTo('/blackjack')"
+                style="background:linear-gradient(135deg,#7b00ff,#c39bfe); color:#fff;">
+                JUGAR BLACKJACK →
+              </button>
+            </div>
+          </div>
+        </article>
 
       </div>
     </section>
 
-    <!-- =============== CTA FINAL =============== -->
-    <section class="cta-section" aria-labelledby="cta-title">
-      <div class="cta-box reveal">
-        <h2 id="cta-title" class="cta-title">
-          ¿Listo para ganar? <span class="gradient-text">Empieza ahora.</span>
-        </h2>
-        <p class="cta-desc">
-          Sin descargas. Sin registros. Solo abre y juega.
-        </p>
-        <button class="cta-btn" type="button" data-action="explorar">
-          🎰 JUGAR GRATIS
-        </button>
-      </div>
-    </section>
 
   </main>
 

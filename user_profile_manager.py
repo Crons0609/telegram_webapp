@@ -154,6 +154,20 @@ class UserProfileManager:
         return notifications
 
     @staticmethod
+    def sync_rewards_for_level(telegram_id: str, current_level: int):
+        """
+        Idempotently ensures all level rewards up to current_level are unlocked.
+        Safe to call on every profile load — INSERT OR IGNORE prevents duplicates.
+        """
+        for lvl in range(1, current_level + 1):
+            if lvl in REWARDS:
+                for r_type, r_id in REWARDS[lvl]:
+                    database.desbloquear_item(telegram_id, r_type, r_id)
+        # Also ensure the correct frame for the level is unlocked
+        correct_frame = get_frame_for_level(current_level)
+        database.desbloquear_item(telegram_id, 'frame', correct_frame)
+
+    @staticmethod
     def add_xp(telegram_id: str, event_type: str, custom_amount: int = 0) -> dict:
         """Awards XP and handles level ups/unlocks. Returns context for the client."""
         xp_map = {

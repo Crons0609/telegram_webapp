@@ -2,96 +2,16 @@
 mission_manager.py — Sistema de Misiones
 Define las misiones del casino y gestiona su progreso y recompensas.
 """
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import database
-
-# ─── Definición de Misiones ─────────────────────────────────────────────────
-
-MISSION_DEFINITIONS = [
-    {
-        "id": "mission_1",
-        "name": "Debut en el Casino",
-        "desc": "Juega tu primera partida en cualquier juego.",
-        "icon": "🎰",
-        "type": "juegos_jugados",
-        "target": 1,
-        "xp_reward": 50,
-        "bits_reward": 0
-    },
-    {
-        "id": "mission_2",
-        "name": "Jugador Dedicado",
-        "desc": "Juega 10 partidas en total.",
-        "icon": "🎮",
-        "type": "juegos_jugados",
-        "target": 10,
-        "xp_reward": 150,
-        "bits_reward": 100
-    },
-    {
-        "id": "mission_3",
-        "name": "Primera Sangre",
-        "desc": "Consigue tu primera victoria en cualquier juego.",
-        "icon": "⚔️",
-        "type": "wins_total",
-        "target": 1,
-        "xp_reward": 100,
-        "bits_reward": 50
-    },
-    {
-        "id": "mission_4",
-        "name": "Rey del Moche",
-        "desc": "Gana 5 partidas de Moche.",
-        "icon": "🃏",
-        "type": "moches_ganados",
-        "target": 5,
-        "xp_reward": 200,
-        "bits_reward": 200
-    },
-    {
-        "id": "mission_5",
-        "name": "La Ruleta de la Fortuna",
-        "desc": "Gana 5 rondas de Ruleta Francesa.",
-        "icon": "🎡",
-        "type": "ruletas_ganadas",
-        "target": 5,
-        "xp_reward": 200,
-        "bits_reward": 200
-    },
-    {
-        "id": "mission_6",
-        "name": "Cazador de Jackpots",
-        "desc": "Obtén 3 Jackpots en la Slot Machine.",
-        "icon": "🎰",
-        "type": "jackpots_ganados",
-        "target": 3,
-        "xp_reward": 300,
-        "bits_reward": 500
-    },
-    {
-        "id": "mission_7",
-        "name": "El Camino del Maestro",
-        "desc": "Acumula 20 victorias en cualquier juego.",
-        "icon": "🏆",
-        "type": "wins_total",
-        "target": 20,
-        "xp_reward": 500,
-        "bits_reward": 300
-    },
-    {
-        "id": "mission_8",
-        "name": "Explorador Total",
-        "desc": "Juega los 3 juegos del casino (Moche, Ruleta y Slot).",
-        "icon": "🌐",
-        "type": "multi_game",
-        "target": 3,
-        "xp_reward": 250,
-        "bits_reward": 150
-    }
-]
-
+from user_profile_manager import UserProfileManager
+from mission_data import MISSIONS as MISSION_DEFINITIONS
 
 def get_mission_definitions():
-    """Returns the full list of mission definitions (no lambdas)."""
+    """Returns the full list of mission definitions."""
     return MISSION_DEFINITIONS
 
 
@@ -101,60 +21,104 @@ def get_user_missions_with_progress(telegram_id: str) -> list:
     if not perfil:
         return []
 
-    # Get claimed missions from DB
+    # Get claimed missions from DB. Format could be 'mission_id_lvl_1'
     user_missions = database.get_user_missions(telegram_id)
-    claimed_map = {um["mission_id"]: um for um in user_missions}
+    claimed_set = {um["mission_id"] for um in user_missions if um["claimed"] == 1}
 
-    # Get current stats
+    # Gather all stats necessary based on the mission_data columns
     stats = {
         "juegos_jugados": perfil.get("juegos_jugados", 0),
         "moches_ganados": perfil.get("moches_ganados", 0),
         "ruletas_ganadas": perfil.get("ruletas_ganadas", 0),
         "jackpots_ganados": perfil.get("jackpots_ganados", 0),
         "wins_total": perfil.get("wins_total", 0),
+        "tiempo_jugado": perfil.get("tiempo_jugado", 0),
+        "bits_apostados": perfil.get("bits_apostados", 0),
+        "bits_ganados": perfil.get("bits_ganados", 0),
+        "win_streak": perfil.get("win_streak", 0),
+        "tournaments_played": perfil.get("tournaments_played", 0),
+        "tournaments_won": perfil.get("tournaments_won", 0),
+        "juegos_diferentes": perfil.get("juegos_diferentes", 0),
     }
 
-    # Compute multi_game progress
-    played_games = 0
-    if perfil.get("moches_ganados", 0) > 0 or perfil.get("juegos_jugados", 0) > 0:
-        if perfil.get("juegos_jugados", 0) > 0:
-            played_games += 1  # played something
-    if perfil.get("moches_ganados", 0) > 0:
-        played_games = max(played_games, 1)
-    if perfil.get("ruletas_ganadas", 0) > 0:
-        played_games = min(played_games + 1, 3)
-    if perfil.get("jackpots_ganados", 0) > 0:
-        played_games = min(played_games + 1, 3)
-    stats["multi_game"] = played_games
-
     result = []
+    
     for m in MISSION_DEFINITIONS:
-        claimed_data = claimed_map.get(m["id"], {})
-        current = stats.get(m["type"], 0)
-        progress_pct = min(int((current / m["target"]) * 100), 100) if m["target"] > 0 else 0
-        completed = current >= m["target"]
-
+        base_id = m["id"]
+        current_stat = stats.get(m["type"], 0)
+        
+        # Determine which level is currently active (the first one not claimed)
+        active_level_idx = 0
+        fully_completed = False
+        
+        for i in range(3):
+            lvl_string = f"{base_id}_lvl_{i+1}"
+            if lvl_string in claimed_set:
+                active_level_idx = i + 1
+            else:
+                break
+                
+        if active_level_idx >= 3:
+            # All levels claimed
+            fully_completed = True
+            active_level_idx = 2 # Show the final tier as completed
+            
+        lvl_data = m["levels"][active_level_idx]
+        
+        # Calculate progress
+        target = lvl_data["target"]
+        progress_pct = min(int((current_stat / target) * 100), 100) if target > 0 else 0
+        
+        # Determine claimability
+        can_claim = (current_stat >= target) and not fully_completed
+        
+        # Format the description
+        desc = m["desc"].format(target=target)
+        
         result.append({
-            **m,
-            "current_progress": current,
+            "id": f"{base_id}_lvl_{lvl_data['level']}" if not fully_completed else f"{base_id}_lvl_3",
+            "base_id": base_id,
+            "name": m["name"],
+            "desc": desc,
+            "icon": m["icon"],
+            "type": m["type"],
+            "level": lvl_data['level'],
+            "target": target,
+            "xp_reward": lvl_data["xp_reward"],
+            "bits_reward": lvl_data["bits_reward"],
+            "current_progress": current_stat,
             "progress_percent": progress_pct,
-            "completed": completed,
-            "claimed": claimed_data.get("claimed", 0) == 1
+            "completed": can_claim, # indicates ready to claim button
+            "claimed": fully_completed  # indicates fully done, no more interactions
         })
 
     return result
 
 
-def claim_mission_reward(telegram_id: str, mission_id: str) -> dict:
+def claim_mission_reward(telegram_id: str, formatted_mission_id: str) -> dict:
     """
-    Claims the reward for a completed mission.
+    Claims the reward for a completed mission level.
+    formatted_mission_id example: 'gen_plays_1_lvl_1'
     Returns dict with status, xp_gained, bits_gained.
     """
-    mission = next((m for m in MISSION_DEFINITIONS if m["id"] == mission_id), None)
-    if not mission:
-        return {"status": "error", "message": "Misión no encontrada"}
+    try:
+        # Extraer base_id y level
+        parts = formatted_mission_id.rsplit("_lvl_", 1)
+        if len(parts) != 2:
+            return {"status": "error", "message": "ID de misión inválido"}
+            
+        base_id = parts[0]
+        level_idx = int(parts[1]) - 1 # 0-indexed para list acceso
+        
+        mission = next((m for m in MISSION_DEFINITIONS if m["id"] == base_id), None)
+        if not mission or level_idx < 0 or level_idx > 2:
+            return {"status": "error", "message": "Misión o nivel no encontrado"}
+            
+        lvl_data = mission["levels"][level_idx]
+        
+    except ValueError:
+        return {"status": "error", "message": "Formato de misión inválido"}
 
-    # Verify completion
     perfil = database.obtener_perfil_completo(telegram_id)
     if not perfil:
         return {"status": "error", "message": "Usuario no encontrado"}
@@ -165,33 +129,63 @@ def claim_mission_reward(telegram_id: str, mission_id: str) -> dict:
         "ruletas_ganadas": perfil.get("ruletas_ganadas", 0),
         "jackpots_ganados": perfil.get("jackpots_ganados", 0),
         "wins_total": perfil.get("wins_total", 0),
+        "tiempo_jugado": perfil.get("tiempo_jugado", 0),
+        "bits_apostados": perfil.get("bits_apostados", 0),
+        "bits_ganados": perfil.get("bits_ganados", 0),
+        "win_streak": perfil.get("win_streak", 0),
+        "tournaments_played": perfil.get("tournaments_played", 0),
+        "tournaments_won": perfil.get("tournaments_won", 0),
+        "juegos_diferentes": perfil.get("juegos_diferentes", 0),
     }
     current = stats.get(mission["type"], 0)
 
-    if current < mission["target"]:
+    if current < lvl_data["target"]:
         return {"status": "error", "message": "Misión no completada todavía"}
 
-    # Check already claimed
-    already = database.is_mission_claimed(telegram_id, mission_id)
+    # Check already claimed for THIS specific level
+    already = database.is_mission_claimed(telegram_id, formatted_mission_id)
     if already:
-        return {"status": "error", "message": "Recompensa ya reclamada"}
+        return {"status": "error", "message": "Recompensa de nivel ya reclamada"}
 
     # Award rewards
     from user_profile_manager import UserProfileManager
     profile_updates = None
 
-    if mission["xp_reward"] > 0:
-        profile_updates = UserProfileManager.add_xp(telegram_id, "custom", mission["xp_reward"])
+    if lvl_data["xp_reward"] > 0:
+        profile_updates = UserProfileManager.add_xp(telegram_id, "custom", lvl_data["xp_reward"])
 
-    if mission["bits_reward"] > 0:
-        database.recargar_bits(telegram_id, mission["bits_reward"])
+    if lvl_data["bits_reward"] > 0:
+        database.recargar_bits(telegram_id, lvl_data["bits_reward"])
 
-    # Mark as claimed
-    database.claim_mission(telegram_id, mission_id)
+    # Mark as claimed using the specific level identifier
+    database.claim_mission(telegram_id, formatted_mission_id)
 
     return {
         "status": "ok",
-        "xp_gained": mission["xp_reward"],
-        "bits_gained": mission["bits_reward"],
+        "xp_gained": lvl_data["xp_reward"],
+        "bits_gained": lvl_data["bits_reward"],
         "profile_updates": profile_updates
     }
+
+
+def check_newly_completed_missions(telegram_id: str) -> list:
+    """
+    Returns a list of missions that just became claimable (ready to show a toast).
+    Used by game endpoints (/bet, /win, /api/spin) to notify the frontend.
+    """
+    try:
+        missions = get_user_missions_with_progress(telegram_id)
+        # Return compact info for each mission that is completed but not yet claimed
+        newly_completed = [
+            {
+                "name": m["name"],
+                "icon": m["icon"],
+                "level": m["level"],
+                "bits_reward": m["bits_reward"],
+                "xp_reward": m["xp_reward"]
+            }
+            for m in missions if m["completed"] and not m["claimed"]
+        ]
+        return newly_completed
+    except Exception:
+        return []

@@ -2358,3 +2358,50 @@ select.input-modern option {
   color: #000;
   box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
 }
+
+/* ======================================================
+   RESPONSIVE DESIGN ADAPTATIONS (Desktop & Tablet)
+====================================================== */
+
+@media (min-width: 768px) {
+  .hero-title {
+    font-size: 4rem;
+  }
+  .hero-subtitle {
+    font-size: 1.2rem;
+    max-width: 600px;
+  }
+  
+  /* Convert single column games grid to multi-column */
+  .games-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .game-card {
+    flex: 1 1 calc(50% - 20px);
+    max-width: 48%;
+  }
+
+  /* Convert benefits grid to row */
+  .benefits-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .benefit-card {
+    flex: 1 1 calc(33.333% - 20px);
+    max-width: 32%;
+    flex-direction: column;
+    text-align: center;
+    padding: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Three columns for games if space permits */
+  .game-card {
+    flex: 1 1 calc(50% - 20px); 
+    max-width: 48%;
+  }
+}

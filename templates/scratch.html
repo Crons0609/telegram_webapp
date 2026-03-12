@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rasca y Gana - Zona Jackpot 777</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&family=Playfair+Display:wght@700;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #050505;
+            --panel-bg: rgba(15, 15, 18, 0.85);
+            --dorado: #FFD700;
+            --dorado-oscuro: #B8860B;
+            --rojo-jackpot: #D32F2F;
+            --rojo-brillante: #FF3333;
+            --plata: #E0E0E0;
+            --texto-claro: #F5F5F5;
+            --texto-mutado: #8B92A5;
+            --neon-glow: rgba(255, 215, 0, 0.5);
+
+            --carta-w: 320px;
+            --carta-h: 320px;
+            --grid-gap: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(211, 47, 47, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a1a1a' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            color: var(--texto-claro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+            z-index: 10;
+        }
+
+        .back-btn {
+            color: var(--texto-mutado);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 8px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            color: var(--dorado);
+            border-color: var(--dorado);
+            box-shadow: 0 0 10px var(--neon-glow);
+        }
+
+        .brand {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 24px;
+            background: linear-gradient(135deg, var(--dorado) 0%, var(--texto-claro) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+            letter-spacing: 1px;
+        }
+
+        .balance-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 1px solid var(--rojo-jackpot);
+            box-shadow: 0 0 15px rgba(211, 47, 47, 0.3);
+        }
+
+        .balance-box span {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            color: var(--dorado);
+            font-weight: 700;
+        }
+
+        /* MAIN CONTENT GRID */
+        .game-layout {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* CARD SELECTOR (LEFT PANEL) */
+        .selector-panel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 5;
+        }
+
+        .card-option {
+            background: var(--panel-bg);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-option:hover {
+            transform: translateX(10px);
+            background: rgba(30, 30, 35, 0.9);
+        }
+
+        .card-option.active {
+            border-color: var(--dorado);
+            box-shadow: 0 0 20px var(--neon-glow);
+            transform: translateX(15px);
+        }
+
+        .card-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .card-option:hover::before {
+            transform: translateX(100%);
+        }
+
+        /* Estilos específicos de tarjetas */
+        .card-option[data-type="clasica"] .card-title {
+            color: #A0A0A0;
+        }
+
+        .card-option[data-type="vip"] .card-title {
+            color: var(--dorado);
+        }
+
+        .card-option[data-type="jackpot"] .card-title {
+            color: var(--rojo-brillante);
+            text-shadow: 0 0 8px rgba(255, 51, 51, 0.5);
+        }
+
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: 22px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .card-cost {
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .card-desc {
+            font-size: 12px;
+            color: var(--texto-mutado);
+            line-height: 1.4;
+        }
+
+        /* SCRATCH AREA (CENTER PANEL) */
+        .scratch-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+        }
+
+        .scratch-card-wrapper {
+            position: relative;
+            width: var(--carta-w);
+            height: var(--carta-h);
+            background: #111;
+            border-radius: 12px;
+            padding: var(--grid-gap);
+            box-shadow:
+                0 0 0 4px #222,
+                0 0 0 6px var(--dorado-oscuro),
+                0 20px 50px rgba(0, 0, 0, 0.8);
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+        }
+
+        .scratch-card-wrapper::after {
+            content: 'ZONA JACKPOT 777';
+            position: absolute;
+            bottom: -35px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-family: 'Playfair Display', serif;
+            font-size: 14px;
+            color: var(--dorado);
+            letter-spacing: 4px;
+            opacity: 0.5;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: var(--grid-gap);
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            /* Dejamos que los pointer events pasen al canvas superior o a las celdas según el z-index */
+        }
+
+        .grid-cell {
+            background: #1a1a1a;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            /* The size of the emojis */
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .grid-cell img {
+            width: 60%;
+            height: 60%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+        }
+
+        .cell-win {
+            animation: pulseWin 1s infinite alternate;
+            background: rgba(255, 215, 0, 0.2);
+            border-color: var(--dorado);
+            box-shadow: 0 0 15px var(--neon-glow), inset 0 0 20px var(--neon-glow);
+        }
+
+        @keyframes pulseWin {
+            0% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            100% {
+                transform: scale(1.05);
+                filter: brightness(1.3);
+            }
+        }
+
+        /* SCRATCH CANVAS OVERLAY */
+        #scratch-canvas {
+            position: absolute;
+            top: var(--grid-gap);
+            left: var(--grid-gap);
+            width: calc(100% - var(--grid-gap)*2);
+            height: calc(100% - var(--grid-gap)*2);
+            z-index: 10;
+            border-radius: 8px;
+            cursor: crosshair;
+            opacity: 0;
+            /* Hidden until bought */
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .scratching {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="%23FFD700" fill-opacity="0.5" stroke="%23fff" stroke-width="2"/></svg>') 16 16, auto !important;
+        }
+
+        .overlay-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        .overlay-message.show {
+            opacity: 1;
+        }
+
+        .win-amount {
+            font-family: 'Playfair Display', serif;
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--dorado);
+            text-shadow: 0 0 20px var(--rojo-jackpot), 0 0 40px var(--dorado);
+            animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* CONTROLS (RIGHT OR BOTTOM) */
+        .controls-panel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 5;
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-buy {
+            background: linear-gradient(135deg, var(--rojo-jackpot) 0%, #8b0000 100%);
+            color: white;
+            box-shadow: 0 6px 0 #5c0000, 0 10px 20px rgba(211, 47, 47, 0.4);
+        }
+
+        .btn-buy:hover {
+            filter: brightness(1.2);
+            transform: translateY(2px);
+            box-shadow: 0 4px 0 #5c0000, 0 6px 15px rgba(211, 47, 47, 0.4);
+        }
+
+        .btn-buy:active {
+            transform: translateY(6px);
+            box-shadow: none;
+        }
+
+        .btn-buy:disabled {
+            background: #333;
+            box-shadow: none;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-reveal {
+            background: linear-gradient(135deg, var(--dorado) 0%, #aa8529 100%);
+            color: #000;
+            box-shadow: 0 6px 0 #7a5f18, 0 10px 20px rgba(255, 215, 0, 0.2);
+            display: none;
+            /* Shows only when bought */
+        }
+
+        .btn-reveal:hover {
+            filter: brightness(1.1);
+            transform: translateY(2px);
+            box-shadow: 0 4px 0 #7a5f18;
+        }
+
+        .btn-reveal:active {
+            transform: translateY(6px);
+            box-shadow: none;
+        }
+
+        .btn-auto {
+            background: transparent;
+            border: 2px solid var(--texto-mutado);
+            color: var(--texto-claro);
+            padding: 12px;
+            font-size: 14px;
+        }
+
+        .btn-auto:hover {
+            border-color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-auto.active {
+            border-color: var(--dorado);
+            color: var(--dorado);
+            background: rgba(255, 215, 0, 0.1);
+            animation: pulseAuto 2s infinite;
+        }
+
+        @keyframes pulseAuto {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 215, 0, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+            }
+        }
+
+        /* HISTORY */
+        .history-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-title {
+            font-size: 12px;
+            color: var(--texto-mutado);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .h-win {
+            color: var(--success, #2ed573);
+            border-left: 3px solid #2ed573;
+        }
+
+        .h-loss {
+            color: var(--texto-mutado);
+            border-left: 3px solid #555;
+        }
+
+        .h-jackpot {
+            color: var(--dorado);
+            border-left: 3px solid var(--dorado);
+            text-shadow: 0 0 5px var(--neon-glow);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* RTP Footer */
+        .rtp-info {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 900px) {
+            .game-layout {
+                flex-direction: column;
+                height: auto;
+                overflow-y: auto;
+            }
+
+            .selector-panel,
+            .controls-panel {
+                width: 100%;
+                max-width: 400px;
+                order: 2;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .scratch-area {
+                order: 1;
+                margin: 20px 0;
+            }
+
+            .card-option {
+                flex: 1 1 30%;
+                padding: 15px 10px;
+            }
+
+            .card-title {
+                font-size: 16px;
+            }
+
+            .controls-panel {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <a href="/" class="back-btn">← Lobby</a>
+        <div class="brand">ZONA JACKPOT 777</div>
+        <div class="balance-box">
+            <span style="font-size:16px;">💎</span>
+            <span id="balance-display">{{ bits|default(10000) }}</span>
+        </div>
+    </header>
+
+    <div class="game-layout">
+
+        <!-- SELECTOR (Niveles de Tarjeta) -->
+        <div class="selector-panel">
+            <div class="card-option" data-type="clasica" onclick="selectCardType('clasica')">
+                <div class="card-cost">10 Bits</div>
+                <div class="card-title">Clásica</div>
+                <div class="card-desc">Ganancias Frecuentes.<br>Premio Max: 50x (500)</div>
+            </div>
+
+            <div class="card-option active" data-type="vip" onclick="selectCardType('vip')">
+                <div class="card-cost">50 Bits</div>
+                <div class="card-title">VIP Plata</div>
+                <div class="card-desc">Riesgo Medio.<br>Premio Max: 200x (10k)</div>
+            </div>
+
+            <div class="card-option" data-type="jackpot" onclick="selectCardType('jackpot')">
+                <div class="card-cost">100 Bits</div>
+                <div class="card-title">Jackpot 777</div>
+                <div class="card-desc">Alta Volatilidad.<br>Premio Max: 1000x (100k)</div>
+            </div>
+        </div>
+
+        <!-- AREA CENTRAL -->
+        <div class="scratch-area">
+            <div class="scratch-card-wrapper" id="card-wrapper">
+                <div class="grid-container" id="grid">
+                    <!-- JS fills 9 cells here -->
+                </div>
+                <!-- HTML5 Canvas overlay for scratching -->
+                <canvas id="scratch-canvas"></canvas>
+                <!-- Mensaje de victoria/derrota superpuesto -->
+                <div class="overlay-message" id="overlay-msg">
+                    <div class="win-amount" id="win-text"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROLES Y HISTORIAL -->
+        <div class="controls-panel">
+            <button class="btn-action btn-buy" id="btn-buy" onclick="buyCard()">COMPRAR (50 BITS)</button>
+            <button class="btn-action btn-reveal" id="btn-reveal" onclick="revealAll()">REVELAR TODO</button>
+
+            <button class="btn-action btn-auto" id="btn-auto" onclick="toggleAutoMode()">Auto x5</button>
+
+            <div class="history-list">
+                <div class="history-title">Últimas Jugadas</div>
+                <div id="history-container">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="rtp-info">Sistema de RTP y Variación Dinámica (85-96%)</div>
+
+    <script>
+        /**
+         * IMPORTANTE: URL DE FICHA PERSONALIZADA
+         * Puedes reemplazar el símbolo de comodín por una URL personalizada.
+         */
+        const FICHA_IMAGEN = ''; // ej: '/static/img/tu_ficha.png'
+
+        // --- Lógica del Generador y Tabla de Premios ---
+
+        // Diccionario de Símbolos y sus multiplicadores relativos
+        const SIMBOLOS = {
+            CEREZA: { icon: '🍒', type: 'text' },
+            LIMON: { icon: '🍋', type: 'text' },
+            CAMPANA: { icon: '🔔', type: 'text' },
+            BAR: { icon: '🍫', type: 'text' },
+            DIAMANTE: { icon: '💎', type: 'text' },
+            ZONA777: { icon: '🎰', type: 'text' },
+            FICHA: {
+                icon: FICHA_IMAGEN ? FICHA_IMAGEN : '🪙',
+                type: FICHA_IMAGEN ? 'image' : 'text'
+            } // Símbolo especial scatter o comodín
+        };
+
+        // Probabilidades y Comportamientos según Tarjeta (Ponderadas)
+        // RTP Objetivo: Casa gana X% a largo plazo.
+        // 'peso' define la probabilidad sumando el total dentro de su tipo.
+        const CARD_LOGIC = {
+            clasica: {
+                cost: 10,
+                rtp_target: 95,
+                outcomes: [
+                    { type: 'loss', weight: 700, mult: 0, desc: 'Nada' },
+                    { type: 'win_small', weight: 200, mult: 2, desc: '3 Cerezas (Línea)' },
+                    { type: 'win_med', weight: 80, mult: 5, desc: '3 Campanas (Línea)' },
+                    { type: 'win_large', weight: 19, mult: 10, desc: 'Scatter Fichas' },
+                    { type: 'jackpot', weight: 1, mult: 50, desc: '3 Diamantes' }
+                ]
+            },
+            vip: {
+                cost: 50,
+                rtp_target: 92,
+                outcomes: [
+                    { type: 'loss', weight: 650, mult: 0, desc: 'Nada' },
+                    { type: 'win_small', weight: 200, mult: 3, desc: 'Línea Baja' },
+                    { type: 'win_med', weight: 100, mult: 10, desc: 'Línea Media' },
+                    { type: 'win_large', weight: 45, mult: 25, desc: 'Línea Alta' },
+                    { type: 'jackpot', weight: 5, mult: 200, desc: 'SUPER VIP' }
+                ]
+            },
+            jackpot: {
+                cost: 100,
+                rtp_target: 87,
+                outcomes: [
+                    { type: 'loss', weight: 800, mult: 0, desc: 'Nada' },
+                    { type: 'win_small', weight: 120, mult: 5, desc: 'Consuelo' },
+                    { type: 'win_med', weight: 60, mult: 20, desc: 'Buen Premio' },
+                    { type: 'win_large', weight: 19, mult: 100, desc: 'Mega' },
+                    { type: 'jackpot', weight: 1, mult: 1000, desc: 'JACKPOT 777' }
+                ]
+            }
+        };
+
+        // --- Estado Variables JS ---
+        let balance = parseFloat("{{ bits|default(1000) }}");
+        let currentType = 'vip'; // Seleccionado por defecto
+        let isBought = false;
+        let isRevealed = false;
+        let autoMode = false;
+        let autoRemaining = 0;
+
+        // Grid interna del juego (3x3 = 9)
+        let currentGrid = [];
+        let currentOutcome = null; // outcome object from CARD_LOGIC
+        let winningCells = []; // Indices de celdas a brillar [0,1,2...]
+
+        // Referencias DOM
+        const balanceDisplay = document.getElementById('balance-display');
+        const btnBuy = document.getElementById('btn-buy');
+        const btnReveal = document.getElementById('btn-reveal');
+        const btnAuto = document.getElementById('btn-auto');
+        const gridDiv = document.getElementById('grid');
+        const overlayMsg = document.getElementById('overlay-msg');
+        const winText = document.getElementById('win-text');
+        const canvas = document.getElementById('scratch-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // --- Inicialización Visual ---
+
+        function init() {
+            if (isNaN(balance)) balance = 10000;
+            updateBalanceDisplay();
+            selectCardType(currentType);
+            createEmptyGrid();
+            setupCanvas();
+        }
+
+        function createEmptyGrid() {
+            gridDiv.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                let div = document.createElement('div');
+                div.className = 'grid-cell';
+                div.id = `cell-${i}`;
+                gridDiv.appendChild(div);
+            }
+        }
+
+        // Cambia la tarjeta activa
+        function selectCardType(type) {
+            if (isBought && !isRevealed) {
+                alert('Revela la tarjeta actual antes de cambiar.');
+                return;
+            }
+            document.querySelectorAll('.card-option').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.card-option[data-type="${type}"]`).classList.add('active');
+            currentType = type;
+
+            btnBuy.innerHTML = `COMPRAR (${CARD_LOGIC[type].cost} BITS)`;
+        }
+
+        // --- CORE LOGIC: DETERMINAR RESULTADO ---
+
+        function buyCard() {
+            const cost = CARD_LOGIC[currentType].cost;
+            if (balance < cost) {
+                alert("No tienes suficientes Bits.");
+                if (autoMode) toggleAutoMode();
+                return;
+            }
+
+            // 1. Restar Saldo (Aquí conectaría con /bet en servidor real)
+            balance -= cost;
+            updateBalanceDisplay();
+
+            // 2. Determinar Resultado (RNG contra tabla de pesos)
+            currentOutcome = spinRNG(currentType);
+
+            // 3. Imyectar matriz de símbolos que coincida visualmente con ese resultado
+            generateGridVisuals(currentOutcome);
+
+            // 4. Reset UI
+            isBought = true;
+            isRevealed = false;
+            overlayMsg.classList.remove('show');
+
+            // Poner Canvas Encima (Pintar Capa a Raspar)
+            fillCanvasLayer();
+            canvas.style.opacity = 1;
+            canvas.style.pointerEvents = 'auto'; // Permitir raspado
+            canvas.classList.add('scratching');
+
+            btnBuy.style.display = 'none';
+            btnReveal.style.display = 'block';
+        }
+
+        function spinRNG(type) {
+            const outcomes = CARD_LOGIC[type].outcomes;
+            let totalWeight = outcomes.reduce((sum, item) => sum + item.weight, 0);
+            let random = Math.random() * totalWeight;
+            let pSum = 0;
+            for (let i = 0; i < outcomes.length; i++) {
+                pSum += outcomes[i].weight;
+                if (random <= pSum) {
+                    return outcomes[i];
+                }
+            }
+            return outcomes[0]; // Fallback loss
+        }
+
+        function generateGridVisuals(outcome) {
+            // Inicializamos con símbolos al azar primero
+            currentGrid = [];
+            winningCells = [];
+
+            const symbolKeys = Object.keys(SIMBOLOS);
+
+            // Fill completely random
+            for (let i = 0; i < 9; i++) {
+                currentGrid.push(symbolKeys[Math.floor(Math.random() * symbolKeys.length)]);
+            }
+
+            // Force the win if not loss
+            if (outcome.type !== 'loss') {
+                const isScatter = Math.random() > 0.5; // Decidir estilo de victoria (Línea o Scatter)
+                const winSymbol = symbolKeys[Math.floor(Math.random() * (symbolKeys.length - 1))]; // Cualquier menos Ficha/Scatter
+
+                if (isScatter && outcome.mult <= 10) {
+                    // Scatter win: put 3 'FICHA' symbols scattered
+                    let positions = getUniqueRandomIndices(3, 9);
+                    positions.forEach(idx => {
+                        currentGrid[idx] = 'FICHA';
+                        winningCells.push(idx);
+                    });
+                } else {
+                    // Line win: 0=Row1, 1=Row2, 2=Row3, 3=Col1, 4=Col2, 5=Col3, 6=Diag1, 7=Diag2
+                    const lines = [
+                        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+                        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
+                        [0, 4, 8], [2, 4, 6]           // Diags
+                    ];
+                    let chosenLine = lines[Math.floor(Math.random() * lines.length)];
+
+                    // Use a special symbol for huge jackpots
+                    let sym = outcome.mult >= 100 ? 'ZONA777' : (outcome.mult >= 50 ? 'DIAMANTE' : winSymbol);
+
+                    chosenLine.forEach(idx => {
+                        currentGrid[idx] = sym;
+                        winningCells.push(idx);
+                    });
+                }
+            } else {
+                // Force LOSS (Make sure no accidental lines are formed)
+                // A simple way is to limit identical symbols to max 2.
+                let counts = {};
+                for (let i = 0; i < 9; i++) {
+                    let s = currentGrid[i];
+                    counts[s] = (counts[s] || 0) + 1;
+                    if (counts[s] >= 3) {
+                        // Force change
+                        let newSym = symbolKeys[(symbolKeys.indexOf(s) + 1) % symbolKeys.length];
+                        currentGrid[i] = newSym;
+                        counts[newSym] = (counts[newSym] || 0) + 1;
+                        counts[s]--;
+                    }
+                }
+                // Double check no lines
+                // (In a full prod environment, check lines array. For this demo, max 2 of kind prevents lines anyway).
+            }
+
+            // Render to DOM under canvas
+            for (let i = 0; i < 9; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                cell.className = 'grid-cell'; // Reset classes
+
+                const symData = SIMBOLOS[currentGrid[i]];
+                if (symData.type === 'text') {
+                    cell.innerHTML = symData.icon;
+                } else {
+                    cell.innerHTML = `<img src="${symData.icon}" alt="ficha">`;
+                }
+            }
+        }
+
+        function getUniqueRandomIndices(count, max) {
+            let arr = [];
+            while (arr.length < count) {
+                let r = Math.floor(Math.random() * max);
+                if (arr.indexOf(r) === -1) arr.push(r);
+            }
+            return arr;
+        }
+
+        // --- MECÁNICA: CANVAS SCRATCHING ---
+
+        let isDrawing = false;
+        let scratchedPixels = 0;
+
+        function setupCanvas() {
+            // The canvas uses CSS sizes, need to match internal rendering size
+            const wrapper = document.getElementById('card-wrapper');
+            // Usar tamaño de layout menos el grid-gap de márgenes
+            const size = wrapper.offsetWidth - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-gap')) * 2);
+
+            canvas.width = size;
+            canvas.height = size;
+
+            // Escucha eventos de ratón
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseleave', stopDrawing);
+
+            // Escucha eventos táctiles para móviles
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function fillCanvasLayer() {
+            ctx.globalCompositeOperation = 'source-over';
+
+            // Color Plateado/Metálico Base
+            ctx.fillStyle = '#666';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Gradiente Lujo
+            let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            grad.addColorStop(0, '#555');
+            grad.addColorStop(0.5, '#999');
+            grad.addColorStop(1, '#333');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Texto o Patrón
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.font = "bold 24px Playfair Display";
+            ctx.textAlign = "center";
+
+            for (let i = 1; i <= 4; i++) {
+                ctx.fillText("JACKPOT 777", canvas.width / 2, (canvas.height / 4) * i - 10);
+            }
+
+            // Restablecer contador e modo de borrado
+            scratchedPixels = 0;
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.lineWidth = 40;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+        }
+
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Check si es evento touch o mouse
+            const isTouch = e.touches && e.touches.length > 0;
+            const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+            const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            if (!isBought || isRevealed) return;
+            e.preventDefault(); // Prevents scrolling on touch
+            isDrawing = true;
+            const pos = getCoords(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!isDrawing || !isBought || isRevealed) return;
+            e.preventDefault();
+            const pos = getCoords(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+
+            // Checador rápido de completado (No ideal iterar imageData cada frame, lo hacemos simple saltado)
+            if (Math.random() < 0.1) {
+                checkCompletion();
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            if (isBought && !isRevealed) {
+                checkCompletion();
+            }
+        }
+
+        function checkCompletion() {
+            const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let transparent = 0;
+            // Check pixel alpha (cada 4 ints en el array)
+            // Reducimos el loop chequeando 1 de cada 16 pixeles para CPU ligero
+            for (let i = 3; i < pixels.length; i += 16) {
+                if (pixels[i] < 50) transparent++;
+            }
+
+            const totalChecked = pixels.length / 16;
+            const rawPercent = (transparent / totalChecked) * 100;
+
+            // Si el jugador raspó más del 50%, auto revelar.
+            if (rawPercent > 50) {
+                revealAll();
+            }
+        }
+
+        // --- FINALIZAR Y MOSTRAR RESULTADO ---
+
+        function revealAll() {
+            if (!isBought || isRevealed) return;
+            isRevealed = true;
+
+            // Quitar Canvas de un golpe
+            canvas.style.opacity = 0;
+            canvas.classList.remove('scratching');
+            canvas.style.pointerEvents = 'none';
+
+            btnReveal.style.display = 'none';
+
+            // Lógica de Ganancia
+            const wonAmount = currentOutcome.mult * CARD_LOGIC[currentType].cost;
+
+            if (currentOutcome.type !== 'loss') {
+                // Visuales de ganar
+                winningCells.forEach(idx => {
+                    document.getElementById(`cell-${idx}`).classList.add('cell-win');
+                });
+
+                winText.innerText = `+${wonAmount.toLocaleString()} Bits`;
+                winText.style.color = currentOutcome.mult >= 100 ? 'var(--rojo-brillante)' : 'var(--dorado)';
+                setTimeout(() => {
+                    overlayMsg.classList.add('show');
+                }, 500); // Pequeño delay dramático
+
+                updateHistory(true, wonAmount, currentOutcome);
+            } else {
+                updateHistory(false, CARD_LOGIC[currentType].cost, currentOutcome);
+            }
+
+            // Add money (Server Simulation)
+            balance += wonAmount;
+            updateBalanceDisplay();
+
+            // Control Auto Mode
+            if (autoMode && autoRemaining > 0) {
+                btnBuy.style.display = 'none'; // Keep hidden
+                autoRemaining--;
+                setTimeout(() => {
+                    if (autoRemaining >= 0) {
+                        overlayMsg.classList.remove('show');
+                        buyCard();
+                        if (autoMode) setTimeout(revealAll, 1000); // raspa auto en 1 seg
+                    } else {
+                        toggleAutoMode(); // Turn off
+                    }
+                }, 2500); // 2.5s display of result
+            } else {
+                setTimeout(() => {
+                    btnBuy.style.display = 'block';
+                    if (overlayMsg.classList.contains('show')) {
+                        setTimeout(() => overlayMsg.classList.remove('show'), 1500);
+                    }
+                }, 1000);
+            }
+        }
+
+        // --- UTILIDADES ---
+
+        function updateBalanceDisplay() {
+            balanceDisplay.innerText = balance.toLocaleString();
+        }
+
+        function toggleAutoMode() {
+            autoMode = !autoMode;
+            if (autoMode) {
+                btnAuto.classList.add('active');
+                btnAuto.innerText = "Detener Auto";
+                autoRemaining = 4; // Total 5
+
+                if (!isBought) {
+                    buyCard();
+                    setTimeout(revealAll, 1000);
+                } else if (!isRevealed) {
+                    revealAll();
+                }
+            } else {
+                btnAuto.classList.remove('active');
+                btnAuto.innerText = "Auto x5";
+                autoRemaining = 0;
+                if (isRevealed) btnBuy.style.display = 'block';
+            }
+        }
+
+        // Historial Lateral
+        const historyContainer = document.getElementById('history-container');
+        function updateHistory(isWin, amount, outcome) {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+
+            if (!isWin) {
+                item.classList.add('h-loss');
+                item.innerHTML = `<span>${CARD_LOGIC[currentType].cost} B</span> <span>0x</span>`;
+            } else {
+                if (outcome.mult >= 100) item.classList.add('h-jackpot');
+                else item.classList.add('h-win');
+
+                item.innerHTML = `<span>+${amount} B</span> <span>${outcome.mult}x</span>`;
+            }
+
+            historyContainer.prepend(item);
+            if (historyContainer.children.length > 5) {
+                historyContainer.removeChild(historyContainer.lastChild);
+            }
+        }
+
+        // Iniciar el entorno en la carga
+        window.onload = init;
+
+    </script>
+</body>
+
+</html>

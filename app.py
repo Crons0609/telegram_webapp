@@ -5,7 +5,7 @@ from moche_engine import manager
 from slot_engine import slot_engine
 from user_profile_manager import UserProfileManager
 from trophy_manager import check_and_unlock_trophies, get_trophy_definitions
-from mission_manager import get_user_missions_with_progress, claim_mission_reward
+from mission_manager import get_user_missions_with_progress, claim_mission_reward, check_newly_completed_missions
 import os
 
 app = Flask(__name__)
@@ -68,6 +68,26 @@ def home():
         session["photo_url"] = ""
         
         return render_template("index.html", nombre=test_nombre, username="tester", telegram_id=test_id, bits=bits, photo_url="")
+
+# =====================================================
+# LOBBY DE JUEGOS
+# =====================================================
+@app.route('/juegos')
+def juegos():
+    telegram_id = session.get("telegram_id")
+    nombre = session.get("nombre")
+    username = session.get("username", "")
+    photo_url = session.get("photo_url", "")
+
+    if telegram_id and nombre:
+        bits = database.obtener_bits(telegram_id)
+        return render_template("juegos.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url)
+    else:
+        # TEST MODE
+        test_id = "12345"
+        test_nombre = "Usuario de Prueba"
+        bits = database.obtener_bits(test_id)
+        return render_template("juegos.html", nombre=test_nombre, username="tester", telegram_id=test_id, bits=bits, photo_url="")
 
 # =====================================================
 # REGISTRO DESDE TELEGRAM WEBAPP
@@ -353,6 +373,8 @@ def api_spin():
     reel_symbols = slot_engine.generate_reels(outcome)
     # Record stats
     database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
+    database.incrementar_stat(telegram_id, 'bits_apostados', bet_amount)
+
 
     # Experience mapping
     xp_event = "slot_spin"
@@ -364,7 +386,11 @@ def api_spin():
     profile_updates = None
     if total_win > 0:
         database.registrar_ganancia(telegram_id, total_win)
+        database.incrementar_stat(telegram_id, 'bits_ganados', total_win)
         database.incrementar_stat(telegram_id, 'wins_total', 1)
+        database.actualizar_racha_victorias(telegram_id, True)
+    else:
+        database.actualizar_racha_victorias(telegram_id, False)
         
         # Determine win tier for XP
         if outcome["multiplier"] >= 50:
@@ -380,7 +406,7 @@ def api_spin():
         # Check trophy and mission unlocks after slot win
         try:
             new_trophies = check_and_unlock_trophies(telegram_id)
-            if profile_updates is None:
+            if not isinstance(profile_updates, dict):
                 profile_updates = {}
             profile_updates['new_trophies'] = new_trophies
         except Exception:
@@ -388,13 +414,21 @@ def api_spin():
 
     bits_actuales = database.obtener_bits(telegram_id)
 
+    # Check for newly completable missions
+    newly_completed_missions = []
+    try:
+        newly_completed_missions = check_newly_completed_missions(telegram_id)
+    except Exception:
+        pass
+
     return jsonify({
         "status": "ok",
         "bits": bits_actuales,
         "win_amount": total_win,
         "multiplier": outcome["multiplier"],
         "reels": reel_symbols,
-        "profile_updates": profile_updates
+        "profile_updates": profile_updates,
+        "newly_completed_missions": newly_completed_missions
     })
 
 # =====================================================
@@ -416,23 +450,32 @@ def bet():
     success = database.descontar_bits(telegram_id, cantidad)
     
     if success:
-        profile_updates = None
+        profile_updates = {}
         # Award participation XP based on source
+        # For multi-game tracking, record a generic "play" action
+        database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
+        database.incrementar_stat(telegram_id, 'bits_apostados', cantidad)
+
         if source == "moche":
             profile_updates = UserProfileManager.add_xp(telegram_id, "moche_play")
-            database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
         elif source == "ruleta":
             profile_updates = UserProfileManager.add_xp(telegram_id, "roulette_spin")
-            database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
 
         # Check mission progress
         try:
             check_and_unlock_trophies(telegram_id)
         except Exception:
             pass
+
+        # Check for newly completable missions
+        newly_completed_missions = []
+        try:
+            newly_completed_missions = check_newly_completed_missions(telegram_id)
+        except Exception:
+            pass
             
         bits_actuales = database.obtener_bits(telegram_id)
-        return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates})
+        return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates, "newly_completed_missions": newly_completed_missions})
     else:
         bits_actuales = database.obtener_bits(telegram_id)
         return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": bits_actuales}), 400
@@ -455,6 +498,8 @@ def win():
 
     telegram_id = session["telegram_id"]
     database.registrar_ganancia(telegram_id, cantidad)
+    database.incrementar_stat(telegram_id, 'bits_ganados', cantidad)
+    database.actualizar_racha_victorias(telegram_id, True)
     
     profile_updates = None
     if source == "moche":
@@ -476,14 +521,21 @@ def win():
     # Check trophy and mission unlocks after a win
     try:
         new_trophies = check_and_unlock_trophies(telegram_id)
-        if profile_updates is None:
+        if not isinstance(profile_updates, dict):
             profile_updates = {}
         profile_updates['new_trophies'] = new_trophies
     except Exception:
         pass
 
+    # Check for newly completable missions
+    newly_completed_missions = []
+    try:
+        newly_completed_missions = check_newly_completed_missions(telegram_id)
+    except Exception:
+        pass
+
     bits_actuales = database.obtener_bits(telegram_id)
-    return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates})
+    return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates, "newly_completed_missions": newly_completed_missions})
 
 # =====================================================
 # USER PROFILE API
@@ -500,9 +552,52 @@ def get_profile():
     rank_info = UserProfileManager.get_rank_info(perfil['nivel'])
     progress = UserProfileManager.get_progress(perfil['xp'])
     
+    # Ensure all level rewards are properly unlocked (backfills any missed unlocks)
+    try:
+        UserProfileManager.sync_rewards_for_level(session["telegram_id"], perfil['nivel'])
+        # Refresh profile after sync so unlocked_items is up to date
+        perfil = database.obtener_perfil_completo(session["telegram_id"])
+    except Exception:
+        pass
+    
+    # Calculate Win Ratio
+    total_played = perfil.get('juegos_jugados', 0)
+    total_wins = perfil.get('wins_total', 0)
+    win_ratio = 0
+    if total_played > 0:
+        win_ratio = round((total_wins / total_played) * 100, 1)
+
+    # Attach calculated stats
+    perfil['win_ratio'] = win_ratio
+    perfil['tiempo_jugado'] = perfil.get('tiempo_jugado', 0)
+    
+    # Trophies
+    trophies_raw = database.get_trophies(session["telegram_id"])
+    trophy_defs = {t['id']: t for t in get_trophy_definitions()}
+    trophies = [
+        {**trophy_defs[t['trophy_id']], 'unlocked_at': t['unlocked_at']}
+        for t in trophies_raw
+        if t['trophy_id'] in trophy_defs
+    ]
+    perfil['trophies'] = trophies
+
     perfil['rank'] = rank_info
     perfil['progress'] = progress
     return jsonify({"status": "ok", "profile": perfil})
+
+@app.route('/api/profile/ping', methods=["POST"])
+def ping_playtime():
+    """Endpoint for tracking playtime. Called periodically by the client."""
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    
+    data = request.get_json() or {}
+    minutes = int(data.get("minutes", 1)) # Default 1 min
+    
+    success = database.incrementar_tiempo_jugado(session["telegram_id"], minutes)
+    if success:
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "error"}), 500
 
 @app.route('/api/profile/equip', methods=["POST"])
 def equip_item():

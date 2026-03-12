@@ -96,15 +96,34 @@ def init_db() -> None:
                 moches_ganados INTEGER DEFAULT 0,
                 ruletas_ganadas INTEGER DEFAULT 0,
                 wins_total INTEGER DEFAULT 0,
+                tiempo_jugado INTEGER DEFAULT 0,
+                bits_apostados INTEGER DEFAULT 0,
+                bits_ganados INTEGER DEFAULT 0,
+                win_streak INTEGER DEFAULT 0,
+                tournaments_played INTEGER DEFAULT 0,
+                tournaments_won INTEGER DEFAULT 0,
+                juegos_diferentes INTEGER DEFAULT 0,
                 FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id)
             )
         """)
-        # Add wins_total to existing tables (migration guard)
-        try:
-            conn.execute("ALTER TABLE user_stats ADD COLUMN wins_total INTEGER DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass
-
+        # Migraciones (Asegurar que existan en BDs antiguas)
+        nuevas_columnas = [
+            ("wins_total", "INTEGER DEFAULT 0"),
+            ("tiempo_jugado", "INTEGER DEFAULT 0"),
+            ("bits_apostados", "INTEGER DEFAULT 0"),
+            ("bits_ganados", "INTEGER DEFAULT 0"),
+            ("win_streak", "INTEGER DEFAULT 0"),
+            ("tournaments_played", "INTEGER DEFAULT 0"),
+            ("tournaments_won", "INTEGER DEFAULT 0"),
+            ("juegos_diferentes", "INTEGER DEFAULT 0")
+        ]
+        
+        for col, tipo in nuevas_columnas:
+            try:
+                conn.execute(f"ALTER TABLE user_stats ADD COLUMN {col} {tipo}")
+            except sqlite3.OperationalError:
+                pass
+                
         # Tabla de Inventario/Desbloqueables
         conn.execute("""
             CREATE TABLE IF NOT EXISTS unlocked_items (
@@ -173,7 +192,14 @@ def obtener_perfil_completo(telegram_id: str) -> dict:
                    u.xp, u.nivel, u.marco_actual, u.avatar_frame, u.tema_actual,
                    u.total_ganados, u.total_recargas, u.last_daily_reward, u.daily_streak,
                    s.juegos_jugados, s.jackpots_ganados, s.moches_ganados, s.ruletas_ganadas,
-                   COALESCE(s.wins_total, 0) as wins_total
+                   COALESCE(s.wins_total, 0) as wins_total,
+                   COALESCE(s.tiempo_jugado, 0) as tiempo_jugado,
+                   COALESCE(s.bits_apostados, 0) as bits_apostados,
+                   COALESCE(s.bits_ganados, 0) as bits_ganados,
+                   COALESCE(s.win_streak, 0) as win_streak,
+                   COALESCE(s.tournaments_played, 0) as tournaments_played,
+                   COALESCE(s.tournaments_won, 0) as tournaments_won,
+                   COALESCE(s.juegos_diferentes, 0) as juegos_diferentes
             FROM usuarios u
             LEFT JOIN user_stats s ON u.telegram_id = s.telegram_id
             WHERE u.telegram_id = ?
@@ -304,7 +330,11 @@ def actualizar_nivel(telegram_id: str, nuevo_nivel: int) -> bool:
 
 def incrementar_stat(telegram_id: str, columna: str, cantidad: int = 1) -> bool:
     """Incrementa una estadistica especifica (juegos_jugados, jackpots_ganados, etc)"""
-    columnas_validas = ['juegos_jugados', 'jackpots_ganados', 'moches_ganados', 'ruletas_ganadas', 'wins_total']
+    columnas_validas = [
+        'juegos_jugados', 'jackpots_ganados', 'moches_ganados', 'ruletas_ganadas', 
+        'wins_total', 'bits_apostados', 'bits_ganados', 'tournaments_played', 
+        'tournaments_won', 'juegos_diferentes'
+    ]
     if columna not in columnas_validas:
         return False
         
@@ -314,6 +344,28 @@ def incrementar_stat(telegram_id: str, columna: str, cantidad: int = 1) -> bool:
         cursor = conn.execute(f"UPDATE user_stats SET {columna} = {columna} + ? WHERE telegram_id = ?", (cantidad, telegram_id))
         return cursor.rowcount > 0
 
+def actualizar_racha_victorias(telegram_id: str, is_win: bool) -> int:
+    """Actualiza la racha actual. Si supera la máxima, la guarda. Retorna la racha actual (no DB persistida momentanea sino calculada) o ajustada en otra tabla si fuera necesario.
+    Para simplificar, usaremos 'win_streak' como la racha MÁXIMA histórica, y al llamar esta función se asume que controlamos la lógica si tenemos una racha viva."""
+    # Para cumplir misiones de rachas a largo plazo, trackearemos una racha de victorias seguidas "actual".
+    # Lo más robusto sería tener "current_win_streak" y "max_win_streak". Agreguemos eso rápido:
+    try:
+        with get_connection() as conn:
+            try: conn.execute("ALTER TABLE user_stats ADD COLUMN current_win_streak INTEGER DEFAULT 0")
+            except: pass
+            
+            if is_win:
+                conn.execute("UPDATE user_stats SET current_win_streak = current_win_streak + 1 WHERE telegram_id = ?", (telegram_id,))
+                # Actualizar el MAX win_streak
+                conn.execute("UPDATE user_stats SET win_streak = MAX(win_streak, current_win_streak) WHERE telegram_id = ?", (telegram_id,))
+            else:
+                conn.execute("UPDATE user_stats SET current_win_streak = 0 WHERE telegram_id = ?", (telegram_id,))
+                
+            row = conn.execute("SELECT win_streak FROM user_stats WHERE telegram_id = ?", (telegram_id,)).fetchone()
+            return row["win_streak"] if row else 0
+    except Exception as e:
+        print(f"Error rachas: {e}")
+        return 0
 
 # --- TROPHIES ---
 def unlock_trophy(telegram_id: str, trophy_id: str) -> bool:
@@ -434,3 +486,14 @@ def actualizar_nombre_usuario(telegram_id: str, nuevo_nombre: str) -> bool:
         except sqlite3.IntegrityError:
             # En caso que haya constraints (unicidad futura)
             return False
+
+def incrementar_tiempo_jugado(telegram_id: str, minutos: int) -> bool:
+    """Suma 'minutos' al tiempo total jugado del usuario."""
+    with get_connection() as conn:
+        _asegurar_stats(telegram_id, conn)
+        cursor = conn.execute("""
+            UPDATE user_stats
+            SET tiempo_jugado = tiempo_jugado + ?
+            WHERE telegram_id = ?
+        """, (minutos, telegram_id))
+        return cursor.rowcount > 0

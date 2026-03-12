@@ -1,0 +1,254 @@
+/* ==========================================================================
+   ZONA JACKPOT 777 — GLOBAL THEME SYSTEM
+   Activate via: document.body.setAttribute('data-casino-theme', 'theme_id')
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   THEME: DEFAULT
+   -------------------------------------------------------------------------- */
+body,
+body[data-casino-theme="default"] {
+    --gold:             #c9a227;
+    --gold-lt:          #f0cc55;
+    --gold-hover:       rgba(201,162,39,0.5);
+    --accent:           #c9a227;
+    --accent-glow:      rgba(201,162,39,0.25);
+    --bg-primary:       #0a0a0f;
+    --bg-card:          rgba(255,255,255,0.04);
+    --border-primary:   rgba(255,255,255,0.1);
+    --text-primary:     #f0f0f0;
+    --text-secondary:   #aaa;
+    --nav-bg:           rgba(10,10,15,0.95);
+    --progress-fill:    linear-gradient(90deg, #c9a227, #ffd700);
+    background-color:   var(--bg-primary);
+    color:              var(--text-primary);
+    transition:         background-color 0.4s ease, color 0.4s ease;
+}
+
+/* --------------------------------------------------------------------------
+   THEME: DARK PREMIUM — Deep purple/violet
+   -------------------------------------------------------------------------- */
+body[data-casino-theme="dark_premium"] {
+    --gold:             #a855f7;
+    --gold-lt:          #c084fc;
+    --gold-hover:       rgba(168,85,247,0.45);
+    --accent:           #a855f7;
+    --accent-glow:      rgba(168,85,247,0.3);
+    --bg-primary:       #07050f;
+    --bg-card:          rgba(140,90,255,0.06);
+    --border-primary:   rgba(140,90,255,0.15);
+    --text-primary:     #ede9ff;
+    --text-secondary:   #b89fe8;
+    --nav-bg:           rgba(7,5,15,0.97);
+    --progress-fill:    linear-gradient(90deg, #a855f7, #c084fc);
+    background-color:   #07050f;
+    color:              #ede9ff;
+}
+
+body[data-casino-theme="dark_premium"] .navbar {
+    background: rgba(10,6,20,0.97) !important;
+    border-bottom-color: rgba(168,85,247,0.2) !important;
+}
+body[data-casino-theme="dark_premium"] .hero-section,
+body[data-casino-theme="dark_premium"] .game-card,
+body[data-casino-theme="dark_premium"] .stat-card {
+    border-color: rgba(168,85,247,0.3) !important;
+    background: rgba(140,90,255,0.06) !important;
+}
+body[data-casino-theme="dark_premium"] .btn-primary,
+body[data-casino-theme="dark_premium"] .mission-claim-btn {
+    background: linear-gradient(135deg, #a855f7, #6d28d9) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 20px rgba(168,85,247,0.4) !important;
+}
+body[data-casino-theme="dark_premium"] h1,
+body[data-casino-theme="dark_premium"] h2,
+body[data-casino-theme="dark_premium"] .stat-value,
+body[data-casino-theme="dark_premium"] .bits-amount,
+body[data-casino-theme="dark_premium"] .trophy-count,
+body[data-casino-theme="dark_premium"] .bits-val {
+    color: #c084fc !important;
+}
+body[data-casino-theme="dark_premium"] .mission-progress-bar-fill {
+    background: linear-gradient(90deg, #a855f7, #c084fc) !important;
+}
+body[data-casino-theme="dark_premium"] .profile-content {
+    border-color: rgba(168,85,247,0.4) !important;
+    background: linear-gradient(145deg, #0e0a1a, #07050f) !important;
+}
+body[data-casino-theme="dark_premium"] .elite-menu-btn,
+body[data-casino-theme="dark_premium"] .profile-tab.active {
+    border-color: #a855f7 !important;
+    color: #c084fc !important;
+}
+
+/* --------------------------------------------------------------------------
+   THEME: GOLD IMPERIAL — Rich amber/gold
+   -------------------------------------------------------------------------- */
+body[data-casino-theme="gold_imperial"] {
+    --gold:             #f5a623;
+    --gold-lt:          #ffd060;
+    --gold-hover:       rgba(245,166,35,0.4);
+    --accent:           #f5a623;
+    --accent-glow:      rgba(245,166,35,0.35);
+    --bg-primary:       #0a0700;
+    --bg-card:          rgba(255,180,20,0.06);
+    --border-primary:   rgba(255,180,20,0.15);
+    --text-primary:     #fff8e6;
+    --text-secondary:   #d4a852;
+    --nav-bg:           rgba(10,7,0,0.97);
+    --progress-fill:    linear-gradient(90deg, #f5a623, #ffd060);
+    background-color:   #0a0700;
+    color:              #fff8e6;
+}
+
+body[data-casino-theme="gold_imperial"] .navbar {
+    background: rgba(12,8,0,0.97) !important;
+    border-bottom-color: rgba(245,166,35,0.25) !important;
+}
+body[data-casino-theme="gold_imperial"] .hero-section,
+body[data-casino-theme="gold_imperial"] .game-card,
+body[data-casino-theme="gold_imperial"] .stat-card {
+    border-color: rgba(245,166,35,0.3) !important;
+    background: rgba(255,180,20,0.05) !important;
+}
+body[data-casino-theme="gold_imperial"] .btn-primary,
+body[data-casino-theme="gold_imperial"] .mission-claim-btn {
+    background: linear-gradient(135deg, #f5a623, #b8730a) !important;
+    color: #000 !important;
+    box-shadow: 0 4px 25px rgba(245,166,35,0.5) !important;
+}
+body[data-casino-theme="gold_imperial"] h1,
+body[data-casino-theme="gold_imperial"] h2,
+body[data-casino-theme="gold_imperial"] .stat-value,
+body[data-casino-theme="gold_imperial"] .bits-amount,
+body[data-casino-theme="gold_imperial"] .trophy-count,
+body[data-casino-theme="gold_imperial"] .bits-val {
+    color: #ffd060 !important;
+    text-shadow: 0 0 20px rgba(245,166,35,0.4);
+}
+body[data-casino-theme="gold_imperial"] .mission-progress-bar-fill {
+    background: linear-gradient(90deg, #f5a623, #ffd060) !important;
+}
+body[data-casino-theme="gold_imperial"] .profile-content {
+    border-color: rgba(245,166,35,0.5) !important;
+}
+
+/* --------------------------------------------------------------------------
+   THEME: LAS VEGAS — Electric neon red
+   -------------------------------------------------------------------------- */
+body[data-casino-theme="las_vegas"] {
+    --gold:             #ff2244;
+    --gold-lt:          #ff6680;
+    --gold-hover:       rgba(255,34,68,0.4);
+    --accent:           #ff2244;
+    --accent-glow:      rgba(255,34,68,0.35);
+    --bg-primary:       #050508;
+    --bg-card:          rgba(220,30,50,0.06);
+    --border-primary:   rgba(220,30,50,0.15);
+    --text-primary:     #fff0f2;
+    --text-secondary:   #dd8090;
+    --nav-bg:           rgba(5,5,8,0.97);
+    --progress-fill:    linear-gradient(90deg, #ff2244, #ff6680);
+    background-color:   #050508;
+    color:              #fff0f2;
+}
+
+body[data-casino-theme="las_vegas"] .navbar {
+    background: rgba(5,5,8,0.97) !important;
+    border-bottom-color: rgba(255,34,68,0.2) !important;
+}
+body[data-casino-theme="las_vegas"] .hero-section,
+body[data-casino-theme="las_vegas"] .game-card,
+body[data-casino-theme="las_vegas"] .stat-card {
+    border-color: rgba(255,34,68,0.3) !important;
+    background: rgba(220,30,50,0.05) !important;
+}
+body[data-casino-theme="las_vegas"] .btn-primary,
+body[data-casino-theme="las_vegas"] .mission-claim-btn {
+    background: linear-gradient(135deg, #ff2244, #990a22) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 25px rgba(255,34,68,0.5) !important;
+}
+body[data-casino-theme="las_vegas"] h1,
+body[data-casino-theme="las_vegas"] h2,
+body[data-casino-theme="las_vegas"] .stat-value,
+body[data-casino-theme="las_vegas"] .bits-amount,
+body[data-casino-theme="las_vegas"] .trophy-count,
+body[data-casino-theme="las_vegas"] .bits-val {
+    color: #ff6680 !important;
+    text-shadow: 0 0 20px rgba(255,34,68,0.5);
+}
+body[data-casino-theme="las_vegas"] .mission-progress-bar-fill {
+    background: linear-gradient(90deg, #ff2244, #ff6680) !important;
+}
+body[data-casino-theme="las_vegas"] .elite-menu-btn,
+body[data-casino-theme="las_vegas"] .profile-tab.active {
+    border-color: #ff2244 !important;
+    color: #ff6680 !important;
+}
+
+/* --------------------------------------------------------------------------
+   THEME: NOIR ÉLITE — Monochrome silver on absolute black
+   -------------------------------------------------------------------------- */
+body[data-casino-theme="noir"] {
+    --gold:             #c8c8c8;
+    --gold-lt:          #f0f0f0;
+    --gold-hover:       rgba(200,200,200,0.35);
+    --accent:           #e0e0e0;
+    --accent-glow:      rgba(220,220,220,0.2);
+    --bg-primary:       #000;
+    --bg-card:          rgba(255,255,255,0.04);
+    --border-primary:   rgba(255,255,255,0.12);
+    --text-primary:     #f5f5f5;
+    --text-secondary:   #999;
+    --nav-bg:           rgba(0,0,0,0.99);
+    --progress-fill:    linear-gradient(90deg, #888, #f0f0f0);
+    background-color:   #000;
+    color:              #f5f5f5;
+}
+
+body[data-casino-theme="noir"] .navbar {
+    background: rgba(0,0,0,0.99) !important;
+    border-bottom-color: rgba(200,200,200,0.08) !important;
+}
+body[data-casino-theme="noir"] .hero-section,
+body[data-casino-theme="noir"] .game-card,
+body[data-casino-theme="noir"] .stat-card {
+    border-color: rgba(255,255,255,0.1) !important;
+    background: rgba(255,255,255,0.03) !important;
+}
+body[data-casino-theme="noir"] .btn-primary,
+body[data-casino-theme="noir"] .mission-claim-btn {
+    background: linear-gradient(135deg, #e0e0e0, #888) !important;
+    color: #000 !important;
+    box-shadow: 0 4px 20px rgba(200,200,200,0.3) !important;
+}
+body[data-casino-theme="noir"] h1,
+body[data-casino-theme="noir"] h2,
+body[data-casino-theme="noir"] .stat-value,
+body[data-casino-theme="noir"] .bits-amount,
+body[data-casino-theme="noir"] .trophy-count,
+body[data-casino-theme="noir"] .bits-val {
+    color: #f0f0f0 !important;
+}
+body[data-casino-theme="noir"] .mission-progress-bar-fill {
+    background: linear-gradient(90deg, #888, #f0f0f0) !important;
+}
+body[data-casino-theme="noir"] .profile-content {
+    border-color: rgba(255,255,255,0.2) !important;
+}
+
+/* ==========================================================================
+   UNIVERSAL: Wiring CSS variables to base components (all themes)
+   ========================================================================== */
+.navbar {
+    background: var(--nav-bg, rgba(10,10,15,0.95));
+    transition: background 0.4s ease;
+}
+.mission-progress-bar-fill {
+    background: var(--progress-fill);
+}
+.reward-badge.bits {
+    color: var(--gold, #c9a227);
+}

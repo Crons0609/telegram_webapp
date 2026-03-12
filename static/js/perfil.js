@@ -6,8 +6,17 @@
 
 window.UserProfileManager = {
     currentProfile: null,
+    playtimeTracker: null,
 
     init: function () {
+        // Start playtime tracker (1 minute pings)
+        this.playtimeTracker = setInterval(() => {
+            fetch('/api/profile/ping', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ minutes: 1 })
+            }).catch(e => console.error("Ping error:", e));
+        }, 60000);
         // Level-up banner
         if (!document.getElementById('level-up-banner')) {
             const banner = document.createElement('div');
@@ -34,6 +43,40 @@ window.UserProfileManager = {
                 </div>
             `;
             document.body.appendChild(toast);
+        }
+        // Mission completed toast
+        if (!document.getElementById('mission-toast')) {
+            const mToast = document.createElement('div');
+            mToast.id = 'mission-toast';
+            mToast.style.cssText = `
+                position: fixed;
+                bottom: 90px;
+                left: 50%;
+                transform: translateX(-50%) translateY(30px);
+                background: linear-gradient(135deg, #0d1b2a, #1a2e0a);
+                border: 1px solid #4caf50;
+                border-radius: 16px;
+                padding: 14px 20px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(76,175,80,0.3);
+                z-index: 99998;
+                opacity: 0;
+                pointer-events: none;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                min-width: 280px;
+                max-width: 360px;
+            `;
+            mToast.innerHTML = `
+                <div style="font-size:2rem; flex-shrink:0;" id="mission-toast-icon">🎯</div>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <strong style="color:#4caf50; font-size:0.85rem;">🏅 ¡Misión Lista para Reclamar!</strong>
+                    <span id="mission-toast-name" style="color:#eee; font-size:0.82rem;"></span>
+                    <span id="mission-toast-rewards" style="color:#aaa; font-size:0.75rem;"></span>
+                </div>
+            `;
+            document.body.appendChild(mToast);
         }
     },
 
@@ -72,6 +115,32 @@ window.UserProfileManager = {
         if (m) m.classList.add('hidden');
     },
 
+    showMissionToast: function(missions) {
+        if (!missions || missions.length === 0) return;
+        const m = missions[0]; // Show the first newly completable mission
+        const toast = document.getElementById('mission-toast');
+        if (!toast) return;
+        document.getElementById('mission-toast-icon').textContent = m.icon || '🎯';
+        document.getElementById('mission-toast-name').textContent = `${m.name} — Nivel ${m.level}/3`;
+        document.getElementById('mission-toast-rewards').textContent = `Recompensa: ${m.bits_reward > 0 ? '+' + m.bits_reward + ' Bits' : ''} ${m.xp_reward > 0 ? '+' + m.xp_reward + ' XP' : ''}`.trim();
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        toast.style.pointerEvents = 'auto';
+        // Allow user to click to go to missions
+        toast.onclick = () => {
+            UserProfileManager.openModal('missions');
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(30px)';
+            toast.style.pointerEvents = 'none';
+        };
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(30px)';
+            toast.style.pointerEvents = 'none';
+        }, 5000);
+    },
+
     renderProfile: function () {
         const p = this.currentProfile;
         const area = document.getElementById('profile-content-area');
@@ -85,12 +154,36 @@ window.UserProfileManager = {
             ? `<img src="${p.photo_url}" class="avatar-image">`
             : `<div class="avatar-image" style="background:#333;display:flex;align-items:center;justify-content:center;font-size:2rem;">👤</div>`;
 
+        const formatPlayTime = (mins) => {
+            if (!mins) return "0 min";
+            if (mins < 60) return `${mins} min`;
+            const hours = Math.floor(mins / 60);
+            const rMins = mins % 60;
+            return rMins > 0 ? `${hours}h ${rMins}m` : `${hours}h`;
+        };
+
+        const winRatio = p.win_ratio !== undefined ? `${p.win_ratio}%` : '0%';
+        const playedTime = formatPlayTime(p.tiempo_jugado);
+
         area.innerHTML = `
-            <div class="profile-header-card">
-                <div class="level-badge">${p.progress.level}</div>
-                <div class="avatar-container">${frameHtml}${avatarHtml}</div>
-                <div class="profile-info">
-                    <h3 class="profile-name">${p.nombre}</h3>
+            <div class="dashboard-header">
+                <div class="dh-avatar-section">
+                    <div class="avatar-container">
+                        ${avatarHtml}
+                        ${hasFrame ? `<img
+                            src="/static/img/frames/${frameId}.png"
+                            class="frame-img"
+                            alt="marco"
+                            onerror="this.style.display='none'"
+                        >` : ''}
+                        <div class="level-badge-pill">Nv. ${p.progress.level}</div>
+                    </div>
+                </div>
+                <div class="dh-info-section">
+                    <div class="dh-name-row">
+                        <h3 class="profile-name">${p.nombre}</h3>
+                        <span class="dh-telegram-id">ID: ${p.id || 'N/A'}</span>
+                    </div>
                     <div class="profile-rank-badge"><span>${p.rank.icon}</span> ${p.rank.full_name || p.rank.name}</div>
                     <div class="xp-container">
                         <div class="xp-label">
@@ -101,36 +194,48 @@ window.UserProfileManager = {
                     </div>
                 </div>
             </div>
-            <div class="stats-grid">
-                <div class="stat-box"><span class="stat-value">${p.juegos_jugados||0}</span><span class="stat-label">Jugados</span></div>
-                <div class="stat-box"><span class="stat-value">${p.jackpots_ganados||0}</span><span class="stat-label">Jackpots</span></div>
-                <div class="stat-box"><span class="stat-value">${p.total_ganados||0}</span><span class="stat-label">Bits Ganados</span></div>
-                <div class="stat-box"><span class="stat-value">${p.wins_total||0}</span><span class="stat-label">Total Wins</span></div>
+
+            <div class="stats-grid-dashboard">
+                <div class="stat-box-d"><span class="stat-value">${playedTime}</span><span class="stat-label">Tiempo Jugado</span></div>
+                <div class="stat-box-d"><span class="stat-value">${winRatio}</span><span class="stat-label">Win Rate</span></div>
+                <div class="stat-box-d"><span class="stat-value">${p.juegos_jugados||0}</span><span class="stat-label">Partidas</span></div>
+                <div class="stat-box-d"><span class="stat-value">${p.wins_total||0}</span><span class="stat-label">Victorias</span></div>
+                <div class="stat-box-d"><span class="stat-value">${p.jackpots_ganados||0}</span><span class="stat-label">Jackpots</span></div>
             </div>
+
             <div style="display:flex;gap:10px;margin-bottom:20px;">
                 <button class="btn-primary" style="flex:1" onclick="UserProfileManager.claimDailyReward()">🎁 Recompensa Diaria</button>
             </div>
-            <div class="profile-tabs">
-                <button class="profile-tab active" onclick="UserProfileManager.switchTab('info',this)">⚙️ Config.</button>
-                <button class="profile-tab" onclick="UserProfileManager.switchTab('frames',this)">🖼️ Marcos</button>
-                <button class="profile-tab" onclick="UserProfileManager.switchTab('themes',this)">🎨 Temas</button>
+
+            <div class="profile-tabs custom-scrollbar" style="overflow-x:auto; white-space:nowrap; padding-bottom:10px; margin-bottom:15px;">
+                <button class="profile-tab active" onclick="UserProfileManager.switchTab('info',this)">⚙️ General</button>
                 <button class="profile-tab tab-highlight" onclick="UserProfileManager.switchTab('trophies',this)">🏆 Trofeos</button>
                 <button class="profile-tab tab-highlight" onclick="UserProfileManager.switchTab('missions',this)">🎯 Misiones</button>
+                <button class="profile-tab" onclick="UserProfileManager.switchTab('frames',this)">🖼️ Marcos</button>
+                <button class="profile-tab" onclick="UserProfileManager.switchTab('themes',this)">🎨 Temas</button>
             </div>
+
+            <!-- TAB: GENERAL INFO -->
             <div id="tab-info" class="tab-content active">
-                <div style="background:rgba(255,255,255,0.05);padding:15px;border-radius:8px;">
-                    <h4 style="color:var(--gold-lt);margin-bottom:10px;">Cambiar Nombre</h4>
-                    <div style="display:flex;gap:10px;">
+                <div class="settings-panel">
+                    <h4 style="color:var(--gold-lt);margin-bottom:15px; border-bottom:1px solid rgba(255,215,0,0.2); padding-bottom:5px;">Ajustes de Perfil</h4>
+                    <label style="color:#aaa; font-size:0.85rem; display:block; margin-bottom:5px;">Nombre Público</label>
+                    <div style="display:flex;gap:10px; margin-bottom:5px;">
                         <input type="text" id="profile-edit-name" class="form-control" value="${p.nombre}" maxlength="20" style="flex:1;">
                         <button class="btn-secondary" onclick="UserProfileManager.updateName()">Guardar</button>
                     </div>
-                    <small style="color:#aaa;display:block;margin-top:5px;">Entre 3 y 20 caracteres.</small>
+                    <small style="color:#888; display:block; margin-bottom:20px;">Este nombre será visible para otros jugadores en las tablas de clasificación y salas online.</small>
+                    
+                    <h4 style="color:var(--gold-lt);margin-bottom:15px; border-bottom:1px solid rgba(255,215,0,0.2); padding-bottom:5px; margin-top:20px;">Acciones de Cuenta</h4>
+                    <button class="btn-secondary" style="width:100%; border-color:#d32f2f; color:#ffeded; background:rgba(211,47,47,0.1);" onclick="window.Telegram?.WebApp?.close()">Cerrar Juego Totalmente</button>
                 </div>
             </div>
+
+            <!-- OTHER TABS -->
+            <div id="tab-trophies" class="tab-content"><div class="trophy-grid" id="grid-trophies"><p style="text-align:center;color:#888;padding:20px;">Cargando Trofeos...</p></div></div>
+            <div id="tab-missions" class="tab-content"><div class="missions-list" id="list-missions"><p style="text-align:center;color:#888;padding:20px;">Cargando Misiones...</p></div></div>
             <div id="tab-frames" class="tab-content"><div class="items-grid" id="grid-frames"></div></div>
             <div id="tab-themes" class="tab-content"><div class="items-grid" id="grid-themes"></div></div>
-            <div id="tab-trophies" class="tab-content"><div class="trophy-grid" id="grid-trophies"><p style="text-align:center;color:#888;padding:20px;">Cargando...</p></div></div>
-            <div id="tab-missions" class="tab-content"><div class="missions-list" id="list-missions"><p style="text-align:center;color:#888;padding:20px;">Cargando...</p></div></div>
         `;
 
         this.renderInventory();
@@ -225,34 +330,103 @@ window.UserProfileManager = {
         try {
             const res = await fetch('/api/missions');
             const data = await res.json();
-            if (data.status === 'ok') this._renderMissionList(data.missions, list);
+            if (data.status === 'ok') {
+                this.currentMissions = data.missions; // Store for filtering
+                this.activeMissionFilter = this.activeMissionFilter || 'all';
+                this._renderMissionList(this.currentMissions, list);
+            }
         } catch(e) { list.innerHTML = '<p style="color:red;text-align:center">Error</p>'; }
     },
 
     _renderMissionList: function (missions, container) {
         let html = '';
-        missions.forEach(m => {
+        
+        // 1. Filter UI
+        const filters = [
+            { id: 'all', name: 'Todas' },
+            { id: 'moche', name: 'Moche' },
+            { id: 'slot', name: 'Slots' },
+            { id: 'ruleta', name: 'Ruleta' },
+            { id: 'general', name: 'Globales' }
+        ];
+
+        let filterHtml = '<div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,215,0,0.2); white-space:nowrap; scrollbar-width:none;">';
+        filters.forEach(f => {
+            const active = this.activeMissionFilter === f.id ? 'background:var(--gold); color:#000;' : 'background:rgba(255,255,255,0.05); color:#ccc; border:1px solid rgba(255,215,0,0.3);';
+            filterHtml += `<button onclick="UserProfileManager.filterMissions('${f.id}')" style="padding:6px 12px; border-radius:20px; font-size:0.8rem; font-weight:bold; cursor:pointer; transition:0.2s; ${active}">${f.name}</button>`;
+        });
+        filterHtml += '</div>';
+
+        // 2. Apply Filter
+        let filtered = missions;
+        if (this.activeMissionFilter !== 'all') {
+            filtered = missions.filter(m => m.id.startsWith(this.activeMissionFilter) || (this.activeMissionFilter === 'general' && (m.id.startsWith('racha_') || m.id.startsWith('diversidad_') || m.id.startsWith('torneo_'))));
+        }
+
+        // 3. Smart Sort: Ready to claim > In progress > Fully Claimed
+        filtered.sort((a, b) => {
+            const getScore = (m) => {
+                if (m.claimed) return 3; // Fully done -> bottom
+                if (m.completed) return 1; // Ready to claim -> top
+                return 2; // In progress -> middle
+            };
+            const scoreA = getScore(a);
+            const scoreB = getScore(b);
+            if (scoreA !== scoreB) return scoreA - scoreB;
+            // If same status, sort by progress percentage descending
+            return b.progress_percent - a.progress_percent;
+        });
+
+        // 4. Progress Summary
+        const totalMissions = missions.length;
+        const fullyClaimed = missions.filter(m => m.claimed).length;
+        html += filterHtml;
+        html += `<div style="text-align:center; font-size:0.8rem; color:#888; margin-bottom:12px;">Progreso Total: <strong style="color:var(--gold);">${fullyClaimed}/${totalMissions}</strong> misiones completadas</div>`;
+        
+        let listHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        filtered.forEach(m => {
+            // m.claimed is true ONLY IF ALL 3 LEVELS ARE CLAIMED now (based on backend logic).
+            // m.completed means THIS LEVEL is ready to claim.
             const cls = m.claimed ? 'mission-claimed' : (m.completed ? 'mission-completed' : 'mission-active');
-            const btn = m.claimed
-                ? '<span class="mission-badge-claimed">✓ Reclamado</span>'
-                : (m.completed
-                    ? `<button class="mission-claim-btn" onclick="UserProfileManager.claimMission('${m.id}',this)">🎁 Reclamar</button>`
-                    : `<span class="mission-progress-text">${m.current_progress}/${m.target}</span>`);
-            html += `<div class="mission-card ${cls}">
-                <div class="mission-icon">${m.icon}</div>
+            
+            let btn = '';
+            if (m.claimed) {
+                btn = '<span class="mission-badge-claimed">✓ Completada</span>';
+            } else if (m.completed) {
+                btn = `<button class="mission-claim-btn" style="animation: pulseDiag 1.5s infinite;" onclick="UserProfileManager.claimMission('${m.id}',this)">🎁 Reclamar Nivel ${m.level}</button>`;
+            } else {
+                btn = `<span class="mission-progress-text">${m.current_progress}/${m.target}</span>`;
+            }
+
+            // Compact Design Update
+            listHtml += `<div class="mission-card ${cls}" style="padding:10px; gap:10px;">
+                <div class="mission-icon" style="font-size:1.6rem; width:36px;">${m.icon}</div>
                 <div class="mission-body">
-                    <div class="mission-name">${m.name}</div>
-                    <div class="mission-desc">${m.desc}</div>
-                    <div class="mission-rewards">
-                        ${m.xp_reward>0?`<span class="reward-badge xp">+${m.xp_reward} XP</span>`:''}
-                        ${m.bits_reward>0?`<span class="reward-badge bits">+${m.bits_reward} Bits</span>`:''}
+                    <div class="mission-name" style="font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+                        ${m.name} 
+                        <span style="font-size:0.65rem; color:var(--gold); border:1px solid var(--gold-hover); padding:1px 5px; border-radius:8px; background:rgba(212,175,55,0.1);">Nv.${m.level}/3</span>
                     </div>
-                    <div class="mission-progress-bar-bg"><div class="mission-progress-bar-fill" style="width:${m.progress_percent}%"></div></div>
+                    <div class="mission-desc" style="font-size:0.7rem; margin-bottom:4px;">${m.desc}</div>
+                    <div class="mission-rewards" style="margin-bottom:6px; gap:4px;">
+                        ${m.xp_reward>0?`<span class="reward-badge xp" style="font-size:0.65rem; padding:1px 6px;">+${m.xp_reward} XP</span>`:''}
+                        ${m.bits_reward>0?`<span class="reward-badge bits" style="font-size:0.65rem; padding:1px 6px;">+${m.bits_reward} Bits</span>`:''}
+                    </div>
+                    ${!m.claimed ? `<div class="mission-progress-bar-bg" style="height:4px;"><div class="mission-progress-bar-fill" style="width:${m.progress_percent}%"></div></div>` : ''}
                 </div>
-                <div class="mission-action">${btn}</div>
+                <div class="mission-action" style="min-width:70px;">${btn}</div>
             </div>`;
         });
-        container.innerHTML = html || '<p style="text-align:center;color:#888">No hay misiones.</p>';
+        listHtml += '</div>';
+
+        container.innerHTML = html + (filtered.length > 0 ? listHtml : '<p style="text-align:center;color:#888; margin-top:20px;">No hay misiones en esta categoría.</p>');
+    },
+
+    filterMissions: function(filterId) {
+        this.activeMissionFilter = filterId;
+        const list = document.getElementById('list-missions');
+        if (list && this.currentMissions) {
+            this._renderMissionList(this.currentMissions, list);
+        }
     },
 
     claimMission: async function (missionId, btn) {
@@ -395,8 +569,18 @@ window.UserProfileManager = {
         } catch(e) { console.error(e); if(area) area.innerHTML='<p style="text-align:center;color:red;">Error de red.</p>'; }
     },
 
-    applyTheme: function (t) { document.body.setAttribute('data-casino-theme', t); localStorage.setItem('casino_theme', t); },
-    loadSavedTheme: function () { const t=localStorage.getItem('casino_theme'); if(t) document.body.setAttribute('data-casino-theme', t); },
+    applyTheme: function (t) {
+        document.body.setAttribute('data-casino-theme', t);
+        document.documentElement.setAttribute('data-casino-theme', t);
+        localStorage.setItem('casino_theme', t);
+    },
+    loadSavedTheme: function () {
+        const t = localStorage.getItem('casino_theme');
+        if (t) {
+            document.body.setAttribute('data-casino-theme', t);
+            document.documentElement.setAttribute('data-casino-theme', t);
+        }
+    },
 
     checkLevelUp: function (pu) {
         if (!pu) return;
@@ -453,6 +637,19 @@ if (typeof window.toggleDropdown === 'undefined') {
             document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
     });
 }
+
+/**
+ * Global helper: Call this from any game page after receiving a response from /bet, /win or /api/spin.
+ * data should be the parsed JSON response object.
+ * Example: checkMissionNotifications(data);
+ */
+window.checkMissionNotifications = function(data) {
+    if (data && data.newly_completed_missions && data.newly_completed_missions.length > 0) {
+        if (window.UserProfileManager) {
+            UserProfileManager.showMissionToast(data.newly_completed_missions);
+        }
+    }
+};
 
 window.openRecargarBits = function () {
     const tg = window.Telegram?.WebApp;
