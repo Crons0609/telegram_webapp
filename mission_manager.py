@@ -8,11 +8,41 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import database
 from user_profile_manager import UserProfileManager
-from mission_data import MISSIONS as MISSION_DEFINITIONS
-
 def get_mission_definitions():
-    """Returns the full list of mission definitions."""
-    return MISSION_DEFINITIONS
+    """Returns the full list of mission definitions from the database."""
+    missions = []
+    with database.get_connection() as conn:
+        # Get active missions
+        rows = conn.execute("SELECT id, name, desc, icon, type FROM missions WHERE is_active = 1").fetchall()
+        
+        for r in rows:
+            m_id = r['id']
+            levels_rows = conn.execute("""
+                SELECT level, target, xp_reward, bits_reward 
+                FROM mission_levels 
+                WHERE mission_id = ? 
+                ORDER BY level ASC
+            """, (m_id,)).fetchall()
+            
+            levels = []
+            for lr in levels_rows:
+                levels.append({
+                    "level": lr['level'],
+                    "target": lr['target'],
+                    "xp_reward": lr['xp_reward'],
+                    "bits_reward": lr['bits_reward']
+                })
+                
+            missions.append({
+                "id": m_id,
+                "name": r['name'],
+                "desc": r['desc'],
+                "icon": r['icon'],
+                "type": r['type'],
+                "levels": levels
+            })
+            
+    return missions
 
 
 def get_user_missions_with_progress(telegram_id: str) -> list:

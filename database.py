@@ -146,6 +146,44 @@ def init_db() -> None:
             )
         """)
 
+        # Tabla de Misiones (Definiciones editables por el admin)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS missions (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                desc TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                type TEXT NOT NULL,
+                is_active INTEGER DEFAULT 1
+            )
+        """)
+        
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS mission_levels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mission_id TEXT,
+                level INTEGER,
+                target INTEGER,
+                xp_reward INTEGER,
+                bits_reward INTEGER,
+                FOREIGN KEY(mission_id) REFERENCES missions(id)
+            )
+        """)
+        
+        # Seed Misiones if empty
+        m_count = conn.execute("SELECT COUNT(*) FROM missions").fetchone()[0]
+        if m_count == 0:
+            try:
+                from mission_data import MISSIONS
+                for m in MISSIONS:
+                    conn.execute("INSERT INTO missions (id, name, desc, icon, type) VALUES (?, ?, ?, ?, ?)", 
+                                 (m['id'], m['name'], m['desc'], m['icon'], m['type']))
+                    for lvl in m['levels']:
+                        conn.execute("INSERT INTO mission_levels (mission_id, level, target, xp_reward, bits_reward) VALUES (?, ?, ?, ?, ?)",
+                                     (m['id'], lvl['level'], lvl['target'], lvl['xp_reward'], lvl['bits_reward']))
+            except Exception as e:
+                print(f"Error seeding missions: {e}")
+
         # Tabla de Misiones Reclamadas
         conn.execute("""
             CREATE TABLE IF NOT EXISTS user_missions (
@@ -157,6 +195,23 @@ def init_db() -> None:
                 FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id)
             )
         """)
+
+        # Tabla de Administradores
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS admins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        
+        # Crear usuario admin por defecto si no existe ninguno
+        admin_count = conn.execute("SELECT COUNT(*) FROM admins").fetchone()[0]
+        if admin_count == 0:
+            from werkzeug.security import generate_password_hash
+            default_hash = generate_password_hash("admin123")
+            conn.execute("INSERT INTO admins (username, password_hash) VALUES (?, ?)", ("admin", default_hash))
 
 def _asegurar_stats(telegram_id: str, conn):
     """Crea una fila de stats en 0 si no existe."""

@@ -47,7 +47,7 @@
    Only the ring portion extending beyond the photo boundary (top:-13px etc.) remains visible. */
 .frame-img {
     position: absolute;
-    top: -13px;
+    top: -17px;
     left: -13px;
     width: calc(100% + 26px);
     height: calc(100% + 26px);
@@ -57,7 +57,7 @@
     /* Stretch bottom of the ring down to close the gap at the bottom of the photo.
        transform-origin:top means the top stays fixed, only the bottom extends. */
     transform-origin: top center;
-    transform: scaleX(1.08) scaleY(1.08);
+    transform: scaleX(1.13) scaleY(1.135);
 }
 
 /* Legacy .frame-overlay kept for backwards compatibility (not used for main avatar anymore) */

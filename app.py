@@ -21,6 +21,10 @@ except ImportError:
 # Inicializamos la base de datos
 database.init_db()
 
+# Registrar Panel de Administración
+from admin_routes import admin_bp
+app.register_blueprint(admin_bp)
+
 @app.context_processor
 def inject_user_profile():
     if "telegram_id" in session:

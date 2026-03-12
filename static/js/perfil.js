@@ -165,10 +165,14 @@ window.UserProfileManager = {
         const winRatio = p.win_ratio !== undefined ? `${p.win_ratio}%` : '0%';
         const playedTime = formatPlayTime(p.tiempo_jugado);
 
+        const lastTrophy = (p.trophies && p.trophies.length > 0)
+            ? [...p.trophies].sort((a,b) => new Date(b.unlocked_at) - new Date(a.unlocked_at))[0]
+            : null;
+
         area.innerHTML = `
             <div class="dashboard-header">
-                <div class="dh-avatar-section">
-                    <div class="avatar-container">
+                <div class="dh-avatar-section" style="position:relative; display:flex; flex-direction:column; align-items:center;">
+                    <div class="avatar-container" style="position:relative;">
                         ${avatarHtml}
                         ${hasFrame ? `<img
                             src="/static/img/frames/${frameId}.png"
@@ -177,6 +181,12 @@ window.UserProfileManager = {
                             onerror="this.style.display='none'"
                         >` : ''}
                         <div class="level-badge-pill">Nv. ${p.progress.level}</div>
+                        ${lastTrophy ? `
+                        <!-- Mini Trophy Badge attached to avatar -->
+                        <div class="last-trophy-avatar-badge" title="Último Trofeo: ${lastTrophy.name}" style="position:absolute; bottom:15%; right:-15px; z-index:10; background:radial-gradient(circle, #2a2a2a 0%, #111 100%); border:2px solid #c9a227; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,0.8), 0 0 10px rgba(201,162,39,0.5);">
+                            <img src="/static/img/trophies/${lastTrophy.id}.png" style="width:18px; height:18px; object-fit:contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));" onerror="this.src='/static/img/trophies/trophy_1.png'">
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
                 <div class="dh-info-section">
