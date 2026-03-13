@@ -270,6 +270,20 @@ def init_db() -> None:
             )
         """)
 
+        # Tabla de Solicitudes P2P
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS p2p_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id TEXT NOT NULL,
+                username TEXT,
+                nombre TEXT,
+                price_usd REAL NOT NULL,
+                bits_amount INTEGER NOT NULL,
+                leida INTEGER NOT NULL DEFAULT 0,
+                fecha TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+
 def _asegurar_stats(telegram_id: str, conn):
     """Crea una fila de stats en 0 si no existe."""
     conn.execute("INSERT OR IGNORE INTO user_stats (telegram_id) VALUES (?)", (telegram_id,))
@@ -698,3 +712,67 @@ def obtener_metricas_financieras() -> dict:
             'bits_profit_week': profit_stats['profit_week'],
             'bits_profit_month': profit_stats['profit_month']
         }
+
+
+def registrar_solicitud_p2p(telegram_id: str, username: str, nombre: str, price_usd: float, bits_amount: int) -> int:
+    """Guarda una solicitud de recarga P2P y retorna su ID."""
+    with get_connection() as conn:
+        cursor = conn.execute(
+            """INSERT INTO p2p_requests (telegram_id, username, nombre, price_usd, bits_amount)
+               VALUES (?, ?, ?, ?, ?)""",
+            (telegram_id, username, nombre, price_usd, bits_amount)
+        )
+        return cursor.lastrowid
+
+
+def obtener_notificaciones(limit: int = 30) -> list:
+    """
+    Retorna las últimas notificaciones combinadas de PayPal y P2P.
+    Ordena por fecha desc.
+    """
+    with get_connection() as conn:
+        # PayPal transactions
+        paypal_rows = conn.execute("""
+            SELECT t.id, t.telegram_id, COALESCE(u.username, '') as username,
+                   COALESCE(u.nombre, '') as nombre,
+                   t.bits, t.usd_amount, t.fecha, 'paypal' as tipo, 0 as leida
+            FROM transacciones t
+            LEFT JOIN usuarios u ON t.telegram_id = u.telegram_id
+            WHERE t.tipo = 'deposito_paypal'
+            ORDER BY t.fecha DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        # P2P requests
+        p2p_rows = conn.execute("""
+            SELECT id, telegram_id, COALESCE(username, '') as username,
+                   COALESCE(nombre, '') as nombre,
+                   bits_amount as bits, price_usd as usd_amount,
+                   fecha, 'p2p' as tipo, leida
+            FROM p2p_requests
+            ORDER BY fecha DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+        # Merge and sort by fecha desc
+        combined = []
+        for row in paypal_rows:
+            combined.append(dict(row))
+        for row in p2p_rows:
+            combined.append(dict(row))
+
+        combined.sort(key=lambda x: x['fecha'], reverse=True)
+        return combined[:limit]
+
+
+def marcar_notificaciones_leidas() -> None:
+    """Marca todas las solicitudes P2P como leídas."""
+    with get_connection() as conn:
+        conn.execute("UPDATE p2p_requests SET leida = 1 WHERE leida = 0")
+
+
+def contar_notificaciones_no_leidas() -> int:
+    """Cuenta las notificaciones no leídas (P2P pendientes)."""
+    with get_connection() as conn:
+        p2p = conn.execute("SELECT COUNT(*) FROM p2p_requests WHERE leida = 0").fetchone()[0]
+        return p2p

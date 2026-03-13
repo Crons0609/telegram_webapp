@@ -99,7 +99,7 @@
         }
 
         // ─── Generate Message & Open Telegram ─────────────────────────────────
-        function requestRecharge(price, bits) {
+        async function requestRecharge(price, bits) {
             const userId   = USER_DATA.id       || "Sin ID";
             const username = USER_DATA.username ? "@" + USER_DATA.username : "Sin usuario";
 
@@ -107,7 +107,19 @@
             const encodedMsg = encodeURIComponent(message);
             const telegramUrl = `https://t.me/${TELEGRAM_ADMIN}?text=${encodedMsg}`;
 
-            showToast(`Abriendo Telegram para $${price} USD...`);
+            showToast(`Procesando solicitud de $${price} USD...`);
+
+            try {
+                // Log request to backend for admin notification
+                await fetch('/api/p2p/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ price_usd: price, bits_amount: bits })
+                });
+            } catch (e) {
+                console.error("Error guardando solicitud P2P:", e);
+            }
+
             setTimeout(() => { window.open(telegramUrl, '_blank'); }, 400);
         }
 

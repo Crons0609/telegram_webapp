@@ -112,9 +112,22 @@
             </div>
             <div class="topbar-actions">
                 <div class="datetime" id="currentDateTime">--/--/---- --:--</div>
-                <div class="notifications">
-                    <i class="fas fa-bell"></i>
-                    <span class="badge">3</span>
+                <!-- Bell Notification -->
+                <div class="notif-wrapper" id="notifWrapper">
+                    <button class="notif-bell" id="notifBellBtn" onclick="toggleNotifPanel()" title="Notificaciones">
+                        <i class="fas fa-bell"></i>
+                        <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+                    </button>
+                    <!-- Dropdown Panel -->
+                    <div class="notif-panel" id="notifPanel">
+                        <div class="notif-panel-header">
+                            <span><i class="fas fa-bell"></i> Notificaciones</span>
+                            <button class="notif-read-all" onclick="markAllRead()">Marcar todas leídas</button>
+                        </div>
+                        <div class="notif-list" id="notifList">
+                            <div class="notif-empty">Sin notificaciones</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>

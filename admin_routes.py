@@ -262,3 +262,22 @@ def api_trophies():
     with database.get_connection() as conn:
         trophies_db = conn.execute("SELECT * FROM trophies_config ORDER BY id").fetchall()
     return jsonify({'success': True, 'trophies': [dict(t) for t in trophies_db]})
+
+
+# ─── NOTIFICATIONS ──────────────────────────────────────────────────────────
+@admin_bp.route('/api/notifications')
+@admin_required_api
+def api_notifications():
+    """Returns combined P2P and PayPal notifications, plus unread count."""
+    notifs = database.obtener_notificaciones(limit=30)
+    unread = database.contar_notificaciones_no_leidas()
+    return jsonify({'success': True, 'notifications': notifs, 'unread': unread})
+
+
+@admin_bp.route('/api/notifications/read', methods=['POST'])
+@admin_required_api
+def api_notifications_read():
+    """Marks all P2P notifications as read."""
+    database.marcar_notificaciones_leidas()
+    return jsonify({'success': True})
+

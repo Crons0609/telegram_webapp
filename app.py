@@ -143,6 +143,29 @@ def p2p_bits():
     )
 
 
+@app.route('/api/p2p/request', methods=['POST'])
+def p2p_request():
+    """Registra una solicitud de recarga P2P antes de abrir Telegram."""
+    telegram_id = session.get("telegram_id")
+    if not telegram_id:
+        return jsonify({"success": False, "message": "No autenticado"}), 401
+
+    data = request.json or {}
+    price_usd = float(data.get("price_usd", 0))
+    bits_amount = int(data.get("bits_amount", 0))
+
+    if price_usd <= 0 or bits_amount <= 0:
+        return jsonify({"success": False, "message": "Datos inválidos"}), 400
+
+    try:
+        username = session.get("username", "")
+        nombre   = session.get("nombre", "")
+        request_id = database.registrar_solicitud_p2p(telegram_id, username, nombre, price_usd, bits_amount)
+        return jsonify({"success": True, "request_id": request_id})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @app.route('/api/paypal/capture', methods=['POST'])
 def paypal_capture():
     telegram_id = session.get("telegram_id")

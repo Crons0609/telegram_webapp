@@ -782,3 +782,110 @@ function showToast(message, type = 'success') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// ============================================================
+//  NOTIFICATION BELL SYSTEM
+// ============================================================
+
+/** Toggle the notification dropdown open/close */
+window.toggleNotifPanel = function () {
+    const panel = document.getElementById('notifPanel');
+    const btn   = document.getElementById('notifBellBtn');
+    if (!panel) return;
+
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+
+    if (!isOpen) {
+        // Load fresh notifications and mark as read in DB
+        loadNotifications();
+        setTimeout(() => markAllRead(), 800);
+    }
+};
+
+/** Fetch notifications from backend and render them */
+async function loadNotifications() {
+    try {
+        const res  = await fetch('/admin/api/notifications');
+        const data = await res.json();
+        if (!data.success) return;
+
+        updateBell(data.unread, data.notifications);
+    } catch (e) {
+        console.warn('Notifications fetch failed', e);
+    }
+}
+
+/** Update bell badge and list */
+function updateBell(unread, notifications) {
+    const badge = document.getElementById('notifBadge');
+    const bell  = document.getElementById('notifBellBtn');
+    const list  = document.getElementById('notifList');
+    if (!badge || !bell || !list) return;
+
+    // Badge
+    if (unread > 0) {
+        badge.textContent = unread > 99 ? '99+' : unread;
+        badge.style.display = 'flex';
+        bell.classList.add('has-unread');
+    } else {
+        badge.style.display = 'none';
+        bell.classList.remove('has-unread');
+    }
+
+    // List
+    if (!notifications || notifications.length === 0) {
+        list.innerHTML = '<div class="notif-empty">Sin notificaciones</div>';
+        return;
+    }
+
+    list.innerHTML = notifications.map(n => {
+        const isP2P    = n.tipo === 'p2p';
+        const iconClass = isP2P ? 'p2p' : 'paypal';
+        const iconFA    = isP2P ? 'fab fa-telegram-plane' : 'fab fa-paypal';
+        const label     = isP2P ? '📲 Solicitud P2P' : '💳 Pago PayPal';
+        const user      = n.username ? `@${n.username}` : (n.nombre || n.telegram_id || '');
+        const amount    = `$${parseFloat(n.usd_amount).toFixed(2)} USD &middot; ${parseInt(n.bits).toLocaleString()} Bits`;
+        const time      = n.fecha ? n.fecha.slice(0, 16).replace('T', ' ') : '';
+        const unreadCls = (!isP2P || n.leida) ? '' : ' unread';
+
+        return `
+        <div class="notif-item${unreadCls}">
+            <div class="notif-icon ${iconClass}">
+                <i class="${iconFA}"></i>
+            </div>
+            <div class="notif-content">
+                <div class="notif-title">${label}</div>
+                <div class="notif-body">${user} &middot; ${amount}</div>
+                <div class="notif-time">${time}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+/** Mark all notifications as read */
+window.markAllRead = async function () {
+    try {
+        await fetch('/admin/api/notifications/read', { method: 'POST' });
+        const badge = document.getElementById('notifBadge');
+        const bell  = document.getElementById('notifBellBtn');
+        if (badge) badge.style.display = 'none';
+        if (bell)  bell.classList.remove('has-unread');
+        // Remove unread class from items
+        document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+    } catch (e) { console.warn(e); }
+};
+
+/** Close panel when clicking outside */
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('notifWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('notifPanel')?.classList.remove('open');
+    }
+});
+
+// Initial load + auto-poll every 60 seconds
+if (document.getElementById('notifBellBtn')) {
+    loadNotifications();
+    setInterval(loadNotifications, 60_000);
+}
