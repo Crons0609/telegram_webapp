@@ -6,17 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zona Jackpot 777 - Recarga P2P</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/p2p.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
 <body>
-
     <div class="container">
         <header>
             <div class="method-badge">
                 <i class="fab fa-telegram-plane"></i> Recarga P2P vía Telegram
             </div>
-            <h1 class="glitch">ZONA JACKPOT 777</h1>
+            <h1 class="glitch" data-text="ZONA JACKPOT 777">ZONA JACKPOT 777</h1>
             <p class="subtitle">Recarga tus bits mediante transferencia persona a persona</p>
             <a href="{{ url_for('home') }}" class="back-btn">
                 <i class="fas fa-arrow-left"></i> Volver al Casino
@@ -28,16 +28,16 @@
 
         <!-- Info Section -->
         <div class="info-section">
-            <div class="info-box">
+            <div class="benefits">
                 <h3>💎 Beneficios</h3>
                 <ul>
                     <li><i class="fas fa-check-circle"></i> Bits acreditados al instante</li>
                     <li><i class="fas fa-check-circle"></i> Sin cargos adicionales</li>
                     <li><i class="fas fa-check-circle"></i> Soporte directo por Telegram</li>
-                    <li><i class="fas fa-check-circle"></i> Proceso simple y seguro</li>
+                    <li><i class="fas fa-check-circle"></i> Proceso simple y 100% seguro</li>
                 </ul>
             </div>
-            <div class="info-box">
+            <div class="how-it-works">
                 <h3>📋 Cómo funciona</h3>
                 <ol class="steps-list">
                     <li>Elige el paquete que deseas recargar</li>
@@ -49,8 +49,9 @@
         </div>
 
         <footer>
-            <p>¿Problemas con tu recarga? <a href="https://t.me/ZonaJackpot777" target="_blank">Contáctanos en
-                    Telegram</a></p>
+            <p>¿Problemas con tu recarga?
+                <a href="https://t.me/ZonaJackpot777" target="_blank">Contáctanos en Telegram</a>
+            </p>
         </footer>
     </div>
 
@@ -67,42 +68,42 @@
             username: "{{ username }}",
         };
 
-        // ─── Telegram Target User (admin handle) ──────────────────────────────
-        const TELEGRAM_ADMIN = "Young_plague_FTP";  // ← Change to your actual admin username
+        // ─── Telegram Target Admin (without @) ───────────────────────────────
+        const TELEGRAM_ADMIN = "Young_plague_FTP";
 
         // ─── Packages ─────────────────────────────────────────────────────────
         const PACKAGES = [
-            { price: 1, bits: 1000, bonus: null, popular: false },
-            { price: 5, bits: 5000, bonus: "+5%", popular: false },
-            { price: 10, bits: 10000, bonus: "+10%", popular: true },
-            { price: 20, bits: 20000, bonus: "+15%", popular: false },
-            { price: 50, bits: 50000, bonus: "+20%", popular: false },
+            { price: 1,  bits: 1000,  bonus: null,   popular: false, icon: "💎" },
+            { price: 5,  bits: 5000,  bonus: "+5%",  popular: false, icon: "💎" },
+            { price: 10, bits: 10000, bonus: "+10%", popular: true,  icon: "👑" },
+            { price: 20, bits: 20000, bonus: "+15%", popular: false, icon: "🏆" },
+            { price: 50, bits: 50000, bonus: "+20%", popular: false, icon: "🚀" },
         ];
 
         // ─── Build Package Cards ───────────────────────────────────────────────
         function buildPackages() {
             const grid = document.getElementById('packages');
             grid.innerHTML = PACKAGES.map(pkg => `
-            <div class="package-card ${pkg.popular ? 'popular' : ''}">
-                ${pkg.popular ? '<span class="popular-badge">⭐ Popular</span>' : ''}
-                <div class="price-tag">$${pkg.price}</div>
-                <div class="bits-label">${pkg.bits.toLocaleString()} Bits</div>
-                <div class="bits-sub">${(pkg.bits / pkg.price).toLocaleString()} bits por dólar</div>
-                ${pkg.bonus ? `<span class="bonus-tag">BONUS ${pkg.bonus}</span>` : '<div style="margin-bottom:1.25rem;"></div>'}
-                <button class="btn-recharge" onclick="requestRecharge(${pkg.price}, ${pkg.bits})">
-                    <i class="fab fa-telegram-plane"></i> Recargar $${pkg.price}
-                </button>
-            </div>
-        `).join('');
+                <div class="card ${pkg.popular ? 'popular' : ''}">
+                    ${pkg.popular ? '<span class="popular-badge">⭐ Popular</span>' : ''}
+                    <div class="icon">${pkg.icon}</div>
+                    <div class="price">$${pkg.price}</div>
+                    <div class="bits">${pkg.bits.toLocaleString()} Bits</div>
+                    <div class="rate">${(pkg.bits / pkg.price).toLocaleString()} bits por dólar</div>
+                    ${pkg.bonus ? `<div class="bonus">BONUS ${pkg.bonus}</div>` : '<div style="margin-bottom:10px;"></div>'}
+                    <button class="btn-telegram" onclick="requestRecharge(${pkg.price}, ${pkg.bits})">
+                        <i class="fab fa-telegram-plane"></i> Recargar $${pkg.price}
+                    </button>
+                </div>
+            `).join('');
         }
 
         // ─── Generate Message & Open Telegram ─────────────────────────────────
         function requestRecharge(price, bits) {
-            const userId = USER_DATA.id || "Sin ID";
+            const userId   = USER_DATA.id       || "Sin ID";
             const username = USER_DATA.username ? "@" + USER_DATA.username : "Sin usuario";
 
             const message = `Hola, quiero recargar bits.\n\nID: ${userId}\nUsuario: ${username}\nCantidad: $${price} = ${bits.toLocaleString()} Bits`;
-
             const encodedMsg = encodeURIComponent(message);
             const telegramUrl = `https://t.me/${TELEGRAM_ADMIN}?text=${encodedMsg}`;
 
