@@ -384,19 +384,18 @@
 
         /* Card back */
         .card-back {
-            background:
-                repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(201, 162, 39, 0.08) 4px, rgba(201, 162, 39, 0.08) 5px),
-                repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(201, 162, 39, 0.05) 4px, rgba(201, 162, 39, 0.05) 5px),
-                linear-gradient(135deg, #1a0a2e 0%, #2d1b69 50%, #1a0a2e 100%);
+            background-image: url('/static/img/moche_card_back.jpg');
+            background-size: cover;
+            background-position: center;
             border: 1px solid rgba(201, 162, 39, 0.5);
         }
 
         .card-back::before {
             content: '';
             position: absolute;
-            inset: 5px;
-            border: 1.5px solid rgba(201, 162, 39, 0.6);
-            border-radius: 6px;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: var(--radius-card);
         }
 
         .card-back-text {
@@ -558,52 +557,26 @@
         }
 
         .chip {
-            width: 52px;
-            height: 52px;
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
-            border: 4px dashed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 0.75rem;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent;
             cursor: pointer;
             transition: all var(--transition);
             user-select: none;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.15);
-            font-family: var(--font-body);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
 
         .chip:hover {
-            transform: translateY(-3px) scale(1.1);
+            transform: translateY(-4px) scale(1.12);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 215, 0, 0.3);
         }
 
         .chip:active {
-            transform: scale(0.93);
-        }
-
-        .chip-5 {
-            background: radial-gradient(#e74c3c, #922b21);
-            border-color: #ff7675;
-            color: #fff;
-        }
-
-        .chip-25 {
-            background: radial-gradient(#27ae60, #1a5e39);
-            border-color: #55efc4;
-            color: #fff;
-        }
-
-        .chip-100 {
-            background: radial-gradient(#2980b9, #1a4a80);
-            border-color: #74b9ff;
-            color: #fff;
-        }
-
-        .chip-500 {
-            background: radial-gradient(#8e44ad, #5b2c6f);
-            border-color: #a29bfe;
-            color: #fff;
+            transform: scale(0.95);
         }
 
         #bet-btns {
@@ -985,10 +958,13 @@
                 <span id="bet-amount">0</span>
             </div>
             <div id="chip-row">
-                <div class="chip chip-5" onclick="Game.addBet(5)" title="+5 Bits">5</div>
-                <div class="chip chip-25" onclick="Game.addBet(25)" title="+25 Bits">25</div>
-                <div class="chip chip-100" onclick="Game.addBet(100)" title="+100 Bits">100</div>
-                <div class="chip chip-500" onclick="Game.addBet(500)" title="+500 Bits">500</div>
+                <div class="chip" style="background-image: url('/static/img/chip_5.png')" onclick="Game.addBet(5)" title="+5 Bits"></div>
+                <div class="chip" style="background-image: url('/static/img/chip_10.png')" onclick="Game.addBet(10)" title="+10 Bits"></div>
+                <div class="chip" style="background-image: url('/static/img/chip_25.png')" onclick="Game.addBet(25)" title="+25 Bits"></div>
+                <div class="chip" style="background-image: url('/static/img/chip_50.png')" onclick="Game.addBet(50)" title="+50 Bits"></div>
+                <div class="chip" style="background-image: url('/static/img/chip_100.png')" onclick="Game.addBet(100)" title="+100 Bits"></div>
+                <!-- Usando la de 350 o 700 para representar altos valores, aquí pondremos la de 150 -->
+                <div class="chip" style="background-image: url('/static/img/chip_150.png')" onclick="Game.addBet(150)" title="+150 Bits"></div>
             </div>
             <div id="bet-btns">
                 <button class="btn-bet-ctrl" id="btn-clear-bet" onclick="Game.clearBet()">✕ Borrar</button>
@@ -1129,7 +1105,7 @@
                 if (card.hidden) {
                     el.className = 'card card-back';
                     el.style.animationDelay = animDelay + 'ms';
-                    el.innerHTML = `<div class="card-back-text">CASINO<br>ONLINE<br>LUXURY</div>`;
+                    el.innerHTML = ''; // Limpiado: Ahora usamos la imagen detallada del reverso
                 } else {
                     el.className = 'card ' + (card.red ? 'red' : 'black');
                     el.style.animationDelay = animDelay + 'ms';
