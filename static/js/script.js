@@ -30,11 +30,34 @@
         username: user.username || "", // Enviar username
         photo_url: user.photo_url || "" // Enviar foto
       })
-    }).then(() => {
-      // Option to reload page to reflect user data if not present?
-      // Since backend handles session, simple reload might work, but let's avoid infinite loops.
-      // We'll rely on the backend session taking over on next page loads.
-    });
+    })
+    .then(res => res.json())
+    .then(data => {
+      // Si la página cargó sin sesión y ahora recibimos el perfil del server:
+      if (data.status === 'ok' && data.profile) {
+        // Actualizar BITS en la cabecera si estaba en 0 (típico cuando no había sesión pre-render)
+        const bitsDisplay = document.querySelector(".header-user .user-info strong, .user-info strong.text-gold");
+        if (bitsDisplay && (bitsDisplay.textContent.trim() === "0" || bitsDisplay.textContent.trim() === "")) {
+          bitsDisplay.textContent = data.bits;
+        }
+        
+        // Actualizar NOMBRE si estaba vacío
+        const nameDisplay = document.querySelector(".header-user .user-info h3, .user-info h3");
+        if (nameDisplay && nameDisplay.textContent.trim() === "") {
+          nameDisplay.textContent = user.first_name;
+        }
+
+        // Emitir un evento custom por si algun otro script (ej: user_profile_manager.js) necesita reconectarse
+        const evt = new CustomEvent("session-restored", { detail: data.profile });
+        document.dispatchEvent(evt);
+        
+        // Refrescar el componente global Badge si está cargado (lobby index.html)
+        if (window.UserProfileManager && typeof window.UserProfileManager.updateGlobalProfileBadge === "function") {
+          window.UserProfileManager.updateGlobalProfileBadge(data.profile);
+        }
+      }
+    })
+    .catch(console.error);
   }
 
   /* =====================================================

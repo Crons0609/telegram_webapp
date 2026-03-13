@@ -18,12 +18,20 @@ try:
 except ImportError:
     app.secret_key = "clave-secreta-super-segura"
 
+from datetime import timedelta
+# Hacer que las sesiones sean permanentes y duren 1 año
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+
 # Inicializamos la base de datos
 database.init_db()
 
 # Registrar Panel de Administración
 from admin_routes import admin_bp
 app.register_blueprint(admin_bp)
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 @app.context_processor
 def inject_user_profile():
@@ -53,25 +61,10 @@ def home():
         bits = database.obtener_bits(telegram_id)
         return render_template("index.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url)
     else:
-        # TEST MODE: Provide a test user with bits when running locally
-        test_id = "12345"
-        test_nombre = "Usuario de Prueba"
-        
-        # Add test user to database if it doesn't exist to ensure /bet works
-        database.agregar_usuario(test_id, test_nombre, "tester")
-        
-        # Give them 500 bits if they have less
-        bits = database.obtener_bits(test_id)
-        if bits < 500:
-            database.recargar_bits(test_id, 500)
-            bits = database.obtener_bits(test_id)
-            
-        session["telegram_id"] = test_id
-        session["nombre"] = test_nombre
-        session["username"] = "tester"
-        session["photo_url"] = ""
-        
-        return render_template("index.html", nombre=test_nombre, username="tester", telegram_id=test_id, bits=bits, photo_url="")
+        # Si no hay sesión, aún renderizamos la página. 
+        # El frontend (script.js) extraerá los datos nativos de Telegram y llamará a /register.
+        # Quitamos la lógica del usuario de prueba "12345" para no sobreescribir sesiones perdidas en Telegram.
+        return render_template("index.html", nombre="", username="", telegram_id="", bits=0, photo_url="")
 
 # =====================================================
 # LOBBY DE JUEGOS
@@ -116,7 +109,19 @@ def register():
     session["username"] = username
     session["photo_url"] = photo_url
 
-    return jsonify({"status": "ok"})
+    # Recuperar datos actuales para devolver al cliente
+    perfil = database.obtener_perfil_completo(telegram_id)
+    bits_actuales = perfil.get('bits', 0) if perfil else 0
+    nivel_actual = perfil.get('nivel', 1) if perfil else 1
+    xp_actual = perfil.get('xp', 0) if perfil else 0
+
+    return jsonify({
+        "status": "ok", 
+        "bits": bits_actuales,
+        "nivel": nivel_actual,
+        "xp": xp_actual,
+        "profile": perfil
+    })
 
 # =====================================================
 # PAYPAL BITS

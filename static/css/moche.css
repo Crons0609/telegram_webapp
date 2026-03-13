@@ -1102,7 +1102,6 @@
     /* Important: never squash the cards/controls themselves */
 }
 
-/* ── HUMAN CARDS — All cards in view, no scroll, no horizontal overflow ─ */
 .human-cards {
     display: flex;
     gap: 0;
@@ -1120,28 +1119,30 @@
     max-width: 98vw;
     overflow: hidden;
     /* clip-path allows lifted cards visually — top overflow kept, sides clipped */
-    clip-path: inset(-30px 0px 0px 0px);
+    clip-path: inset(-50px 0px 0px 0px);
+    /* Allow horizontal scroll if cards overflow on very small screens */
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
+.human-cards::-webkit-scrollbar { display: none; }
+
 .human-cards .card {
-    /*
-     * Width = (98vw − 20px·padding − 8px) / (n − n*overlap_ratio)
-     * For n=9, overlap=8px on 360px device: 8vw=28.8 → clamp to 30px
-     * 30 + 8*(30−8) = 30+176 = 206px ≤ 340px ✔︎
-     */
-    width: clamp(50px, 14vw, 95px);
+    /* Bigger cards — much more readable on mobile */
+    width: clamp(68px, 18vw, 120px);
     aspect-ratio: 2 / 3;
     height: auto;
     flex-shrink: 0;
-    margin-left: 3px;
-    /* Cards are visually separated by exactly 3px */
-    box-shadow: -1px 0 6px rgba(0, 0, 0, 0.5), 0 5px 12px rgba(0, 0, 0, 0.6);
-    border-radius: 5px;
+    margin-left: -6px;
+    /* Overlapping slightly */
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.5), 0 6px 14px rgba(0, 0, 0, 0.6);
+    border-radius: 7px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     position: relative;
     z-index: 1;
     transition: transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275),
         box-shadow 0.22s ease;
+    cursor: grab;
 }
 
 .human-cards .card:first-child {
@@ -1152,23 +1153,23 @@
 .human-cards .card:hover,
 .human-cards .card.interactive:hover {
     z-index: 20;
-    transform: translateY(-12px) scale(1.05);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 215, 0, 0.3);
+    transform: translateY(-16px) scale(1.07);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 215, 0, 0.35);
 }
 
 .human-cards .card.selected {
     z-index: 30;
-    transform: translateY(-18px) scale(1.07) !important;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 18px 36px rgba(0, 0, 0, 0.6) !important;
+    transform: translateY(-22px) scale(1.1) !important;
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.9), 0 22px 40px rgba(0, 0, 0, 0.6) !important;
 }
 
 .human-cards .card .center-suit {
-    font-size: clamp(0.75rem, 3.5vw, 1.3rem);
+    font-size: clamp(1rem, 4.5vw, 1.8rem);
 }
 
 .human-cards .card .corner-top,
 .human-cards .card .corner-bottom {
-    font-size: clamp(0.35rem, 1.6vw, 0.58rem);
+    font-size: clamp(0.5rem, 2vw, 0.75rem);
 }
 
 /* ── PLAYER CONTROLS ─────────────────────────────────────────────────────── */
