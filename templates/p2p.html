@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zona Jackpot 777 - Recarga P2P</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/p2p.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div class="method-badge">
+                <i class="fab fa-telegram-plane"></i> Recarga P2P vía Telegram
+            </div>
+            <h1 class="glitch">ZONA JACKPOT 777</h1>
+            <p class="subtitle">Recarga tus bits mediante transferencia persona a persona</p>
+            <a href="{{ url_for('home') }}" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Volver al Casino
+            </a>
+        </header>
+
+        <!-- Packages Grid (rendered by JS) -->
+        <div class="packages" id="packages"></div>
+
+        <!-- Info Section -->
+        <div class="info-section">
+            <div class="info-box">
+                <h3>💎 Beneficios</h3>
+                <ul>
+                    <li><i class="fas fa-check-circle"></i> Bits acreditados al instante</li>
+                    <li><i class="fas fa-check-circle"></i> Sin cargos adicionales</li>
+                    <li><i class="fas fa-check-circle"></i> Soporte directo por Telegram</li>
+                    <li><i class="fas fa-check-circle"></i> Proceso simple y seguro</li>
+                </ul>
+            </div>
+            <div class="info-box">
+                <h3>📋 Cómo funciona</h3>
+                <ol class="steps-list">
+                    <li>Elige el paquete que deseas recargar</li>
+                    <li>Presiona el botón — se abrirá Telegram</li>
+                    <li>El mensaje ya viene listo con tus datos</li>
+                    <li>Envíalo y espera la confirmación del admin</li>
+                </ol>
+            </div>
+        </div>
+
+        <footer>
+            <p>¿Problemas con tu recarga? <a href="https://t.me/ZonaJackpot777" target="_blank">Contáctanos en
+                    Telegram</a></p>
+        </footer>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i class="fab fa-telegram-plane"></i>
+        <span id="toastMsg">Abriendo Telegram...</span>
+    </div>
+
+    <script>
+        // ─── User session data injected from Flask ────────────────────────────
+        const USER_DATA = {
+            id: "{{ user_id }}",
+            username: "{{ username }}",
+        };
+
+        // ─── Telegram Target User (admin handle) ──────────────────────────────
+        const TELEGRAM_ADMIN = "Young_plague_FTP";  // ← Change to your actual admin username
+
+        // ─── Packages ─────────────────────────────────────────────────────────
+        const PACKAGES = [
+            { price: 1, bits: 1000, bonus: null, popular: false },
+            { price: 5, bits: 5000, bonus: "+5%", popular: false },
+            { price: 10, bits: 10000, bonus: "+10%", popular: true },
+            { price: 20, bits: 20000, bonus: "+15%", popular: false },
+            { price: 50, bits: 50000, bonus: "+20%", popular: false },
+        ];
+
+        // ─── Build Package Cards ───────────────────────────────────────────────
+        function buildPackages() {
+            const grid = document.getElementById('packages');
+            grid.innerHTML = PACKAGES.map(pkg => `
+            <div class="package-card ${pkg.popular ? 'popular' : ''}">
+                ${pkg.popular ? '<span class="popular-badge">⭐ Popular</span>' : ''}
+                <div class="price-tag">$${pkg.price}</div>
+                <div class="bits-label">${pkg.bits.toLocaleString()} Bits</div>
+                <div class="bits-sub">${(pkg.bits / pkg.price).toLocaleString()} bits por dólar</div>
+                ${pkg.bonus ? `<span class="bonus-tag">BONUS ${pkg.bonus}</span>` : '<div style="margin-bottom:1.25rem;"></div>'}
+                <button class="btn-recharge" onclick="requestRecharge(${pkg.price}, ${pkg.bits})">
+                    <i class="fab fa-telegram-plane"></i> Recargar $${pkg.price}
+                </button>
+            </div>
+        `).join('');
+        }
+
+        // ─── Generate Message & Open Telegram ─────────────────────────────────
+        function requestRecharge(price, bits) {
+            const userId = USER_DATA.id || "Sin ID";
+            const username = USER_DATA.username ? "@" + USER_DATA.username : "Sin usuario";
+
+            const message = `Hola, quiero recargar bits.\n\nID: ${userId}\nUsuario: ${username}\nCantidad: $${price} = ${bits.toLocaleString()} Bits`;
+
+            const encodedMsg = encodeURIComponent(message);
+            const telegramUrl = `https://t.me/${TELEGRAM_ADMIN}?text=${encodedMsg}`;
+
+            showToast(`Abriendo Telegram para $${price} USD...`);
+            setTimeout(() => { window.open(telegramUrl, '_blank'); }, 400);
+        }
+
+        // ─── Toast Notification ────────────────────────────────────────────────
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3500);
+        }
+
+        // Init
+        buildPackages();
+    </script>
+</body>
+
+</html>

@@ -219,8 +219,23 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 100;
   box-shadow: 1px 0 10px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Mobile Overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 99;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.sidebar-overlay.active {
+  opacity: 1;
 }
 
 .sidebar-brand {
@@ -1145,7 +1160,12 @@ input:checked + .slider:before {
   }
   
   .datetime {
-    display: none; /* Hide clock on mobile to save space */
+    display: none;
+  }
+
+  /* Overlay visible on mobile */
+  .sidebar-overlay {
+    display: block;
   }
 
   /* Grids and Tables */

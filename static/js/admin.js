@@ -83,20 +83,39 @@ function initAdminPanel() {
         });
     });
 
-    // 2.b Mobile Sidebar Toggle
+    // 2.b Sidebar Toggle (works on both desktop and mobile)
     const mobileToggle = document.getElementById('mobileMenuToggle');
     const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        if (sidebarOverlay) sidebarOverlay.classList.add('active');
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+    }
+    function toggleSidebar() {
+        if (sidebar.classList.contains('open')) {
+            closeSidebar();
+        } else {
+            openSidebar();
+        }
+    }
+
     if (mobileToggle && sidebar) {
-        mobileToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-        });
+        mobileToggle.addEventListener('click', toggleSidebar);
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
     }
 
     // 2.c Close sidebar on mobile when a nav item is clicked
     navItems.forEach(item => {
         item.addEventListener('click', () => {
-            if (window.innerWidth <= 768) {
-                sidebar.classList.remove('open');
+            if (window.innerWidth <= 900) {
+                closeSidebar();
             }
         });
     });

@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=3.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=3.1">
 </head>
 <body>
 
@@ -53,6 +53,8 @@
      MAIN SPA PANEL
 ════════════════════════════════════════════ -->
 <div class="admin-layout">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -409,6 +411,6 @@
 <div id="toastContainer" class="toast-container"></div>
 {% endif %}
 
-<script src="{{ url_for('static', filename='js/admin.js') }}?v=3.0"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v=3.1"></script>
 </body>
 </html>

@@ -128,6 +128,21 @@ def paypal_bits():
         return redirect(url_for('index'))
     return render_template("paypal.html")
 
+# =====================================================
+# P2P BITS
+# =====================================================
+@app.route('/p2p_bits')
+def p2p_bits():
+    telegram_id = session.get("telegram_id")
+    if not telegram_id:
+        return redirect(url_for('home'))
+    return render_template(
+        "p2p.html",
+        user_id=telegram_id,
+        username=session.get("username", "")
+    )
+
+
 @app.route('/api/paypal/capture', methods=['POST'])
 def paypal_capture():
     telegram_id = session.get("telegram_id")

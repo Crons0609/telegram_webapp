@@ -251,32 +251,8 @@
         break;
 
       case "recargar":
-        // Get user details
-        const tgid = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || window.USER_DATA?.telegram_id || "ID_DESCONOCIDO";
-        const tguser = window.Telegram?.WebApp?.initDataUnsafe?.user?.username || window.USER_DATA?.username || "Usuario";
-
-        const recargaMsg = `Hola, quiero recargar bits.\nID: ${tgid}\nUsuario: @${tguser}`;
-        const encodedMsg = encodeURIComponent(recargaMsg);
-
-        // Link to admin support account with prefilled text (works on some clients)
-        const telegramUrl = `https://t.me/antraxx_g59?text=${encodedMsg}`;
-
-        // Attempt to copy to clipboard as fallback
-        try {
-          navigator.clipboard.writeText(recargaMsg);
-          if (window.Telegram && window.Telegram.WebApp.showAlert) {
-            window.Telegram.WebApp.showAlert("Se ha copiado el mensaje de recarga al portapapeles. Pégalo en el chat de soporte si no aparece automáticamente.");
-          }
-        } catch (e) { console.error('Clipboard copy failed', e); }
-
-        // Open Telegram link
-        setTimeout(() => {
-          if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.openTelegramLink(telegramUrl);
-          } else {
-            window.open(telegramUrl, "_blank");
-          }
-        }, 500);
+        // Redirect to P2P Bits page where user selects the amount
+        window.location.href = '/p2p_bits';
         break;
 
       case "explorar":
