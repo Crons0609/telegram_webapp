@@ -103,6 +103,8 @@ def init_db() -> None:
                 tournaments_played INTEGER DEFAULT 0,
                 tournaments_won INTEGER DEFAULT 0,
                 juegos_diferentes INTEGER DEFAULT 0,
+                ajedrez_elo INTEGER DEFAULT 1200,
+                ajedrez_partidas INTEGER DEFAULT 0,
                 FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id)
             )
         """)
@@ -115,7 +117,9 @@ def init_db() -> None:
             ("win_streak", "INTEGER DEFAULT 0"),
             ("tournaments_played", "INTEGER DEFAULT 0"),
             ("tournaments_won", "INTEGER DEFAULT 0"),
-            ("juegos_diferentes", "INTEGER DEFAULT 0")
+            ("juegos_diferentes", "INTEGER DEFAULT 0"),
+            ("ajedrez_elo", "INTEGER DEFAULT 1200"),
+            ("ajedrez_partidas", "INTEGER DEFAULT 0")
         ]
         
         for col, tipo in nuevas_columnas:
@@ -325,7 +329,9 @@ def obtener_perfil_completo(telegram_id: str) -> dict:
                    COALESCE(s.win_streak, 0) as win_streak,
                    COALESCE(s.tournaments_played, 0) as tournaments_played,
                    COALESCE(s.tournaments_won, 0) as tournaments_won,
-                   COALESCE(s.juegos_diferentes, 0) as juegos_diferentes
+                   COALESCE(s.juegos_diferentes, 0) as juegos_diferentes,
+                   COALESCE(s.ajedrez_elo, 1200) as ajedrez_elo,
+                   COALESCE(s.ajedrez_partidas, 0) as ajedrez_partidas
             FROM usuarios u
             LEFT JOIN user_stats s ON u.telegram_id = s.telegram_id
             WHERE u.telegram_id = ?
@@ -459,7 +465,7 @@ def incrementar_stat(telegram_id: str, columna: str, cantidad: int = 1) -> bool:
     columnas_validas = [
         'juegos_jugados', 'jackpots_ganados', 'moches_ganados', 'ruletas_ganadas', 
         'wins_total', 'bits_apostados', 'bits_ganados', 'tournaments_played', 
-        'tournaments_won', 'juegos_diferentes'
+        'tournaments_won', 'juegos_diferentes', 'ajedrez_partidas'
     ]
     if columna not in columnas_validas:
         return False
@@ -468,6 +474,13 @@ def incrementar_stat(telegram_id: str, columna: str, cantidad: int = 1) -> bool:
         _asegurar_stats(telegram_id, conn)
         # Using string formatting for column name is safe here because validated against whitelist
         cursor = conn.execute(f"UPDATE user_stats SET {columna} = {columna} + ? WHERE telegram_id = ?", (cantidad, telegram_id))
+        return cursor.rowcount > 0
+
+def actualizar_ajedrez_elo(telegram_id: str, new_elo: int) -> bool:
+    """Actualiza el ELO de ajedrez tras una partida."""
+    with get_connection() as conn:
+        _asegurar_stats(telegram_id, conn)
+        cursor = conn.execute("UPDATE user_stats SET ajedrez_elo = ?, ajedrez_partidas = ajedrez_partidas + 1 WHERE telegram_id = ?", (new_elo, telegram_id))
         return cursor.rowcount > 0
 
 def actualizar_racha_victorias(telegram_id: str, is_win: bool) -> int:

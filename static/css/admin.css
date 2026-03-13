@@ -233,9 +233,11 @@ body {
   z-index: 99;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 .sidebar-overlay.active {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .sidebar-brand {

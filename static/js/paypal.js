@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         packages.forEach((pkg, index) => {
             const containerId = `paypal-button-${index + 1}`;
             paypal.Buttons({
+                fundingSource: paypal.FUNDING.PAYPAL,
                 style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'paypal', height: 45 },
                 createOrder: function(data, actions) {
                     enableSound();
