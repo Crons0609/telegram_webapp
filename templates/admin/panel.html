@@ -94,6 +94,9 @@
             <a href="#" class="nav-item" data-view="admins">
                 <i class="fas fa-user-shield"></i> <span>Admins</span>
             </a>
+            <a href="#" class="nav-item" data-view="temas">
+                <i class="fas fa-palette"></i> <span>Temas Globales</span>
+            </a>
 
             <a href="/admin/logout" class="nav-item logout">
                 <i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
@@ -417,6 +420,156 @@
             <button class="btn-secondary close-modal-btn" style="flex:1;">Cancelar</button>
             <button id="confirmDeleteBtn" style="flex:1; background:#ef4444; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Eliminar</button>
         </div>
+    </div>
+</div>
+
+<!-- ── VIEW: TEMAS GLOBALES ────────────────────────────── -->
+<div id="view-temas" class="view-section" style="display:none; padding:1.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h2 style="color:var(--text-main); margin:0;"><i class="fas fa-palette" style="color:#a855f7;"></i> Temas Globales</h2>
+            <p style="color:var(--text-muted); margin:0.25rem 0 0;">El tema activo se aplica en tiempo real a todos los usuarios.</p>
+        </div>
+        <button class="btn-primary" onclick="openThemeBuilderModal()" style="background:linear-gradient(135deg,#a855f7,#6d28d9);">
+            <i class="fas fa-plus"></i> Nuevo Tema
+        </button>
+    </div>
+
+    <!-- Theme Cards -->
+    <div id="temasGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; margin-bottom:2rem;"></div>
+
+    <!-- Schedules -->
+    <div class="card" style="padding:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="margin:0; color:var(--text-main);"><i class="fas fa-calendar-alt" style="color:#f59e0b;"></i> Calendario de Temas</h3>
+            <button class="btn-primary" onclick="openAddScheduleModal()" style="font-size:0.85rem; padding:0.5rem 1rem; background:linear-gradient(135deg,#f59e0b,#d97706);">
+                <i class="fas fa-plus"></i> Programar
+            </button>
+        </div>
+        <div id="schedulesTable" style="overflow-x:auto;"></div>
+    </div>
+</div>
+
+<!-- Modal: Theme Builder -->
+<div class="modal-overlay" id="themeBuilderModal">
+    <div class="modal-container" style="max-width:480px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-paint-brush" style="color:#a855f7;"></i> Nuevo Tema</h3>
+            <button class="close-modal-btn" style="background:transparent;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form id="themeBuilderForm">
+            <div class="form-group">
+                <label>Nombre del Tema</label>
+                <input type="text" id="tb_name" class="form-control" placeholder="Ej: Navidad 2025" required>
+            </div>
+            <div class="form-group">
+                <label>Slug (identificador único)</label>
+                <input type="text" id="tb_slug" class="form-control" placeholder="ej: navidad_2025" required pattern="[a-z0-9_]+">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" id="tb_description" class="form-control" placeholder="Descripción breve (opcional)">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                    <label>Color Principal</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                        <input type="color" id="tb_primary" value="#c9a227" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
+                        <input type="text" id="tb_primary_hex" class="form-control" value="#c9a227" maxlength="7" style="flex:1;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Color Secundario</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                        <input type="color" id="tb_secondary" value="#f0cc55" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
+                        <input type="text" id="tb_secondary_hex" class="form-control" value="#f0cc55" maxlength="7" style="flex:1;">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Color de Fondo</label>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input type="color" id="tb_bg" value="#0a0a0f" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
+                    <input type="text" id="tb_bg_hex" class="form-control" value="#0a0a0f" maxlength="7" style="flex:1;">
+                </div>
+            </div>
+            <!-- Opciones Avanzadas -->
+            <div style="margin-top:1rem; border-top:1px solid #333; padding-top:1rem;">
+                <h4 style="margin-bottom:0.5rem; color:#a855f7;"><i class="fas fa-magic"></i> Opciones Avanzadas</h4>
+                
+                <div class="form-group">
+                    <label>URL de Imagen de Fondo</label>
+                    <input type="text" id="tb_bg_image" class="form-control" placeholder="Ej: https://.../fondo.jpg">
+                </div>
+                <div class="form-group">
+                    <label>Fondo Superpuesto (Overlay) <span style="font-size:0.7rem; color:var(--text-muted);">(Opaca la imagen)</span></label>
+                    <input type="text" id="tb_bg_overlay" class="form-control" placeholder="Ej: rgba(10, 10, 15, 0.85)">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group">
+                        <label>Tipografía (font-family)</label>
+                        <input type="text" id="tb_font_family" class="form-control" placeholder="Ej: 'Cinzel', serif">
+                    </div>
+                    <div class="form-group">
+                        <label>Animaciones</label>
+                        <div style="display:flex; gap:1rem; margin-top:0.5rem;">
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.3rem;">
+                                <input type="checkbox" id="tb_anim_hearts"> Corazones
+                            </label>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.3rem;">
+                                <input type="checkbox" id="tb_anim_snow"> Nieve
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Preview -->
+            <div id="themePreviewBar" style="height:10px; border-radius:6px; background:linear-gradient(90deg,#c9a227,#f0cc55); margin:0.75rem 0; transition:background 0.3s;"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary close-modal-btn">Cancelar</button>
+                <button type="submit" class="btn-primary" style="background:linear-gradient(135deg,#a855f7,#6d28d9);"><i class="fas fa-save"></i> Crear Tema</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Schedule -->
+<div class="modal-overlay" id="addScheduleModal">
+    <div class="modal-container" style="max-width:420px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-calendar-plus" style="color:#f59e0b;"></i> Programar Tema</h3>
+            <button class="close-modal-btn" style="background:transparent;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form id="addScheduleForm">
+            <div class="form-group">
+                <label>Nombre del Evento</label>
+                <input type="text" id="sched_event" class="form-control" placeholder="Ej: Navidad 2025" required>
+            </div>
+            <div class="form-group">
+                <label>Tema a Activar</label>
+                <select id="sched_theme" class="form-control" required></select>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                    <label>Inicio</label>
+                    <input type="datetime-local" id="sched_start" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Fin</label>
+                    <input type="datetime-local" id="sched_end" class="form-control" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Prioridad (mayor gana si hay solapamiento)</label>
+                <input type="number" id="sched_priority" class="form-control" value="1" min="1" max="10">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary close-modal-btn">Cancelar</button>
+                <button type="submit" class="btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-calendar-check"></i> Programar</button>
+            </div>
+        </form>
     </div>
 </div>
 

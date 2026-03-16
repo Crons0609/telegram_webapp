@@ -221,6 +221,7 @@ window.UserProfileManager = {
                 <button class="profile-tab active" onclick="UserProfileManager.switchTab('info',this)">⚙️ General</button>
                 <button class="profile-tab tab-highlight" onclick="UserProfileManager.switchTab('trophies',this)">🏆 Trofeos</button>
                 <button class="profile-tab tab-highlight" onclick="UserProfileManager.switchTab('missions',this)">🎯 Misiones</button>
+                <button class="profile-tab" onclick="UserProfileManager.switchTab('sports',this)">⚽ Apuestas</button>
                 <button class="profile-tab" onclick="UserProfileManager.switchTab('frames',this)">🖼️ Marcos</button>
                 <button class="profile-tab" onclick="UserProfileManager.switchTab('themes',this)">🎨 Temas</button>
             </div>
@@ -244,6 +245,7 @@ window.UserProfileManager = {
             <!-- OTHER TABS -->
             <div id="tab-trophies" class="tab-content"><div class="trophy-grid" id="grid-trophies"><p style="text-align:center;color:#888;padding:20px;">Cargando Trofeos...</p></div></div>
             <div id="tab-missions" class="tab-content"><div class="missions-list" id="list-missions"><p style="text-align:center;color:#888;padding:20px;">Cargando Misiones...</p></div></div>
+            <div id="tab-sports" class="tab-content"><div class="sports-list" id="list-sports"><p style="text-align:center;color:#888;padding:20px;">Cargando Apuestas...</p></div></div>
             <div id="tab-frames" class="tab-content"><div class="items-grid" id="grid-frames"></div></div>
             <div id="tab-themes" class="tab-content"><div class="items-grid" id="grid-themes"></div></div>
         `;
@@ -259,6 +261,46 @@ window.UserProfileManager = {
         if (tab) tab.classList.add('active');
         if (tabName === 'trophies') this.loadTrophies();
         if (tabName === 'missions') this.loadMissions();
+        if (tabName === 'sports') this.loadSportsHistory();
+    },
+
+    loadSportsHistory: async function() {
+        const grid = document.getElementById('list-sports');
+        if (!grid) return;
+        
+        const tgId = this.currentProfile.id;
+        if (!tgId) return;
+
+        grid.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">Cargando historial deportivo...</p>';
+        try {
+            const res = await fetch(`/sports/api/bets/${tgId}`);
+            const bets = await res.json();
+            if(!bets || bets.length === 0) {
+                grid.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">No has realizado apuestas deportivas aún.</p>';
+                return;
+            }
+            grid.innerHTML = '';
+            bets.forEach(b => {
+                const el = document.createElement("div");
+                el.style.cssText = "background:rgba(255,255,255,0.05); padding:15px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.1);";
+                let statusColor = b.status === 'won' ? '#10b981' : (b.status === 'lost' ? '#ef4444' : '#f59e0b');
+                let statusText = b.status === 'won' ? 'Ganada' : (b.status === 'lost' ? 'Perdida' : 'Pendiente');
+                el.innerHTML = `
+                  <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                    <strong>${b.match}</strong>
+                    <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-size: 0.9em; opacity: 0.8;">
+                    <span>Opción: <strong style="color: var(--gold-1)">${b.choice}</strong></span>
+                    <span>Apuesta: ${b.amount} bits</span>
+                  </div>
+                  <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.6;">Potencial: ${b.potential_win} bits · ${new Date(b.date).toLocaleString()}</div>
+                `;
+                grid.appendChild(el);
+            });
+        } catch(e) {
+            grid.innerHTML = '<p style="text-align:center;color:red;padding:20px;">Error cargando historial.</p>';
+        }
     },
 
     renderInventory: function () {

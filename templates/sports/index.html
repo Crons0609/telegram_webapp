@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="color-scheme" content="dark">
+  <title>Zona Jackpot 777 | Deportes</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/themes.css">
+  <link rel="stylesheet" href="/static/css/perfil.css">
+  <script>document.documentElement.classList.remove("no-js");</script>
+  <script src="/static/js/theme-manager.js"></script>
+  <script defer src="/static/js/soundManager.js"></script>
+  <script defer src="/static/js/perfil.js"></script>
+  <script defer src="/static/js/script.js"></script>
+
+  <style>
+    .sports-card {
+      background: linear-gradient(135deg, rgba(20,40,20,0.85), rgba(10,50,20,0.6)) !important;
+      border: 1px solid rgba(40,150,40,0.3) !important;
+    }
+    .sports-card-btn {
+      background: linear-gradient(135deg, #10b981, #059669) !important;
+      color: #fff !important;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar" aria-label="Navegación principal">
+    <div class="container nav-container">
+      <button class="brand brand-btn" onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close(); else window.history.back();" style="padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
+        <span class="brand-icon" aria-hidden="true" style="margin:0; font-size:16px;">✕</span>
+      </button>
+      <div class="nav-actions">
+        {% include 'user_menu.html' %}
+      </div>
+    </div>
+  </nav>
+
+  <div style="height: 100px;"></div>
+
+  <main id="main-content">
+    <section class="games-section">
+      <div class="section-header reveal">
+        <h2 id="games-title">⚽ Apuestas Deportivas</h2>
+        <p class="section-subtitle">Selecciona tu Deporte</p>
+      </div>
+      <div class="games-grid">
+        <article class="game-card sports-card reveal">
+          <div class="game-card-inner sports-card" role="button" tabindex="0" onclick="window.location.href='/sports/futbol'">
+            <span class="game-card-emoji" aria-hidden="true">⚽</span>
+            <div class="game-card-info">
+              <p class="game-card-label">Fútbol · Mundial Edition</p>
+              <h3 class="game-card-name">Fútbol</h3>
+              <p class="game-card-desc">Apuesta en los mejores partidos, ligas y campeonatos mundiales.</p>
+              <button class="game-card-btn sports-card-btn" type="button" onclick="window.location.href='/sports/futbol'">
+                VER PARTIDOS →
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+  
+  {% include 'user_profile_modal.html' ignore missing %}
+  
+</body>
+</html>

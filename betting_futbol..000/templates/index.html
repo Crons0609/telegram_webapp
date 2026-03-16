@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="worldcup">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Zona Jackpot 777 | Sportsbook</title>
+
+<link rel="stylesheet" href="/static/css/style.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+<link rel="icon" href="/static/img/logo.png">
+
+</head>
+
+<body>
+
+<div class="background"></div>
+
+<!-- NAVBAR -->
+<nav class="navbar glass">
+
+<div class="logo">
+⚽ ZONA JACKPOT 777
+</div>
+
+<div class="nav-links">
+
+<button class="nav-btn active">Apuestas</button>
+<button class="nav-btn">Mis apuestas</button>
+<button class="nav-btn">Ranking</button>
+
+</div>
+
+<div class="balance-nav">
+💰 <span id="balance">0</span> bits
+</div>
+
+</nav>
+
+
+<!-- CONTENEDOR PRINCIPAL -->
+
+<div class="container">
+
+<header class="hero">
+
+<h1 class="glitch" data-text="ZONA JACKPOT 777">
+ZONA JACKPOT 777
+</h1>
+
+<p class="subtitle">
+Sportsbook futurista • Mundial Edition ⚽
+</p>
+
+</header>
+
+
+<!-- PANEL DE USUARIO -->
+
+<section class="user-panel glass">
+
+<div class="user-fields">
+
+<div class="input-group">
+<label>Usuario</label>
+<input type="text" id="username" placeholder="Ej: Carlos">
+</div>
+
+<div class="input-group">
+<label>Telegram Chat ID</label>
+<input type="text" id="chat_id" placeholder="Ej: 123456789">
+</div>
+
+<button class="btn-primary" id="saveUser">
+Guardar usuario
+</button>
+
+</div>
+
+<div class="balance-card">
+
+<div class="balance-title">
+Saldo disponible
+</div>
+
+<div class="balance-amount">
+<span id="balance">0</span> bits
+</div>
+
+</div>
+
+</section>
+
+
+<!-- FILTROS DE PARTIDOS -->
+
+<section class="filters glass">
+
+<button class="filter active">Todos</button>
+<button class="filter">Hoy</button>
+<button class="filter">Mañana</button>
+<button class="filter">En vivo</button>
+
+</section>
+
+
+<!-- PARTIDOS -->
+
+<section class="matches-section">
+
+<h2 class="section-title">
+⚽ Partidos disponibles
+</h2>
+
+<div id="matches-container" class="matches-container">
+
+<!-- JS carga partidos -->
+
+</div>
+
+</section>
+
+
+<!-- HISTORIAL DE APUESTAS -->
+
+<section class="bets-history glass">
+
+<h2 class="section-title">
+📊 Mis apuestas
+</h2>
+
+<div id="bets-history-list">
+
+<div class="empty-history">
+Aún no has realizado apuestas
+</div>
+
+</div>
+
+</section>
+
+</div>
+
+
+<!-- NOTIFICACIONES -->
+
+<div class="notification-area" id="notification"></div>
+
+
+<!-- SONIDOS -->
+
+<audio id="bet-sound" src="/static/sounds/bet.mp3" preload="auto"></audio>
+
+<audio id="win-sound" src="/static/sounds/win.mp3" preload="auto"></audio>
+
+
+<!-- JS -->
+
+<script src="/static/js/main.js"></script>
+
+</body>
+</html>

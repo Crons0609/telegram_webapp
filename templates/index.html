@@ -42,12 +42,12 @@
   <!-- Inline: remove no-js immediately -->
   <script>document.documentElement.classList.remove("no-js");</script>
 
-  <!-- Deferred scripts -->
+  <!-- Theme Manager (global admin-controlled theme) -->
+  <script src="/static/js/theme-manager.js"></script>
   <script defer src="/static/js/soundManager.js"></script>
   <script defer src="/static/js/perfil.js"></script>
   <script defer src="/static/js/script.js"></script>
 
-  <script>try { var t = localStorage.getItem("casino_theme"); if (t) document.documentElement.setAttribute("data-casino-theme", t); } catch (e) { }</script>
 </head>
 
 <body>
@@ -103,6 +103,12 @@
         🎰 JUGAR AHORA
       </button>
 
+      <!-- Deportes CTA -->
+      <button class="reveal reveal-d3" type="button" onclick="window.location.href='/sports'" id="hero-cta-sports-btn"
+        style="width:min(320px,90vw); padding:16px 42px; font-size:clamp(1rem,4vw,1.1rem); font-weight:800; letter-spacing:.04em; color:#fff; background:linear-gradient(135deg,#0ba360,#3cba92); border:none; border-radius:50px; cursor:pointer; box-shadow:0 0 25px rgba(11,163,96,0.4),0 15px 40px rgba(0,0,0,0.5); touch-action:manipulation;">
+        ⚽ APUESTAS DEPORTIVAS
+      </button>
+
       <!-- Bits Counter -->
       <div class="reveal reveal-d3"
         style="margin: 15px 0 5px 0; font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-1); text-shadow: 0 0 10px rgba(212,175,55,0.5);">
@@ -113,7 +119,7 @@
       <!-- Sub actions -->
       <div class="hero-cta-sub reveal reveal-d3">
         <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
-        <button class="btn-primary" type="button" onclick="window.location.href='{{ url_for('paypal_bits') }}'"
+        <button class="btn-primary" type="button" onclick="window.location.href='/paypal_bits'"
           style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
           <span style="font-weight:900; font-style: italic;">Pay<span style="color:#003087;">Pal</span></span> Bits
         </button>

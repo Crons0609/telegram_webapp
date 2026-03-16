@@ -29,12 +29,23 @@ database.init_db()
 from admin_routes import admin_bp
 app.register_blueprint(admin_bp)
 
+# Registrar Deportes
+from sports_routes import sports_bp
+app.register_blueprint(sports_bp)
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
+    # Check scheduled themes (lightweight — cached by DB logic)
+    try:
+        database.check_and_apply_scheduled_theme()
+    except Exception:
+        pass
 
 @app.context_processor
 def inject_user_profile():
+    active_theme = database.get_active_theme()
+    context = {'global_theme': active_theme}
     if "telegram_id" in session:
         telegram_id = session["telegram_id"]
         perfil = database.obtener_perfil_completo(telegram_id)
@@ -43,9 +54,10 @@ def inject_user_profile():
             progress = UserProfileManager.get_progress(perfil['xp'])
             perfil['rank'] = rank_info
             perfil['progress'] = progress
-            # Extract basic bits if necessary, it's already in perfil.
-            return dict(global_profile=perfil)
-    return dict(global_profile=None)
+            context['global_profile'] = perfil
+            return context
+    context['global_profile'] = None
+    return context
 
 # =====================================================
 # HOME
@@ -857,6 +869,15 @@ def claim_mission():
     if result["status"] == "ok":
         result["bits"] = database.obtener_bits(session["telegram_id"])
     return jsonify(result)
+
+# =====================================================
+# THEMES (PUBLIC API)
+# =====================================================
+@app.route('/api/themes/active')
+def api_active_theme():
+    """Returns the currently active global theme (public, no auth required)."""
+    theme = database.get_active_theme()
+    return jsonify(theme)
 
 # =====================================================
 # ADMIN (Manejado por admin_routes.py Blueprint)

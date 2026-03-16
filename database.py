@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from contextlib import contextmanager
 from typing import Optional
 
@@ -288,9 +289,228 @@ def init_db() -> None:
             )
         """)
 
+        # =====================================================
+        # TEMAS GLOBALES
+        # =====================================================
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS themes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                description TEXT DEFAULT '',
+                primary_color TEXT NOT NULL DEFAULT '#c9a227',
+                secondary_color TEXT NOT NULL DEFAULT '#f0cc55',
+                bg_color TEXT NOT NULL DEFAULT '#0a0a0f',
+                accent_glow TEXT NOT NULL DEFAULT 'rgba(201,162,39,0.25)',
+                particles_color TEXT NOT NULL DEFAULT 'rgba(212,175,55,0.55)',
+                background_image TEXT DEFAULT '',
+                background_overlay TEXT DEFAULT '',
+                typography TEXT DEFAULT '{}',
+                ui_sounds TEXT DEFAULT '{}',
+                animations TEXT DEFAULT '{}',
+                is_active INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS theme_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                theme_id INTEGER NOT NULL,
+                event_name TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                priority INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY(theme_id) REFERENCES themes(id)
+            )
+        """)
+
+        # Seed 5 default themes if table is empty
+        theme_count = conn.execute("SELECT COUNT(*) FROM themes").fetchone()[0]
+        if theme_count == 0:
+            default_themes = [
+                ("Default (Casino)",     "default",      "Tema base dorado elegante",               "#c9a227", "#f0cc55", "#0a0a0f", "rgba(201,162,39,0.25)", "rgba(212,175,55,0.55)", "", "", "{}", "{}", "{}", 1),
+                ("Dark Premium",         "dark_premium",  "Púrpura profundo y misterioso",           "#a855f7", "#c084fc", "#07050f", "rgba(168,85,247,0.3)",  "rgba(168,85,247,0.4)",  "", "", "{}", "{}", "{}", 0),
+                ("Gold Imperial",        "gold_imperial", "Ámbar riquísimo, el tema de los reyes",   "#f5a623", "#ffd060", "#0a0700", "rgba(245,166,35,0.35)", "rgba(245,166,35,0.55)", "", "", "{}", "{}", "{}", 0),
+                ("Las Vegas",            "las_vegas",     "Rojo neón eléctrico, la vibra Vegas",     "#ff2244", "#ff6680", "#050508", "rgba(255,34,68,0.35)",  "rgba(255,34,68,0.55)",  "", "", "{}", "{}", "{}", 0),
+                ("Noir Élite",           "noir",          "Monocromático plata sobre negro absoluto","#c8c8c8", "#f0f0f0", "#000000", "rgba(220,220,220,0.2)", "rgba(200,200,200,0.4)", "", "", "{}", "{}", "{}", 0),
+            ]
+            conn.executemany("""
+                INSERT INTO themes (name, slug, description, primary_color, secondary_color, bg_color, accent_glow, particles_color, background_image, background_overlay, typography, ui_sounds, animations, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, default_themes)
+
+        # =====================================================
+        # APUESTAS DEPORTIVAS (SPORTS BETTING)
+        # =====================================================
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sports_leagues (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                country TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sports_matches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team1 TEXT NOT NULL,
+                team2 TEXT NOT NULL,
+                date TEXT NOT NULL,
+                league_id INTEGER,
+                status TEXT DEFAULT 'upcoming',
+                result TEXT,
+                odd1 REAL DEFAULT 2.0,
+                oddx REAL DEFAULT 3.0,
+                odd2 REAL DEFAULT 2.0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                FOREIGN KEY(league_id) REFERENCES sports_leagues(id)
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS sports_bets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                telegram_id TEXT NOT NULL,
+                match_id INTEGER NOT NULL,
+                team_choice TEXT NOT NULL,
+                amount INTEGER NOT NULL,
+                odd REAL,
+                potential_win INTEGER,
+                status TEXT DEFAULT 'pending',
+                created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                FOREIGN KEY(telegram_id) REFERENCES usuarios(telegram_id),
+                FOREIGN KEY(match_id) REFERENCES sports_matches(id)
+            )
+        """)
+
+
+# =====================================================
+# THEME HELPERS
+# =====================================================
+
+def get_active_theme() -> dict:
+    """Returns the currently active theme as a dict, or the default slug if none active."""
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM themes WHERE is_active = 1 LIMIT 1").fetchone()
+        if row:
+            d = dict(row)
+            d['typography'] = json.loads(d.get('typography') or '{}')
+            d['ui_sounds'] = json.loads(d.get('ui_sounds') or '{}')
+            d['animations'] = json.loads(d.get('animations') or '{}')
+            return d
+        return {"slug": "default", "name": "Default (Casino)", "primary_color": "#c9a227",
+                "secondary_color": "#f0cc55", "bg_color": "#0a0a0f",
+                "accent_glow": "rgba(201,162,39,0.25)", "particles_color": "rgba(212,175,55,0.55)",
+                "background_image": "", "background_overlay": "",
+                "typography": {}, "ui_sounds": {}, "animations": {}}
+
+def get_all_themes() -> list:
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM themes ORDER BY id ASC").fetchall()
+        res = []
+        for r in rows:
+            d = dict(r)
+            d['typography'] = json.loads(d.get('typography') or '{}')
+            d['ui_sounds'] = json.loads(d.get('ui_sounds') or '{}')
+            d['animations'] = json.loads(d.get('animations') or '{}')
+            res.append(d)
+        return res
+
+def activate_theme(theme_id: int) -> bool:
+    with get_connection() as conn:
+        conn.execute("UPDATE themes SET is_active = 0, updated_at = datetime('now')")
+        conn.execute("UPDATE themes SET is_active = 1, updated_at = datetime('now') WHERE id = ?", (theme_id,))
+        return True
+
+def create_theme(name: str, slug: str, description: str, primary_color: str,
+                 secondary_color: str, bg_color: str, accent_glow: str, particles_color: str,
+                 background_image: str = '', background_overlay: str = '', 
+                 typography: dict = None, ui_sounds: dict = None, animations: dict = None) -> int:
+    typography_json = json.dumps(typography or {})
+    ui_sounds_json = json.dumps(ui_sounds or {})
+    animations_json = json.dumps(animations or {})
+    with get_connection() as conn:
+        cursor = conn.execute("""
+            INSERT INTO themes (name, slug, description, primary_color, secondary_color, bg_color, accent_glow, particles_color, background_image, background_overlay, typography, ui_sounds, animations)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (name, slug, description, primary_color, secondary_color, bg_color, accent_glow, particles_color, background_image, background_overlay, typography_json, ui_sounds_json, animations_json))
+        return cursor.lastrowid
+
+def update_theme(theme_id: int, data: dict) -> bool:
+    allowed = ['name', 'description', 'primary_color', 'secondary_color', 'bg_color', 'accent_glow', 'particles_color', 'background_image', 'background_overlay']
+    json_fields = ['typography', 'ui_sounds', 'animations']
+    
+    sets = []
+    vals = []
+    
+    for k in allowed:
+        if k in data:
+            sets.append(f"{k} = ?")
+            vals.append(data[k])
+            
+    for k in json_fields:
+        if k in data:
+            sets.append(f"{k} = ?")
+            vals.append(json.dumps(data[k] or {}))
+            
+    if not sets:
+        return False
+    sets.append("updated_at = datetime('now')")
+    vals.append(theme_id)
+    with get_connection() as conn:
+        conn.execute(f"UPDATE themes SET {', '.join(sets)} WHERE id = ?", vals)
+        return True
+
+def get_theme_schedules() -> list:
+    with get_connection() as conn:
+        rows = conn.execute("""
+            SELECT ts.*, t.name as theme_name, t.slug as theme_slug
+            FROM theme_schedules ts
+            JOIN themes t ON ts.theme_id = t.id
+            ORDER BY ts.start_date ASC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+def create_schedule(theme_id: int, event_name: str, start_date: str, end_date: str, priority: int = 1) -> int:
+    with get_connection() as conn:
+        cursor = conn.execute("""
+            INSERT INTO theme_schedules (theme_id, event_name, start_date, end_date, priority)
+            VALUES (?, ?, ?, ?, ?)
+        """, (theme_id, event_name, start_date, end_date, priority))
+        return cursor.lastrowid
+
+def delete_schedule(schedule_id: int) -> bool:
+    with get_connection() as conn:
+        conn.execute("DELETE FROM theme_schedules WHERE id = ?", (schedule_id,))
+        return True
+
+def check_and_apply_scheduled_theme() -> bool:
+    """Check if any scheduled theme should be active right now. Activates it if so. Returns True if switched."""
+    with get_connection() as conn:
+        scheduled = conn.execute("""
+            SELECT ts.theme_id
+            FROM theme_schedules ts
+            WHERE ts.start_date <= datetime('now') AND ts.end_date >= datetime('now')
+            ORDER BY ts.priority DESC
+            LIMIT 1
+        """).fetchone()
+        if scheduled:
+            theme_id = scheduled['theme_id']
+            active = conn.execute("SELECT id FROM themes WHERE is_active = 1").fetchone()
+            if not active or active['id'] != theme_id:
+                conn.execute("UPDATE themes SET is_active = 0")
+                conn.execute("UPDATE themes SET is_active = 1, updated_at = datetime('now') WHERE id = ?", (theme_id,))
+                return True
+    return False
+
+
 def _asegurar_stats(telegram_id: str, conn):
     """Crea una fila de stats en 0 si no existe."""
     conn.execute("INSERT OR IGNORE INTO user_stats (telegram_id) VALUES (?)", (telegram_id,))
+
+
 
 def agregar_usuario(telegram_id: str, nombre: str, username: Optional[str] = None, photo_url: Optional[str] = None) -> bool:
     """

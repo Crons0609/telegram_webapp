@@ -172,7 +172,8 @@ function switchView(viewName) {
         'players': 'Players Management',
         'missions': 'Missions Config',
         'history': 'Games History',
-        'admins': 'Admins Management'
+        'admins': 'Admins Management',
+        'temas': 'Temas Globales'
     };
     document.getElementById('currentPageTitle').textContent = titleMap[viewName] || 'Dashboard';
 
@@ -183,6 +184,7 @@ function switchView(viewName) {
         case 'missions': loadMissions(); break;
         case 'history': loadHistory(); break;
         case 'admins': loadAdmins(); break;
+        case 'temas': loadTemas(); break;
     }
 }
 
@@ -889,3 +891,179 @@ if (document.getElementById('notifBellBtn')) {
     loadNotifications();
     setInterval(loadNotifications, 60_000);
 }
+
+
+// ─── TEMAS GLOBALES ───────────────────────────────────────────────────────────
+
+let _allThemes = [];
+
+async function loadTemas() {
+    try {
+        const [tresp, sresp] = await Promise.all([
+            fetch('/admin/api/themes'),
+            fetch('/admin/api/themes/schedules')
+        ]);
+        const tdata = await tresp.json();
+        const sdata = await sresp.json();
+        if (tdata.success) { _allThemes = tdata.themes; renderThemeCards(tdata.themes); }
+        if (sdata.success) renderSchedulesTable(sdata.schedules);
+    } catch (e) {
+        showToast('Error cargando temas', 'error');
+    }
+}
+
+function renderThemeCards(themes) {
+    const grid = document.getElementById('temasGrid');
+    if (!grid) return;
+    grid.innerHTML = themes.map(t => `
+        <div class="card" style="padding:1.25rem; border:2px solid ${t.is_active ? t.primary_color : 'var(--border)'}; position:relative; transition:border-color 0.3s;">
+            <!-- Color swatch -->
+            <div style="height:8px; border-radius:4px; background:linear-gradient(90deg,${t.primary_color},${t.secondary_color}); margin-bottom:0.75rem;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <strong style="color:var(--text-main);">${t.name}</strong>
+                    <p style="color:var(--text-muted); font-size:0.8rem; margin:0.15rem 0 0;">${t.description || t.slug}</p>
+                </div>
+                ${t.is_active ? '<span style="background:#10b981;color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:50px;font-weight:700;">ACTIVO</span>' : ''}
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-top:1rem; flex-wrap:wrap;">
+                <div style="display:flex;gap:4px;">
+                    <span title="Principal" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.primary_color};border:2px solid rgba(255,255,255,0.2);"></span>
+                    <span title="Secundario" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.secondary_color};border:2px solid rgba(255,255,255,0.2);"></span>
+                    <span title="Fondo" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.bg_color};border:2px solid rgba(255,255,255,0.2);"></span>
+                </div>
+                ${!t.is_active ? `<button onclick="activateTheme(${t.id})" class="btn-primary" style="font-size:0.78rem;padding:4px 12px;margin-left:auto;"><i class="fas fa-bolt"></i> Activar</button>` : '<button class="btn-secondary" style="font-size:0.78rem;padding:4px 12px;margin-left:auto;cursor:default;" disabled><i class="fas fa-check"></i> Activo</button>'}
+            </div>
+        </div>
+    `).join('');
+}
+
+async function activateTheme(themeId) {
+    try {
+        const res = await fetch(`/admin/api/themes/${themeId}/activate`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Tema activado: ${data.active_theme.name}`, 'success');
+            loadTemas();
+            // Also update this browser tab's live theme immediately
+            if (window.ThemeManager) window.ThemeManager.preview(data.active_theme);
+        }
+    } catch (e) { showToast('Error activando tema', 'error'); }
+}
+
+function renderSchedulesTable(schedules) {
+    const el = document.getElementById('schedulesTable');
+    if (!el) return;
+    if (!schedules.length) {
+        el.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:1rem;">No hay eventos programados.</p>';
+        return;
+    }
+    el.innerHTML = `
+        <table class="data-table" style="width:100%;">
+            <thead><tr><th>Evento</th><th>Tema</th><th>Inicio</th><th>Fin</th><th>Prio.</th><th></th></tr></thead>
+            <tbody>${schedules.map(s => `
+                <tr>
+                    <td>${s.event_name}</td>
+                    <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${_allThemes.find(t=>t.id===s.theme_id)?.primary_color||'#888'};margin-right:6px;"></span>${s.theme_name}</td>
+                    <td style="font-size:0.82rem;">${s.start_date}</td>
+                    <td style="font-size:0.82rem;">${s.end_date}</td>
+                    <td>${s.priority}</td>
+                    <td><button onclick="deleteSchedule(${s.id})" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('')}</tbody>
+        </table>`;
+}
+
+async function deleteSchedule(id) {
+    if (!confirm('¿Eliminar este evento programado?')) return;
+    await fetch(`/admin/api/themes/schedules/${id}`, { method: 'DELETE' });
+    showToast('Evento eliminado', 'success');
+    loadTemas();
+}
+
+function openAddScheduleModal() {
+    // Populate theme select
+    const sel = document.getElementById('sched_theme');
+    if (sel) sel.innerHTML = _allThemes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    document.getElementById('addScheduleModal')?.classList.add('open');
+}
+
+function openThemeBuilderModal() {
+    document.getElementById('themeBuilderModal')?.classList.add('open');
+    // Wire color pickers <-> hex inputs
+    [['tb_primary','tb_primary_hex'],['tb_secondary','tb_secondary_hex'],['tb_bg','tb_bg_hex']].forEach(([picId, hexId]) => {
+        const pic = document.getElementById(picId);
+        const hex = document.getElementById(hexId);
+        if (!pic || !hex) return;
+        pic.oninput = () => { hex.value = pic.value; updatePreviewBar(); };
+        hex.oninput = () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) { pic.value = hex.value; updatePreviewBar(); } };
+    });
+    updatePreviewBar();
+}
+
+function updatePreviewBar() {
+    const p = document.getElementById('tb_primary_hex')?.value || '#c9a227';
+    const s = document.getElementById('tb_secondary_hex')?.value || '#f0cc55';
+    const bar = document.getElementById('themePreviewBar');
+    if (bar) bar.style.background = `linear-gradient(90deg,${p},${s})`;
+}
+
+// Wire forms
+document.addEventListener('DOMContentLoaded', () => {
+    // Theme Builder submit
+    const tbForm = document.getElementById('themeBuilderForm');
+    tbForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            name: document.getElementById('tb_name').value,
+            slug: document.getElementById('tb_slug').value,
+            description: document.getElementById('tb_description').value,
+            primary_color: document.getElementById('tb_primary_hex').value,
+            secondary_color: document.getElementById('tb_secondary_hex').value,
+            bg_color: document.getElementById('tb_bg_hex').value,
+            background_image: document.getElementById('tb_bg_image')?.value || '',
+            background_overlay: document.getElementById('tb_bg_overlay')?.value || '',
+            typography: {
+                family: document.getElementById('tb_font_family')?.value || ''
+            },
+            animations: {
+                hearts: document.getElementById('tb_anim_hearts')?.checked || false,
+                snow: document.getElementById('tb_anim_snow')?.checked || false
+            }
+        };
+        const res = await fetch('/admin/api/themes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+        const resp = await res.json();
+        if (resp.success) {
+            showToast('✅ Tema creado', 'success');
+            tbForm.reset();
+            document.getElementById('themeBuilderModal')?.classList.remove('open');
+            loadTemas();
+        } else { showToast('Error: ' + (resp.message||''), 'error'); }
+    });
+
+    // Add Schedule submit
+    const schedForm = document.getElementById('addScheduleForm');
+    schedForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            theme_id: document.getElementById('sched_theme').value,
+            event_name: document.getElementById('sched_event').value,
+            start_date: document.getElementById('sched_start').value,
+            end_date: document.getElementById('sched_end').value,
+            priority: document.getElementById('sched_priority').value,
+        };
+        const res = await fetch('/admin/api/themes/schedules', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+        const resp = await res.json();
+        if (resp.success) {
+            showToast('✅ Evento programado', 'success');
+            schedForm.reset();
+            document.getElementById('addScheduleModal')?.classList.remove('open');
+            loadTemas();
+        } else { showToast('Error: ' + (resp.message||''), 'error'); }
+    });
+});
+
+window.openAddScheduleModal = openAddScheduleModal;
+window.openThemeBuilderModal = openThemeBuilderModal;
+window.activateTheme = activateTheme;
+window.deleteSchedule = deleteSchedule;

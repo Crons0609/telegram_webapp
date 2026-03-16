@@ -281,3 +281,76 @@ def api_notifications_read():
     database.marcar_notificaciones_leidas()
     return jsonify({'success': True})
 
+
+# ─── TEMAS GLOBALES ─────────────────────────────────────────────────────────
+
+@admin_bp.route('/api/themes', methods=['GET'])
+@admin_required_api
+def api_themes_list():
+    themes = database.get_all_themes()
+    return jsonify({'success': True, 'themes': themes})
+
+@admin_bp.route('/api/themes/<int:theme_id>/activate', methods=['POST'])
+@admin_required_api
+def api_theme_activate(theme_id):
+    database.activate_theme(theme_id)
+    active = database.get_active_theme()
+    return jsonify({'success': True, 'active_theme': active})
+
+@admin_bp.route('/api/themes', methods=['POST'])
+@admin_required_api
+def api_theme_create():
+    data = request.get_json()
+    required = ['name', 'slug', 'primary_color', 'secondary_color', 'bg_color']
+    if not all(k in data for k in required):
+        return jsonify({'success': False, 'message': 'Faltan campos requeridos'}), 400
+    new_id = database.create_theme(
+        name=data['name'], slug=data['slug'],
+        description=data.get('description', ''),
+        primary_color=data['primary_color'],
+        secondary_color=data['secondary_color'],
+        bg_color=data['bg_color'],
+        accent_glow=data.get('accent_glow', 'rgba(255,255,255,0.2)'),
+        particles_color=data.get('particles_color', 'rgba(255,255,255,0.4)'),
+        background_image=data.get('background_image', ''),
+        background_overlay=data.get('background_overlay', ''),
+        typography=data.get('typography', {}),
+        ui_sounds=data.get('ui_sounds', {}),
+        animations=data.get('animations', {})
+    )
+    return jsonify({'success': True, 'id': new_id}), 201
+
+@admin_bp.route('/api/themes/<int:theme_id>', methods=['PUT'])
+@admin_required_api
+def api_theme_update(theme_id):
+    data = request.get_json()
+    database.update_theme(theme_id, data)
+    return jsonify({'success': True})
+
+@admin_bp.route('/api/themes/schedules', methods=['GET'])
+@admin_required_api
+def api_schedules_list():
+    schedules = database.get_theme_schedules()
+    return jsonify({'success': True, 'schedules': schedules})
+
+@admin_bp.route('/api/themes/schedules', methods=['POST'])
+@admin_required_api
+def api_schedule_create():
+    data = request.get_json()
+    required = ['theme_id', 'event_name', 'start_date', 'end_date']
+    if not all(k in data for k in required):
+        return jsonify({'success': False, 'message': 'Faltan campos requeridos'}), 400
+    new_id = database.create_schedule(
+        theme_id=int(data['theme_id']),
+        event_name=data['event_name'],
+        start_date=data['start_date'],
+        end_date=data['end_date'],
+        priority=int(data.get('priority', 1))
+    )
+    return jsonify({'success': True, 'id': new_id}), 201
+
+@admin_bp.route('/api/themes/schedules/<int:schedule_id>', methods=['DELETE'])
+@admin_required_api
+def api_schedule_delete(schedule_id):
+    database.delete_schedule(schedule_id)
+    return jsonify({'success': True})
