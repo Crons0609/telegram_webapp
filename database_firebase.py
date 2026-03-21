@@ -6,12 +6,6 @@ from datetime import datetime
 
 FIREBASE_URL = "https://ghost-plague-casino-default-rtdb.firebaseio.com"
 
-def _to_dict(data):
-    if data is None: return {}
-    if isinstance(data, list):
-        return {str(i): v for i, v in enumerate(data) if v is not None}
-    return dict(data)
-
 def get_fb(path: str):
     try:
         r = httpx.get(f"{FIREBASE_URL}/{path}.json", timeout=10.0)
@@ -77,11 +71,11 @@ def init_db() -> None:
     # Initialize initial configs in Firebase if they don't exist
     
     # Check default admin
-    admins = get_fb("Administradores")
+    admins = get_fb("admins")
     if not admins:
         from werkzeug.security import generate_password_hash
         default_hash = generate_password_hash("admin123")
-        post_fb("Administradores", {"Email": "admin@admin.com", "password_hash": default_hash, "created_at": datetime.utcnow().isoformat()})
+        post_fb("admins", {"username": "admin", "password_hash": default_hash, "created_at": datetime.utcnow().isoformat()})
     
     themes = get_fb("themes")
     if not themes:
@@ -130,7 +124,7 @@ def init_db() -> None:
 # THEME HELPERS
 # =====================================================
 def get_active_theme() -> dict:
-    themes = _to_dict(get_fb("themes"))
+    themes = get_fb("themes") or {}
     for key, t in themes.items():
         if t.get("is_active") == 1:
             d = dict(t)
@@ -141,7 +135,7 @@ def get_active_theme() -> dict:
     return {"slug": "default", "name": "Default (Casino)", "primary_color": "#c9a227", "secondary_color": "#f0cc55", "bg_color": "#0a0a0f", "accent_glow": "rgba(201,162,39,0.25)", "particles_color": "rgba(212,175,55,0.55)", "background_image": "", "background_overlay": "", "typography": {}, "ui_sounds": {}, "animations": {}}
 
 def get_all_themes() -> list:
-    themes = _to_dict(get_fb("themes"))
+    themes = get_fb("themes") or {}
     res = []
     for k, r in themes.items():
         d = dict(r)
@@ -153,7 +147,7 @@ def get_all_themes() -> list:
     return res
 
 def activate_theme(theme_slug: str) -> bool:
-    themes = _to_dict(get_fb("themes"))
+    themes = get_fb("themes") or {}
     updates = {}
     for k in themes:
         updates[f"{k}/is_active"] = 0
@@ -177,8 +171,8 @@ def update_theme(theme_slug: str, data: dict) -> bool:
     return True
 
 def get_theme_schedules() -> list:
-    schedules = _to_dict(get_fb("theme_schedules"))
-    themes = _to_dict(get_fb("themes"))
+    schedules = get_fb("theme_schedules") or {}
+    themes = get_fb("themes") or {}
     res = []
     for k, s in schedules.items():
         theme = themes.get(s['theme_slug'], {})
@@ -197,7 +191,7 @@ def delete_schedule(schedule_id: str) -> bool:
 
 def check_and_apply_scheduled_theme() -> bool:
     now = datetime.utcnow().isoformat()
-    schedules = _to_dict(get_fb("theme_schedules"))
+    schedules = get_fb("theme_schedules") or {}
     active_sched = None
     for k, s in schedules.items():
         if s['start_date'] <= now and s['end_date'] >= now:
@@ -220,7 +214,7 @@ def _asegurar_stats(telegram_id: str):
         })
 
 def _get_next_cliente_id() -> int:
-    clientes = _to_dict(get_fb("usuarios"))
+    clientes = get_fb("usuarios") or {}
     max_id = 0
     for u in clientes.values():
         cid = u.get("cliente_id", 0)
@@ -476,8 +470,8 @@ def actualizar_ultima_partida_ganada(telegram_id: str, juego: str, ganancia: int
     return False
 
 def obtener_metricas_financieras() -> dict:
-    txs = _to_dict(get_fb("transacciones"))
-    hists = _to_dict(get_fb("juegos_historial"))
+    txs = get_fb("transacciones") or {}
+    hists = get_fb("juegos_historial") or {}
     
     # We will simulate the financials. To avoid huge memory loads in production,
     # Firebase Cloud Functions or structured querying is better.

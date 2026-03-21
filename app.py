@@ -198,14 +198,10 @@ def paypal_capture():
         return jsonify({"success": False, "message": "Cantidades inválidas"}), 400
 
     try:
-        with database.get_connection() as conn:
-            # Añadir los bits al usuario
-            conn.execute("UPDATE usuarios SET bits = bits + ? WHERE telegram_id = ?", (bits_amount, telegram_id))
-            # Registrar la transacción
-            conn.execute(
-                "INSERT INTO transacciones (telegram_id, tipo, usd_amount, bits) VALUES (?, 'deposito', ?, ?)",
-                (telegram_id, amount_usd, bits_amount)
-            )
+        # Añadir los bits al usuario
+        database.recargar_bits(telegram_id, bits_amount)
+        # Registrar la transacción
+        database.registrar_transaccion(telegram_id, bits_amount, amount_usd, 'deposito')
         
         # Obtener nuevo saldo para retornar
         new_balance = database.obtener_bits(telegram_id)

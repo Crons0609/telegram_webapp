@@ -9,39 +9,38 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import database
 from user_profile_manager import UserProfileManager
 def get_mission_definitions():
-    """Returns the full list of mission definitions from the database."""
+    """Returns the full list of mission definitions from Firebase."""
     missions = []
-    with database.get_connection() as conn:
-        # Get active missions
-        rows = conn.execute("SELECT id, name, desc, icon, type FROM missions WHERE is_active = 1").fetchall()
+    
+    missions_db = database._to_dict(database.get_fb("missions"))
+    mission_levels_db = database._to_dict(database.get_fb("mission_levels"))
+    
+    for m_id, r in missions_db.items():
+        if r.get('is_active') != 1: continue
         
-        for r in rows:
-            m_id = r['id']
-            levels_rows = conn.execute("""
-                SELECT level, target, xp_reward, bits_reward 
-                FROM mission_levels 
-                WHERE mission_id = ? 
-                ORDER BY level ASC
-            """, (m_id,)).fetchall()
-            
-            levels = []
-            for lr in levels_rows:
+        # Get levels for this mission
+        levels = []
+        for l_id, lr in mission_levels_db.items():
+            if str(lr.get('mission_id')) == str(m_id):
                 levels.append({
-                    "level": lr['level'],
-                    "target": lr['target'],
-                    "xp_reward": lr['xp_reward'],
-                    "bits_reward": lr['bits_reward']
+                    "level": lr.get('level'),
+                    "target": lr.get('target'),
+                    "xp_reward": lr.get('xp_reward'),
+                    "bits_reward": lr.get('bits_reward')
                 })
-                
-            missions.append({
-                "id": m_id,
-                "name": r['name'],
-                "desc": r['desc'],
-                "icon": r['icon'],
-                "type": r['type'],
-                "levels": levels
-            })
-            
+        
+        # Sort levels
+        levels = sorted(levels, key=lambda x: x['level'])
+        
+        missions.append({
+            "id": m_id,
+            "name": r.get('name'),
+            "desc": r.get('desc'),
+            "icon": r.get('icon'),
+            "type": r.get('type'),
+            "levels": levels
+        })
+        
     return missions
 
 

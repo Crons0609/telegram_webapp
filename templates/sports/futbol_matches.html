@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="/static/css/themes.css">
   
-  <!-- Restored Original Sports Styles -->
+  <!-- Sports Styles -->
   <link rel="stylesheet" href="/static/sports/css/style.css">
   
-  <!-- Fix User Profile Display -->
+  <!-- User Profile -->
   <link rel="stylesheet" href="/static/css/perfil.css">
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -22,14 +22,16 @@
   <script defer src="/static/js/soundManager.js"></script>
   <script defer src="/static/js/perfil.js"></script>
   <script defer src="/static/js/script.js"></script>
+
+  <!-- Football-Data API Layer (must load BEFORE sports_futbol.js) -->
+  <script defer src="/static/sports/js/football_api.js"></script>
   <script defer src="/static/sports/js/sports_futbol.js"></script>
 </head>
 <body>
 
-  <!-- GLOBAL NAVBAR (To retain profile/bits integration) -->
+  <!-- GLOBAL NAVBAR -->
   <nav class="navbar" aria-label="Navegación principal" style="margin-bottom:0; background:rgba(10,12,15,0.9); z-index: 100;">
     <div class="container nav-container">
-      <!-- Back to Sports Hub -->
       <button class="brand brand-btn" onclick="window.location.href='/sports'" style="padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
         <span class="brand-icon" aria-hidden="true" style="margin:0; font-size:16px;">←</span>
       </button>
@@ -40,43 +42,53 @@
     </div>
   </nav>
 
-  <!-- USER ORIGINAL SPORTSBOOK WRAPPER -->
+  <!-- BACKGROUND FX -->
   <div class="background"></div>
 
   <div class="container">
-      <!-- HERO -->
-      <header class="hero">
-        <div class="premium-banner">
-          <h1 class="premium-text" data-text="ZONA JACKPOT 777">ZONA JACKPOT 777</h1>
-          <p class="premium-subtitle">EXPERIENCIA FUTURISTA • SPORTSBOOK VIP ⚽</p>
-        </div>
-      </header>
 
-      <!-- FILTERS -->
-      <section class="filters glass">
-        <button class="filter active">Todos</button>
-        <button class="filter">Hoy</button>
-        <button class="filter">Mañana</button>
-        <button class="filter">En vivo</button>
-      </section>
+    <!-- HERO -->
+    <header class="hero">
+      <div class="premium-banner">
+        <h1 class="premium-text" data-text="ZONA JACKPOT 777">ZONA JACKPOT 777</h1>
+        <p class="premium-subtitle">EXPERIENCIA FUTURISTA • SPORTSBOOK VIP ⚽</p>
+      </div>
+    </header>
 
-      <!-- MATCHES -->
-      <section class="matches-section">
-        <h2 class="section-title">⚽ Partidos disponibles</h2>
-        <div id="matches-container" class="matches-container">
-          <!-- JS carga partidos -->
-        </div>
-      </section>
+    <!-- FILTERS -->
+    <section class="filters glass">
+      <button class="filter active" data-filter="todos">Todos</button>
+      <button class="filter" data-filter="hoy">Hoy</button>
+      <button class="filter" data-filter="mañana">Mañana</button>
+      <button class="filter" data-filter="en vivo">En vivo</button>
+    </section>
 
-      <!-- HISTORY -->
-      <section class="bets-history glass">
-        <h2 class="section-title">📊 Mis apuestas</h2>
-        <div id="bets-history-list">
-          <div class="empty-history">Aún no has realizado apuestas</div>
-        </div>
-      </section>
+    <!-- LIVE MATCHES (auto-refresh, hidden when empty) -->
+    <section id="live-section" style="display:none;">
+      <h2 class="section-title">
+        🔴 En Vivo
+        <span class="live-badge">LIVE</span>
+      </h2>
+      <div id="live-container" class="matches-container"></div>
+    </section>
 
-    </div>
+    <!-- UPCOMING MATCHES -->
+    <section class="matches-section">
+      <h2 class="section-title">⚽ Partidos disponibles</h2>
+      <div id="matches-container" class="matches-container">
+        <!-- JS loads matches -->
+      </div>
+    </section>
+
+    <!-- BET HISTORY -->
+    <section class="bets-history glass">
+      <h2 class="section-title">📊 Mis apuestas</h2>
+      <div id="bets-history-list">
+        <div class="empty-history">Aún no has realizado apuestas</div>
+      </div>
+    </section>
+
+  </div>
 
   <!-- NOTIFICATIONS -->
   <div class="notification-area" id="notification"></div>

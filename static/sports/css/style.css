@@ -668,3 +668,224 @@ padding: 15px;
 font-size: 1.1rem;
 }
 }
+
+/* =========================
+   LIVE SECTION
+========================= */
+
+#live-section {
+  margin-bottom: 30px;
+}
+
+#live-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =========================
+   LIVE BADGE
+========================= */
+
+.live-badge {
+  display: inline-block;
+  background: #ff003c;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  animation: livePulse 1.5s ease-in-out infinite;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+@keyframes livePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,0,60,0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(255,0,60,0); }
+}
+
+/* =========================
+   SCORE DISPLAY
+========================= */
+
+.score-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(0,255,255,0.4);
+}
+
+.match-minute {
+  font-size: 12px;
+  font-weight: 400;
+  color: #ff003c;
+  font-family: 'Inter', sans-serif;
+  animation: livePulse 1.2s ease-in-out infinite;
+}
+
+/* =========================
+   CARD HEADER ROW
+========================= */
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  min-height: 22px;
+}
+
+/* =========================
+   COMPETITION PILL
+========================= */
+
+.competition-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-muted);
+  padding: 3px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================
+   MATCH STATUS CLASSES
+========================= */
+
+.match-status-live {
+  border-color: rgba(255, 0, 60, 0.35) !important;
+  box-shadow: 0 0 20px rgba(255, 0, 60, 0.12);
+}
+
+.match-status-finished {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.match-status-postponed {
+  border-color: rgba(255, 165, 0, 0.3) !important;
+}
+
+/* =========================
+   SKELETON LOADER
+========================= */
+
+.skeleton-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+.skeleton-line {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  margin: 0 auto 8px;
+}
+
+.skeleton-teams {
+  display: block;
+  height: 32px;
+  border-radius: 6px;
+  width: 90%;
+  margin: 0 auto 12px;
+}
+
+.skeleton-options {
+  display: block;
+  height: 48px;
+  border-radius: 8px;
+  width: 100%;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* =========================
+   SPINNER
+========================= */
+
+.spinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.empty-msg {
+  font-size: 15px;
+  opacity: 0.7;
+}
+
+/* =========================
+   HISTORY ITEM
+========================= */
+
+.history-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+
+.history-item:hover {
+  border-color: rgba(255,255,255,0.15);
+}
+
+/* Notification types */
+.notification.success { background: #00cc6a; color: #000; }
+.notification.error   { background: #ff003c; color: #fff; }
+.notification.info    { background: var(--accent); color: #000; }

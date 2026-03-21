@@ -1,70 +1,106 @@
-// ======================================================
-// ZONA JACKPOT 777 - SECURE SPORTSBOOK JS (RESTORED)
-// ======================================================
+// ============================================================
+// ZONA JACKPOT 777 — SPORTSBOOK FRONTEND
+// Integrado con football-data.org v4 via FOOTBALL_API
+// ============================================================
 
-const matchesContainer = document.getElementById("matches-container");
-const historyList = document.getElementById("bets-history-list");
-const notificationDiv = document.getElementById("notification");
-const betSound = document.getElementById("bet-sound");
-const winSound = document.getElementById("win-sound");
+// DOM References
+const matchesContainer  = document.getElementById("matches-container");
+const liveContainer     = document.getElementById("live-container");
+const historyList       = document.getElementById("bets-history-list");
+const notificationDiv   = document.getElementById("notification");
+const betSound          = document.getElementById("bet-sound");
+const winSound          = document.getElementById("win-sound");
+
+// State
+let currentMatches  = [];
+let liveRefreshTimer = null;
+const LIVE_REFRESH_INTERVAL = 60_000; // 60 s
+
+// ============================================================
+// TELEGRAM AUTH
+// ============================================================
 
 function getTelegramId() {
   const tg = window.Telegram?.WebApp;
-  return tg?.initDataUnsafe?.user?.id || '12345'; // fallback
+  return tg?.initDataUnsafe?.user?.id || "12345";
 }
 
-// ======================================================
+// ============================================================
 // INIT
-// ======================================================
+// ============================================================
 
 function init() {
+  // Listen for rate-limit events from the API module
+  window.addEventListener("footballApi:ratelimit", (e) => {
+    const wait = e.detail?.waitSeconds || 60;
+    showNotification(`Rate limit — espera ${wait}s`, "error");
+  });
+
   initFilters();
-  loadMatches();
+  loadAllMatches();
+  loadLiveSection();
   loadHistory();
+
+  // Auto-refresh live section
+  liveRefreshTimer = setInterval(loadLiveSection, LIVE_REFRESH_INTERVAL);
 }
 
-// ======================================================
-// LOAD MATCHES
-// ======================================================
+// ============================================================
+// LOAD ALL MATCHES (real API)
+// ============================================================
 
-async function loadMatches() {
-  showLoader();
-  try {
-    const res = await fetch("/sports/api/matches");
-    if(!res.ok) throw new Error("Network error");
-    const matches = await res.json();
-    currentMatches = matches; // Store globally for filtering
-    renderMatches(matches);
-  } catch(e) {
-    showNotification("Error cargando partidos", "error");
+async function loadAllMatches() {
+  showSkeleton(matchesContainer, 6);
+
+  const matches = await FOOTBALL_API.getMatches();
+
+  if (!matches || matches.length === 0) {
+    renderEmptyState(matchesContainer, "No hay partidos disponibles por ahora.");
+    return;
   }
+
+  currentMatches = matches;
+  renderMatches(matches);
 }
 
-function showLoader() {
-  matchesContainer.innerHTML = `
-    <div class="loader" style="text-align:center; padding: 20px;">
-      Cargando partidos...
-    </div>
-  `;
+// ============================================================
+// LIVE SECTION (auto-refresh)
+// ============================================================
+
+async function loadLiveSection() {
+  if (!liveContainer) return;
+
+  const liveMatches = await FOOTBALL_API.getLiveMatches();
+
+  // Toggle live section visibility
+  const liveSection = document.getElementById("live-section");
+  if (liveSection) {
+    liveSection.style.display = (liveMatches && liveMatches.length > 0) ? "block" : "none";
+  }
+
+  if (!liveMatches || liveMatches.length === 0) {
+    liveContainer.innerHTML = "";
+    return;
+  }
+
+  liveContainer.innerHTML = "";
+  liveMatches.forEach(match => {
+    const card = buildMatchCard(match, true);
+    liveContainer.appendChild(card);
+  });
 }
 
-// ======================================================
+// ============================================================
 // FILTERS
-// ======================================================
-
-let currentMatches = [];
+// ============================================================
 
 function initFilters() {
   const filterBtns = document.querySelectorAll(".filter");
   filterBtns.forEach(btn => {
     btn.addEventListener("click", (e) => {
-      // Manage active visual state
       filterBtns.forEach(b => b.classList.remove("active"));
-      e.target.classList.add("active");
-
-      // Apply Filter
-      const filterMode = e.target.textContent.trim().toLowerCase();
-      applyFilter(filterMode);
+      e.currentTarget.classList.add("active");
+      applyFilter(e.currentTarget.dataset.filter || e.currentTarget.textContent.trim().toLowerCase());
     });
   });
 }
@@ -72,93 +108,120 @@ function initFilters() {
 function applyFilter(mode) {
   if (!currentMatches || currentMatches.length === 0) return;
 
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  
+  const now      = new Date();
+  const today    = now.toISOString().split("T")[0];
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-  let filtered = currentMatches;
+  let filtered;
 
-  if (mode === "hoy") {
-    filtered = currentMatches.filter(m => m.date.startsWith(today));
-  } else if (mode === "mañana") {
-    filtered = currentMatches.filter(m => m.date.startsWith(tomorrowStr));
-  } else if (mode === "en vivo") {
-    filtered = currentMatches.filter(m => m.status === "live");
+  switch (mode) {
+    case "hoy":
+      filtered = currentMatches.filter(m => m.date && m.date.startsWith(today));
+      break;
+    case "mañana":
+      filtered = currentMatches.filter(m => m.date && m.date.startsWith(tomorrowStr));
+      break;
+    case "en vivo":
+      filtered = currentMatches.filter(m => m.status === "live");
+      break;
+    default: // "todos"
+      filtered = currentMatches;
   }
 
-  // mode "todos" just passes through all currentMatches
-  renderMatches(filtered, true); // true = avoid over-writing currentMatches
+  renderMatches(filtered, true);
 }
 
-// ======================================================
+// ============================================================
 // RENDER MATCHES
-// ======================================================
+// ============================================================
 
 function renderMatches(matches, isFiltered = false) {
   matchesContainer.innerHTML = "";
-  
-  if(!isFiltered && matches) {
-      currentMatches = matches; // safety update
-  }
-  
-  if(!matches || matches.length === 0) {
-    matchesContainer.innerHTML = `<div class="empty-history">No hay partidos disponibles para este filtro.</div>`;
+
+  if (!isFiltered && matches) currentMatches = matches;
+
+  if (!matches || matches.length === 0) {
+    renderEmptyState(matchesContainer, "No hay partidos para este filtro.");
     return;
   }
 
   matches.forEach(match => {
-    const card = document.createElement("div");
-    card.className = "match-card glass";
-    card.dataset.id = match.id;
-
-    card.innerHTML = `
-      <div class="match-teams">
-        <div class="team">${match.team1}</div>
-        <div class="vs">VS</div>
-        <div class="team">${match.team2}</div>
-      </div>
-      <div class="match-date">
-        ${formatDate(match.date)}
-      </div>
-      <div class="bet-options">
-        <div class="bet-option" data-choice="1">
-           ${match.team1}<br> <strong style="color:var(--sb-accent)">${match.odds["1"]}x</strong>
-        </div>
-        <div class="bet-option" data-choice="X">
-           Empate<br> <strong style="color:var(--sb-accent)">${match.odds["X"]}x</strong>
-        </div>
-        <div class="bet-option" data-choice="2">
-           ${match.team2}<br> <strong style="color:var(--sb-accent)">${match.odds["2"]}x</strong>
-        </div>
-      </div>
-      <div class="bet-input">
-        <input type="number" placeholder="Cantidad" min="10" class="bet-amount">
-        <button class="place-bet">Apostar</button>
-      </div>
-    `;
-
-    // Seleccionar opcion (Exact behavior from original)
-    const options = card.querySelectorAll(".bet-option");
-    options.forEach(opt => {
-      opt.addEventListener("click", () => {
-        options.forEach(o => o.classList.remove("selected"));
-        opt.classList.add("selected");
-      });
-    });
-
-    // Apostar
-    card.querySelector(".place-bet").addEventListener("click", () => placeBet(card, match.id));
-
+    const card = buildMatchCard(match, false);
     matchesContainer.appendChild(card);
   });
 }
 
-// ======================================================
-// PLACE BET
-// ======================================================
+// ============================================================
+// BUILD MATCH CARD
+// ============================================================
+
+function buildMatchCard(match, isLive = false) {
+  const card = document.createElement("div");
+  const statusClass = isLive ? "match-card glass match-status-live" : "match-card glass";
+  card.className = statusClass;
+  card.dataset.id = match.id;
+
+  // Score / time display
+  const scoreHtml = (isLive && match.score.home !== null)
+    ? `<div class="score-display">${match.score.home} — ${match.score.away}${match.minute ? ` <span class="match-minute">${match.minute}'</span>` : ""}</div>`
+    : "";
+
+  const liveBadgeHtml = isLive
+    ? `<span class="live-badge">🔴 EN VIVO</span>`
+    : "";
+
+  const compHtml = match.competition
+    ? `<div class="competition-pill">${match.competition}</div>`
+    : "";
+
+  card.innerHTML = `
+    <div class="card-header-row">
+      ${compHtml}
+      ${liveBadgeHtml}
+    </div>
+    <div class="match-teams">
+      <div class="team">${match.team1}</div>
+      <div class="vs">${scoreHtml || "VS"}</div>
+      <div class="team">${match.team2}</div>
+    </div>
+    <div class="match-date">${formatDate(match.date)}</div>
+    <div class="bet-options">
+      <div class="bet-option" data-choice="1">
+        ${match.team1}<br><strong style="color:var(--accent)">${match.odds["1"]}x</strong>
+      </div>
+      <div class="bet-option" data-choice="X">
+        Empate<br><strong style="color:var(--accent)">${match.odds["X"]}x</strong>
+      </div>
+      <div class="bet-option" data-choice="2">
+        ${match.team2}<br><strong style="color:var(--accent)">${match.odds["2"]}x</strong>
+      </div>
+    </div>
+    <div class="bet-input">
+      <input type="number" placeholder="Cantidad" min="10" class="bet-amount">
+      <button class="place-bet">Apostar</button>
+    </div>
+  `;
+
+  // Bet option selection
+  const options = card.querySelectorAll(".bet-option");
+  options.forEach(opt => {
+    opt.addEventListener("click", () => {
+      options.forEach(o => o.classList.remove("selected"));
+      opt.classList.add("selected");
+    });
+  });
+
+  // Place bet
+  card.querySelector(".place-bet").addEventListener("click", () => placeBet(card, match.id));
+
+  return card;
+}
+
+// ============================================================
+// PLACE BET (unchanged — local Flask API)
+// ============================================================
 
 async function placeBet(card, matchId) {
   const selected = card.querySelector(".bet-option.selected");
@@ -177,25 +240,25 @@ async function placeBet(card, matchId) {
   }
 
   const tgId = getTelegramId();
-  if(!tgId) {
+  if (!tgId) {
     showNotification("Error de autenticación", "error");
     return;
   }
 
   const teamChoice = selected.dataset.choice;
-  const placeBtn = card.querySelector(".place-bet");
+  const placeBtn   = card.querySelector(".place-bet");
   placeBtn.textContent = "Procesando...";
-  placeBtn.disabled = true;
+  placeBtn.disabled    = true;
 
   try {
     const res = await fetch("/sports/api/bet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        telegram_id: String(tgId),
-        match_id: matchId,
-        team_choice: teamChoice,
-        amount: amount
+        telegram_id:  String(tgId),
+        match_id:     matchId,
+        team_choice:  teamChoice,
+        amount
       })
     });
 
@@ -204,75 +267,43 @@ async function placeBet(card, matchId) {
     if (data.error || !data.success) {
       showNotification(data.error || "Error al realizar apuesta", "error");
       placeBtn.textContent = "Apostar";
-      placeBtn.disabled = false;
+      placeBtn.disabled    = false;
       return;
     }
 
-    // Sonido
-    if (betSound) betSound.play().catch(()=>{});
+    if (betSound) betSound.play().catch(() => {});
 
-    showNotification("Apuesta realizada", "success");
+    showNotification("¡Apuesta realizada! 🎯", "success");
     animateCard(card);
-    
-    // Update live bits
     updateBalanceDisplay(data.new_balance);
-
-    // Refresh history
     loadHistory();
 
-    // Reset UI
     amountInput.value = "";
-    options = card.querySelectorAll(".bet-option");
-    options.forEach(o => o.classList.remove("selected"));
-    
-    setTimeout(() => {
-        placeBtn.textContent = "Apostar";
-        placeBtn.disabled = false;
-    }, 500);
+    card.querySelectorAll(".bet-option").forEach(o => o.classList.remove("selected"));
+    setTimeout(() => { placeBtn.textContent = "Apostar"; placeBtn.disabled = false; }, 500);
 
-  } catch(e) {
+  } catch (e) {
     showNotification("Error apostando", "error");
     placeBtn.textContent = "Apostar";
-    placeBtn.disabled = false;
+    placeBtn.disabled    = false;
   }
 }
 
-// ======================================================
-// ANIMATIONS & BALANCE
-// ======================================================
-
-function animateCard(card) {
-  card.style.transform = "scale(0.95)";
-  setTimeout(() => {
-    card.style.transform = "";
-  }, 200);
-}
-
-function updateBalanceDisplay(balance) {
-  // Update the global header displays
-  const bitsDisplays = document.querySelectorAll(".header-user .user-info strong, .user-info strong.text-gold");
-  bitsDisplays.forEach(el => {
-    el.textContent = balance.toLocaleString();
-    el.style.transform = "scale(1.2)";
-    setTimeout(() => el.style.transform = "scale(1)", 200);
-  });
-}
-
-// ======================================================
-// BET HISTORY
-// ======================================================
+// ============================================================
+// BET HISTORY (unchanged — local Flask API)
+// ============================================================
 
 async function loadHistory() {
   const tgId = getTelegramId();
-  if(!tgId) return;
+  if (!tgId || !historyList) return;
 
-  historyList.innerHTML = `<div class="loader" style="text-align:center; padding: 20px;">Cargando historial...</div>`;
-  
+  historyList.innerHTML = `<div class="loader" style="text-align:center;padding:20px">Cargando historial...</div>`;
+
   try {
-    const res = await fetch(`/sports/api/bets/${tgId}`);
+    const res  = await fetch(`/sports/api/bets/${tgId}`);
     if (!res.ok) throw new Error("Network error");
     const bets = await res.json();
-    
+
     if (bets.length === 0) {
       historyList.innerHTML = `<div class="empty-history">Aún no has realizado apuestas.</div>`;
       return;
@@ -282,50 +313,118 @@ async function loadHistory() {
     bets.forEach(b => {
       const el = document.createElement("div");
       el.className = "history-item";
-      
-      let statusColor = b.status === 'won' ? '#00ff85' : (b.status === 'lost' ? '#ff003c' : '#ffd700');
-      let statusText = b.status === 'won' ? 'Ganada' : (b.status === 'lost' ? 'Perdida' : 'Pendiente');
+
+      const statusColor = b.status === "won"  ? "#00ff85"
+                        : b.status === "lost" ? "#ff003c"
+                        : "#ffd700";
+      const statusText  = b.status === "won"  ? "Ganada"
+                        : b.status === "lost" ? "Perdida"
+                        : "Pendiente";
 
       el.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
           <strong>${b.match}</strong>
-          <span style="color: ${statusColor}; font-weight: bold; text-transform: uppercase; font-size:0.8em">${statusText}</span>
+          <span style="color:${statusColor};font-weight:700;text-transform:uppercase;font-size:.8em">${statusText}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">
-           <span>Tu Elección: <strong style="color: var(--sb-accent)">${b.choice}</strong> a ${b.odd.toFixed(2)}x</span>
-           <span>Apuesta: ${b.amount} bits</span>
+        <div style="display:flex;justify-content:space-between;font-size:.9em;opacity:.8;margin-bottom:5px">
+          <span>Tu Elección: <strong style="color:var(--accent)">${b.choice}</strong> a ${b.odd.toFixed(2)}x</span>
+          <span>Apuesta: ${b.amount} bits</span>
         </div>
-        <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 5px;">
-          Potencial: <strong style="color:var(--sb-accent)">${b.potential_win.toLocaleString()}</strong> bits <span style="float:right">${formatDate(b.date)}</span>
+        <div style="font-size:.8em;margin-top:5px;opacity:.6;border-top:1px solid rgba(255,255,255,.1);padding-top:5px">
+          Potencial: <strong style="color:var(--accent)">${b.potential_win.toLocaleString()}</strong> bits
+          <span style="float:right">${formatDate(b.date)}</span>
         </div>
       `;
       historyList.appendChild(el);
     });
+
   } catch (e) {
     historyList.innerHTML = `<div class="empty-history">No se pudo cargar el historial.</div>`;
   }
 }
 
-// ======================================================
-// NOTIFICATIONS & UTILS
-// ======================================================
+// ============================================================
+// LOADING STATES
+// ============================================================
 
-function showNotification(msg, type="info") {
+function showSkeleton(container, count = 4) {
+  container.innerHTML = Array.from({ length: count }, () => `
+    <div class="match-card skeleton-card">
+      <div class="skeleton skeleton-line" style="width:40%;height:12px;margin-bottom:16px"></div>
+      <div class="skeleton skeleton-teams"></div>
+      <div class="skeleton skeleton-line" style="width:60%;height:10px;margin:12px auto"></div>
+      <div class="skeleton skeleton-options"></div>
+    </div>
+  `).join("");
+}
+
+function showLoader() {
+  matchesContainer.innerHTML = `
+    <div class="loader" style="text-align:center;padding:40px;grid-column:1/-1">
+      <div class="spinner"></div>
+      <p style="margin-top:12px;color:var(--text-muted)">Cargando partidos...</p>
+    </div>
+  `;
+}
+
+function renderEmptyState(container, msg = "No hay datos disponibles.") {
+  container.innerHTML = `
+    <div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">⚽</div>
+      <p class="empty-msg">${msg}</p>
+    </div>
+  `;
+}
+
+// ============================================================
+// ANIMATIONS & BALANCE
+// ============================================================
+
+function animateCard(card) {
+  card.style.transform = "scale(0.96)";
+  setTimeout(() => { card.style.transform = ""; }, 200);
+}
+
+function updateBalanceDisplay(balance) {
+  const els = document.querySelectorAll(".header-user .user-info strong, .user-info strong.text-gold");
+  els.forEach(el => {
+    el.textContent = balance.toLocaleString();
+    el.style.transform = "scale(1.2)";
+    setTimeout(() => { el.style.transform = "scale(1)"; }, 200);
+  });
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+function showNotification(msg, type = "info") {
+  if (!notificationDiv) return;
   const notif = document.createElement("div");
   notif.className = `notification ${type}`;
   notif.textContent = msg;
   notificationDiv.appendChild(notif);
-  setTimeout(() => {
-    notif.remove();
-  }, 3000);
+  setTimeout(() => notif.remove(), 3500);
 }
 
-function formatDate(date) {
-  const d = new Date(date);
-  return d.toLocaleString([], {hour: '2-digit', minute:'2-digit', day:'2-digit', month:'short'});
+// ============================================================
+// UTILS
+// ============================================================
+
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return d.toLocaleString("es-MX", {
+    day:    "2-digit",
+    month:  "short",
+    hour:   "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
 }
 
-// ======================================================
+// ============================================================
 // START
-// ======================================================
+// ============================================================
+
 document.addEventListener("DOMContentLoaded", init);

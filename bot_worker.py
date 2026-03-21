@@ -28,48 +28,47 @@ def send_telegram_message(chat_id, text):
         return False
 
 def process_pending_bets():
-    with database.get_connection() as conn:
-        # Find matches that are finished
-        matches = conn.execute("SELECT * FROM sports_matches WHERE status = 'finished'").fetchall()
+    matches_db = database._to_dict(database.get_fb("sports_matches"))
+    bets_db = database._to_dict(database.get_fb("sports_bets"))
+    
+    # Find finished matches
+    finished_matches = {k: m for k, m in matches_db.items() if m.get('status') == 'finished' and m.get('result')}
+    
+    for match_id, match in finished_matches.items():
+        result = match.get('result')
+        team1 = match.get('team1')
+        team2 = match.get('team2')
         
-        for match in matches:
-            match_id = match['id']
-            result = match['result']
-            team1 = match['team1']
-            team2 = match['team2']
-            if not result: continue # Finished but no result? skip
+        # Find pending bets for this match
+        pending_bets = {k: b for k, b in bets_db.items() if str(b.get('match_id')) == str(match_id) and b.get('status') == 'pending'}
+        
+        for bet_id, bet in pending_bets.items():
+            telegram_id = bet.get('telegram_id')
+            amount = bet.get('amount', 0)
+            choice = bet.get('team_choice')
             
-            # Find pending bets for this match
-            bets = conn.execute("SELECT * FROM sports_bets WHERE match_id = ? AND status = 'pending'", (match_id,)).fetchall()
+            # Fetch user
+            user = database.get_fb(f"usuarios/{telegram_id}")
+            if not user:
+                continue
             
-            for bet in bets:
-                bet_id = bet['id']
-                telegram_id = bet['telegram_id']
-                amount = bet['amount']
-                choice = bet['team_choice']
+            if choice == result:
+                # Won
+                odds = bet.get('odd', 1.0)
+                winnings = int(amount * odds)
                 
-                # Fetch user
-                user = database.obtener_perfil_completo(telegram_id)
-                if not user:
-                    continue
+                # Update bet
+                database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
                 
-                if choice == result:
-                    # Won
-                    odds = bet['odds_at_placement']
-                    winnings = int(amount * odds)
-                    
-                    # Update bet
-                    conn.execute("UPDATE sports_bets SET status = 'won' WHERE id = ?", (bet_id,))
-                    
-                    # Update User Bits
-                    conn.execute("UPDATE usuarios SET bits = bits + ? WHERE telegram_id = ?", (winnings, telegram_id))
-                    
-                    # Also Add XP
-                    from user_profile_manager import UserProfileManager
-                    UserProfileManager.add_xp(telegram_id, "first_win_day", 20) # Dummy XP addition
-                    
-                    # Notify
-                    text = f"""
+                # Update User Bits
+                database.recargar_bits(telegram_id, winnings)
+                
+                # Also Add XP
+                from user_profile_manager import UserProfileManager
+                UserProfileManager.add_xp(telegram_id, "first_win_day", 20) # Dummy XP addition
+                
+                # Notify
+                text = f"""
 🏆 <b>¡GANASTE TU APUESTA DEPORTIVA!</b>
 
 ⚽ Partido:
@@ -80,15 +79,15 @@ def process_pending_bets():
 
 🔥 ¡Sigue apostando en Zona Jackpot 777!
 """
-                    send_telegram_message(telegram_id, text)
-                    logger.info(f"Bet {bet_id} WON by {telegram_id}. Winnings: {winnings}")
+                send_telegram_message(telegram_id, text)
+                logger.info(f"Bet {bet_id} WON by {telegram_id}. Winnings: {winnings}")
+            
+            else:
+                # Lost
+                database.patch_fb(f"sports_bets/{bet_id}", {"status": "lost"})
                 
-                else:
-                    # Lost
-                    conn.execute("UPDATE sports_bets SET status = 'lost' WHERE id = ?", (bet_id,))
-                    
-                    # Notify
-                    text = f"""
+                # Notify
+                text = f"""
 😢 <b>Apuesta deportiva perdida</b>
 
 ⚽ Partido:
@@ -98,8 +97,8 @@ Tu predicción ({choice}) no fue correcta esta vez. (Resultado: {result})
 
 🍀 ¡El próximo partido puede ser el tuyo!
 """
-                    send_telegram_message(telegram_id, text)
-                    logger.info(f"Bet {bet_id} LOST by {telegram_id}.")
+                send_telegram_message(telegram_id, text)
+                logger.info(f"Bet {bet_id} LOST by {telegram_id}.")
 
 if __name__ == "__main__":
     logger.info("Iniciando Bot Worker de Deportes...")

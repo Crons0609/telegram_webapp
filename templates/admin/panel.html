@@ -25,10 +25,10 @@
             </div>
             <form id="adminLoginForm">
                 <div class="form-group">
-                    <label>Nombre de usuario</label>
+                    <label>Correo Electrónico</label>
                     <div class="input-container">
-                        <i class="fa-solid fa-user"></i>
-                        <input type="text" name="username" placeholder="Tu usuario" required autocomplete="off" style="padding: 1rem 1rem 1rem 2.5rem; width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" name="email" placeholder="Tu correo electrónico" required autocomplete="off" style="padding: 1rem 1rem 1rem 2.5rem; width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff;">
                     </div>
                 </div>
                 <div class="form-group">
@@ -64,9 +64,9 @@
         </div>
 
         <div class="sidebar-user">
-            <div class="avatar">{{ session.get('admin_username', 'A')[0] | upper }}</div>
+            <div class="avatar">{{ session.get('admin_email', 'A')[0] | upper }}</div>
             <div class="user-info">
-                <span class="name">{{ session.get('admin_username', 'Admin') }}</span>
+                <span class="name">{{ session.get('admin_email', 'Admin') }}</span>
                 <span class="role">Executive Admin</span>
             </div>
         </div>
@@ -389,8 +389,8 @@
         <div class="modal-body">
             <form id="addAdminForm">
                 <div class="form-group">
-                    <label>Nombre de usuario</label>
-                    <input type="text" id="new_admin_username" class="form-control" placeholder="Ej: superadmin" autocomplete="off" required>
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="new_admin_email" class="form-control" placeholder="Ej: admin@dominio.com" autocomplete="off" required>
                 </div>
                 <div class="form-group">
                     <label>Contraseña</label>

@@ -144,11 +144,7 @@ class UserProfileManager:
         # Always unlock the auto-frame in inventory
         database.desbloquear_item(telegram_id, 'frame', new_frame)
         # Equip it directly (bypass ownership check via direct DB update)
-        with database.get_connection() as conn:
-            conn.execute(
-                "UPDATE usuarios SET avatar_frame = ?, marco_actual = ? WHERE telegram_id = ?",
-                (new_frame, new_frame, telegram_id)
-            )
+        database.actualizar_perfil(telegram_id, {'avatar_frame': new_frame, 'marco_actual': new_frame})
         notifications.append(f"¡Nuevo marco desbloqueado: {new_frame}!")
 
         return notifications

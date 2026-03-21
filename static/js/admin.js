@@ -312,20 +312,31 @@ function renderChart(stats) {
 
 // PLAYERS
 let playersData = [];
-async function loadPlayers() {
+let playersListenerAttached = false;
+function loadPlayers() {
+    if (playersListenerAttached) return; // Ya estamos escuchando en tiempo real
+
     const tbody = document.querySelector('#playersTable tbody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center loading-row"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center loading-row"><i class="fas fa-spinner fa-spin"></i> Conectando a Firebase...</td></tr>';
 
-    try {
-        const res = await fetch('/admin/api/players');
-        const data = await res.json();
-
-        if (data.success) {
-            playersData = data.players;
+    if (window.escucharClientes) {
+        window.escucharClientes((list) => {
+            // Ordenar por bits descendente, igual que el backend
+            playersData = list.sort((a,b) => (b.bits || 0) - (a.bits || 0));
             renderPlayersTable(playersData);
-        }
-    } catch (err) {
-        showToast('Error loading players', 'error');
+        });
+        playersListenerAttached = true;
+    } else {
+        // Fallback a API si firebase.js falla
+        fetch('/admin/api/players')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    playersData = data.players;
+                    renderPlayersTable(playersData);
+                }
+            })
+            .catch(err => showToast('Error cargando players', 'error'));
     }
 }
 
@@ -504,29 +515,29 @@ function renderAdminsTable(admins) {
     tbody.innerHTML = admins.map(a => `
         <tr>
             <td><span class="badge-status" style="background:rgba(255,255,255,0.05); color:#94a3b8;">#${a.id}</span></td>
-            <td style="font-weight:600; color:#fff;"><i class="fas fa-user-shield" style="color:var(--gold);margin-right:6px;"></i>${a.username}</td>
+            <td style="font-weight:600; color:#fff;"><i class="fas fa-envelope" style="color:var(--gold);margin-right:6px;"></i>${a.email}</td>
             <td style="color:#94a3b8; font-size:0.85rem;">${a.created_at || 'N/A'}</td>
             <td>
-                <button class="btn-danger" onclick="deleteAdmin(${a.id}, '${a.username}')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;"><i class="fas fa-trash"></i> Eliminar</button>
+                <button class="btn-danger" onclick="deleteAdmin('${a.id}', '${a.email}')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;"><i class="fas fa-trash"></i> Eliminar</button>
             </td>
         </tr>
     `).join('');
 }
 
 function openAddAdminModal() {
-    document.getElementById('new_admin_username').value = '';
+    document.getElementById('new_admin_email').value = '';
     document.getElementById('new_admin_password').value = '';
     document.getElementById('new_admin_password2').value = '';
     document.getElementById('addAdminModal').classList.add('active');
 }
 
-async function deleteAdmin(id, username) {
-    if (!confirm(`\u00bfEliminar al admin "${username}"? Esta acción no se puede deshacer.`)) return;
+async function deleteAdmin(id, email) {
+    if (!confirm(`\u00bfEliminar al admin "${email}"? Esta acción no se puede deshacer.`)) return;
     try {
         const res = await fetch(`/admin/api/admins/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
-            showToast(`Admin "${username}" eliminado`, 'success');
+            showToast(`Admin "${email}" eliminado`, 'success');
             loadAdmins();
         } else {
             showToast(data.message || 'Error al eliminar', 'error');
@@ -548,7 +559,7 @@ function setupModals() {
     // Add Admin Form
     document.getElementById('addAdminForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('new_admin_username').value.trim();
+        const email = document.getElementById('new_admin_email').value.trim();
         const password = document.getElementById('new_admin_password').value;
         const password2 = document.getElementById('new_admin_password2').value;
 
@@ -568,11 +579,11 @@ function setupModals() {
             const res = await fetch('/admin/api/admins', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email, password })
             });
             const result = await res.json();
             if (result.success) {
-                showToast(`Admin "${username}" creado exitosamente`, 'success');
+                showToast(`Admin "${email}" creado exitosamente`, 'success');
                 document.getElementById('addAdminModal').classList.remove('active');
                 loadAdmins();
             } else {

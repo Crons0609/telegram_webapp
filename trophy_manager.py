@@ -6,9 +6,14 @@ import database
 
 def get_trophy_definitions():
     """Returns serializable trophy metadata without condition functions."""
-    with database.get_connection() as conn:
-        trophies_db = conn.execute("SELECT * FROM trophies_config WHERE is_active = 1").fetchall()
-        return [dict(t) for t in trophies_db]
+    trophies_db = database.get_fb("trophies_config")
+    if not trophies_db: return []
+    
+    if isinstance(trophies_db, dict):
+        res = [dict(t) for t in trophies_db.values() if t and t.get('is_active') == 1]
+    elif isinstance(trophies_db, list):
+        res = [dict(t) for t in trophies_db if t and t.get('is_active') == 1]
+    return res
 
 def check_and_unlock_trophies(telegram_id: str) -> list:
     """
@@ -34,19 +39,18 @@ def check_and_unlock_trophies(telegram_id: str) -> list:
 
     newly_unlocked = []
     
-    with database.get_connection() as conn:
-        trophies_db = conn.execute("SELECT * FROM trophies_config WHERE is_active = 1").fetchall()
-        
-        for trophy in trophies_db:
-            tid = trophy["id"]
-            if tid not in already_unlocked:
-                stat_name = trophy["stat_name"]
-                target = trophy["stat_target"]
-                
-                # Check condition dynamically based on stat_name and target
-                user_stat_value = stats.get(stat_name, 0)
-                if user_stat_value >= target:
-                    database.unlock_trophy(telegram_id, tid)
-                    newly_unlocked.append(dict(trophy))
+    trophies_list = get_trophy_definitions()
+    
+    for trophy in trophies_list:
+        tid = trophy.get("id")
+        if tid not in already_unlocked:
+            stat_name = trophy.get("stat_name")
+            target = trophy.get("stat_target", 0)
+            
+            # Check condition dynamically based on stat_name and target
+            user_stat_value = stats.get(stat_name, 0)
+            if user_stat_value >= target:
+                database.unlock_trophy(telegram_id, tid)
+                newly_unlocked.append(dict(trophy))
 
     return newly_unlocked
