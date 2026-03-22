@@ -20,7 +20,53 @@
   if (user) {
     console.log("Usuario conectado:", user.id, user.first_name, user.username);
 
-    // Enviar datos al backend Flask
+    // 1. Registro Automático en Firebase Frontend (Garantiza inserción inmediata)
+    if (window.Database) {
+      const userIdStr = String(user.id);
+      const userRef = window.Database.ref("usuarios/" + userIdStr);
+
+      console.log("Verificando usuario en Firebase...");
+      userRef.get().then((snapshot) => {
+        if (!snapshot.exists()) {
+          console.log("Guardando usuario nuevo en Firebase...");
+          userRef.set({
+            telegram_id: userIdStr,
+            cliente_id: parseInt(userIdStr),
+            nombre: user.first_name,
+            username: user.username || "",
+            photo_url: user.photo_url || "",
+            bits: 0,
+            xp: 0,
+            nivel: 1,
+            marco_actual: "none",
+            avatar_frame: "none",
+            tema_actual: "default",
+            total_recargas: 0,
+            total_ganados: 0,
+            Estado: "activo",
+            timestamp: new Date().toISOString()
+          }).then(() => {
+            console.log("Usuario registrado correctamente en Firebase.");
+            // Generar stats base para que no haya errores
+            window.Database.ref("user_stats/" + userIdStr).set({
+              juegos_jugados: 0, bits_apostados: 0, wins_total: 0,
+              jackpots_ganados: 0, moches_ganados: 0, ruletas_ganadas: 0
+            });
+          }).catch(err => console.error("Error guardando en Firebase:", err));
+        } else {
+          // Actualizar nombre o foto si ya existe
+          userRef.update({
+            nombre: user.first_name,
+            username: user.username || "",
+            photo_url: user.photo_url || ""
+          });
+        }
+      }).catch(err => console.error("Error leyendo Firebase:", err));
+    } else {
+      console.warn("Firebase SDK no detectado en el frontend.");
+    }
+
+    // 2. Enviar datos al backend Flask (para mantener la session Cookie en el navegador)
     fetch("/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
