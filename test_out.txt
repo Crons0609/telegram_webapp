@@ -1,0 +1,54 @@
+DEBUG:httpcore.connection:connect_tcp.started host='ghost-plague-casino-default-rtdb.firebaseio.com' port=443 local_address=None timeout=10.0 socket_options=None
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001D0E8D230E0>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x000001D0E8D82670> server_hostname='ghost-plague-casino-default-rtdb.firebaseio.com' timeout=10.0
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001D0E8D51BD0>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Server', b'nginx'), (b'Date', b'Sat, 21 Mar 2026 06:46:41 GMT'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Content-Length', b'300'), (b'Connection', b'keep-alive'), (b'Access-Control-Allow-Origin', b'*'), (b'Cache-Control', b'no-cache'), (b'Strict-Transport-Security', b'max-age=31556926; includeSubDomains; preload')])
+INFO:httpx:HTTP Request: GET https://ghost-plague-casino-default-rtdb.firebaseio.com/usuarios/TEST_12356.json "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:httpcore.connection:close.started
+DEBUG:httpcore.connection:close.complete
+DEBUG:httpcore.connection:connect_tcp.started host='ghost-plague-casino-default-rtdb.firebaseio.com' port=443 local_address=None timeout=10.0 socket_options=None
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001D0E8D53250>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x000001D0E8D82B70> server_hostname='ghost-plague-casino-default-rtdb.firebaseio.com' timeout=10.0
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001D0E8C7F360>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'PATCH']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'PATCH']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'PATCH']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Server', b'nginx'), (b'Date', b'Sat, 21 Mar 2026 06:46:42 GMT'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Content-Length', b'51'), (b'Connection', b'keep-alive'), (b'Access-Control-Allow-Origin', b'*'), (b'Cache-Control', b'no-cache'), (b'Strict-Transport-Security', b'max-age=31556926; includeSubDomains; preload')])
+INFO:httpx:HTTP Request: PATCH https://ghost-plague-casino-default-rtdb.firebaseio.com/usuarios/TEST_12356.json "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'PATCH']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:httpcore.connection:close.started
+DEBUG:httpcore.connection:close.complete
+DEBUG:httpcore.connection:connect_tcp.started host='ghost-plague-casino-default-rtdb.firebaseio.com' port=443 local_address=None timeout=10.0 socket_options=None
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001D0E8C7F950>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x000001D0E8DB51D0> server_hostname='ghost-plague-casino-default-rtdb.firebaseio.com' timeout=10.0
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x000001D0E8D79B50>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Server', b'nginx'), (b'Date', b'Sat, 21 Mar 2026 06:46:44 GMT'), (b'Content-Type', b'application/json; charset=utf-8'), (b'Content-Length', b'300'), (b'Connection', b'keep-alive'), (b'Access-Control-Allow-Origin', b'*'), (b'Cache-Control', b'no-cache'), (b'Strict-Transport-Security', b'max-age=31556926; includeSubDomains; preload')])
+INFO:httpx:HTTP Request: GET https://ghost-plague-casino-default-rtdb.firebaseio.com/usuarios/TEST_12356.json "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:httpcore.connection:close.started
+DEBUG:httpcore.connection:close.complete
+Agregando usuario test...
+Usuario agregado.
+Usuario encontrado: {'Estado': 'activo', 'avatar_frame': 'none', 'bits': 0, 'cliente_id': 1, 'daily_streak': 0, 'marco_actual': 'none', 'nivel': 1, 'nombre': 'Test User', 'photo_url': '', 'telegram_id': 'TEST_12356', 'tema_actual': 'default', 'timestamp': '2026-03-21T06:46:10.045180', 'total_ganados': 0, 'total_recargas': 0, 'username': '', 'xp': 0}

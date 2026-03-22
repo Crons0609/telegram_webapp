@@ -531,6 +531,17 @@ def contar_notificaciones_no_leidas() -> int:
     p2p = get_fb("p2p_requests") or {}
     return sum(1 for v in p2p.values() if v.get('leida') == 0)
 
+def actualizar_perfil(telegram_id: str, campos: dict) -> bool:
+    """
+    Generic profile field updater via PATCH.
+    Accepts any dict of top-level field:value pairs under usuarios/{telegram_id}.
+    Used by user_profile_manager to auto-equip frames and marco on level-up.
+    """
+    if not campos:
+        return False
+    patch_fb(f"usuarios/{str(telegram_id)}", campos)
+    return True
+
 # Helper para Admin - Obtener usuario por ID incremental (cliente_id)
 # o por telegram_id si se pasa string.
 def obtener_usuario(identifier) -> dict:

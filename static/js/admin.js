@@ -314,29 +314,39 @@ function renderChart(stats) {
 let playersData = [];
 let playersListenerAttached = false;
 function loadPlayers() {
-    if (playersListenerAttached) return; // Ya estamos escuchando en tiempo real
+    if (!playersListenerAttached) {
+        // Attach real-time Firebase listener only once
+        const tbody = document.querySelector('#playersTable tbody');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center loading-row"><i class="fas fa-spinner fa-spin"></i> Conectando a Firebase...</td></tr>';
 
-    const tbody = document.querySelector('#playersTable tbody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center loading-row"><i class="fas fa-spinner fa-spin"></i> Conectando a Firebase...</td></tr>';
-
-    if (window.escucharClientes) {
-        window.escucharClientes((list) => {
-            // Ordenar por bits descendente, igual que el backend
-            playersData = list.sort((a,b) => (b.bits || 0) - (a.bits || 0));
-            renderPlayersTable(playersData);
-        });
-        playersListenerAttached = true;
+        if (window.escucharClientes) {
+            window.escucharClientes((list) => {
+                playersData = list.sort((a,b) => (b.bits || 0) - (a.bits || 0));
+                renderPlayersTable(playersData);
+            });
+            playersListenerAttached = true;
+        } else {
+            // Fallback a API si firebase.js falla
+            fetch('/admin/api/players')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        playersData = data.players;
+                        renderPlayersTable(playersData);
+                    }
+                })
+                .catch(err => showToast('Error cargando players', 'error'));
+        }
     } else {
-        // Fallback a API si firebase.js falla
-        fetch('/admin/api/players')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    playersData = data.players;
-                    renderPlayersTable(playersData);
-                }
-            })
-            .catch(err => showToast('Error cargando players', 'error'));
+        // Real-time listener already active — just re-render cached data (or fetch fresh from API)
+        if (playersData.length > 0) {
+            renderPlayersTable(playersData);
+        } else {
+            fetch('/admin/api/players')
+                .then(res => res.json())
+                .then(data => { if (data.success) { playersData = data.players; renderPlayersTable(playersData); } })
+                .catch(() => {});
+        }
     }
 }
 

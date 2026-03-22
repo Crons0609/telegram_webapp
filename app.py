@@ -79,6 +79,54 @@ def home():
         return render_template("index.html", nombre="", username="", telegram_id="", bits=0, photo_url="")
 
 # =====================================================
+# DEV LOGIN (Solo entorno local — usar para pruebas)
+# =====================================================
+TEST_USER_ID  = "99999999"
+TEST_NOMBRE   = "🧪 Tester Ghost"
+TEST_USERNAME = "dev_tester"
+
+@app.route('/dev-login')
+def dev_login():
+    """Login inmediato como usuario de prueba — solo para desarrollo local."""
+    # Crear / actualizar usuario en Firebase con recursos generosos
+    database.agregar_usuario(TEST_USER_ID, TEST_NOMBRE, TEST_USERNAME, "")
+    # Aseguramos bits, nivel y xp para probar todas las funciones
+    perfil = database.obtener_perfil_completo(TEST_USER_ID) or {}
+    if perfil.get('bits', 0) < 50_000:
+        database.patch_fb(f"usuarios/{TEST_USER_ID}", {
+            "bits": 50000,
+            "nivel": 10,
+            "xp": 9500,
+            "avatar_frame": "frame_gold",
+            "marco_actual": "frame_gold",
+        })
+    # Inicializar stats si no existen
+    if not database.get_fb(f"user_stats/{TEST_USER_ID}"):
+        database.patch_fb(f"user_stats/{TEST_USER_ID}", {
+            "juegos_jugados": 0,
+            "bits_ganados": 0,
+            "bits_apostados": 0,
+            "jackpots_ganados": 0,
+            "moches_ganados": 0,
+            "ruletas_ganadas": 0,
+            "wins_total": 0,
+        })
+    # Set session
+    session["telegram_id"] = TEST_USER_ID
+    session["nombre"]      = TEST_NOMBRE
+    session["username"]    = TEST_USERNAME
+    session["photo_url"]   = ""
+    session.permanent      = True
+    return redirect(url_for('home'))
+
+@app.route('/dev-logout')
+def dev_logout():
+    """Cierra la sesión del usuario de prueba."""
+    session.clear()
+    return redirect(url_for('home'))
+
+
+# =====================================================
 # LOBBY DE JUEGOS
 # =====================================================
 @app.route('/juegos')
@@ -467,17 +515,17 @@ def api_spin():
     outcome = slot_engine.draw_spin()
     # Generate the 5-reel visual symbols from the outcome
     reel_symbols = slot_engine.generate_reels(outcome)
+    
+    total_win = bet_amount * outcome["multiplier"]
+    
     # Record stats
     database.registrar_partida(telegram_id, 'slot_machine', bet_amount, total_win, 'win' if total_win > 0 else 'loss')
     database.incrementar_stat(telegram_id, 'juegos_jugados', 1)
     database.incrementar_stat(telegram_id, 'bits_apostados', bet_amount)
 
-
     # Experience mapping
     xp_event = "slot_spin"
     UserProfileManager.add_xp(telegram_id, xp_event)
-
-    total_win = bet_amount * outcome["multiplier"]
 
     # Register win securely if any
     profile_updates = None

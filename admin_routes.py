@@ -217,23 +217,31 @@ def api_admin_delete(admin_id):
 @admin_bp.route('/api/missions')
 @admin_required_api
 def api_missions():
-    missions_db = database.get_fb("missions") or {}
-    levels_db = database.get_fb("mission_levels") or {}
-    
+    missions_db = _to_dict(database.get_fb("missions"))
+    levels_db   = _to_dict(database.get_fb("mission_levels"))
+
     missions = []
     for k, m in missions_db.items():
-        m_dict = dict(m)
-        m_dict['levels'] = []
-        for lk, l in levels_db.items():
-            if str(l.get('mission_id')) == str(m.get('id')):
-                ld = dict(l)
-                ld['id'] = lk
-                m_dict['levels'].append(ld)
-        # Sort levels by level number
-        m_dict['levels'] = sorted(m_dict['levels'], key=lambda x: int(x.get('level', 0)))
-        missions.append(m_dict)
-            
+        if not m or not isinstance(m, dict):
+            continue
+        try:
+            m_dict = dict(m)
+            m_dict['levels'] = []
+            for lk, l in levels_db.items():
+                if not l or not isinstance(l, dict):
+                    continue
+                if str(l.get('mission_id')) == str(m.get('id')):
+                    ld = dict(l)
+                    ld['id'] = lk
+                    m_dict['levels'].append(ld)
+            m_dict['levels'] = sorted(m_dict['levels'], key=lambda x: int(x.get('level', 0)))
+            missions.append(m_dict)
+        except Exception as e:
+            print(f"Error processing mission {k}: {e}")
+            continue
+
     return jsonify({'success': True, 'missions': sorted(missions, key=lambda x: str(x.get('id', '')))})
+
 
 @admin_bp.route('/api/missions/<mission_id>/toggle', methods=['POST'])
 @admin_required_api
@@ -304,10 +312,10 @@ def api_themes_list():
     themes = database.get_all_themes()
     return jsonify({'success': True, 'themes': themes})
 
-@admin_bp.route('/api/themes/<int:theme_id>/activate', methods=['POST'])
+@admin_bp.route('/api/themes/<theme_slug>/activate', methods=['POST'])
 @admin_required_api
-def api_theme_activate(theme_id):
-    database.activate_theme(theme_id)
+def api_theme_activate(theme_slug):
+    database.activate_theme(str(theme_slug))
     active = database.get_active_theme()
     return jsonify({'success': True, 'active_theme': active})
 
@@ -334,11 +342,11 @@ def api_theme_create():
     )
     return jsonify({'success': True, 'id': new_id}), 201
 
-@admin_bp.route('/api/themes/<int:theme_id>', methods=['PUT'])
+@admin_bp.route('/api/themes/<theme_slug>', methods=['PUT'])
 @admin_required_api
-def api_theme_update(theme_id):
+def api_theme_update(theme_slug):
     data = request.get_json()
-    database.update_theme(theme_id, data)
+    database.update_theme(str(theme_slug), data)
     return jsonify({'success': True})
 
 @admin_bp.route('/api/themes/schedules', methods=['GET'])
@@ -355,7 +363,7 @@ def api_schedule_create():
     if not all(k in data for k in required):
         return jsonify({'success': False, 'message': 'Faltan campos requeridos'}), 400
     new_id = database.create_schedule(
-        theme_id=int(data['theme_id']),
+        theme_slug=str(data['theme_id']),
         event_name=data['event_name'],
         start_date=data['start_date'],
         end_date=data['end_date'],
