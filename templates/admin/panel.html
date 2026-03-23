@@ -104,6 +104,9 @@
             <a href="#" class="nav-item" data-view="history">
                 <i class="fas fa-history"></i> <span>Historial</span>
             </a>
+            <a href="#" class="nav-item" data-view="withdrawals">
+                <i class="fas fa-money-bill-wave"></i> <span>Retiros</span>
+            </a>
             {% endif %}
 
             {% if session.get('admin_role', 'admin') == 'superadmin' %}
@@ -158,8 +161,11 @@
             <!-- ── VIEW: DASHBOARD ── -->
             <section id="view-dashboard" class="view-section active">
                 <div class="dashboard-grid">
-                    <div class="section-title" style="margin-bottom:1rem; color:var(--text-main);">
+                    <div class="section-title" style="margin-bottom:1rem; color:var(--text-main); display:flex; justify-content:space-between; align-items:center;">
                         <h3>Resumen General</h3>
+                        {% if session.get('admin_role') == 'superadmin' %}
+                        <button class="btn-primary" style="background:#ef4444; border-color:#ef4444; font-size:0.9rem; padding:8px 16px; border-radius:8px;" onclick="resetDashboardMetrics()"><i class="fas fa-broom"></i> Limpiar Registro Mensual</button>
+                        {% endif %}
                     </div>
                     <div class="kpi-grid" id="dashboardKPIs"></div>
 
@@ -185,6 +191,25 @@
                                 <canvas id="mainChart"></canvas>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── VIEW: RETIROS ── -->
+            <section id="view-withdrawals" class="view-section">
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                    <h2 style="font-size:1.3rem; font-weight:700;"><i class="fas fa-money-bill-wave" style="color:var(--success)"></i> Gestión de Retiros</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px;" onclick="loadWithdrawals('all')">Todos</button>
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.3);" onclick="loadWithdrawals('pending')"><i class="fas fa-clock"></i> Pendientes</button>
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3);" onclick="loadWithdrawals('approved')"><i class="fas fa-check"></i> Aprobados</button>
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3);" onclick="loadWithdrawals('completed')"><i class="fas fa-check-double"></i> Pagados</button>
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3);" onclick="loadWithdrawals('rejected')"><i class="fas fa-times"></i> Rechazados</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div id="withdrawalsList">
+                        <div style="text-align:center; padding:2rem; color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
                     </div>
                 </div>
             </section>

@@ -373,6 +373,24 @@ async function clearMessagesHistory() {
 }
 
 // DASHBOARD
+async function resetDashboardMetrics() {
+    const msg = '🛑 ¡ATENCIÓN SUPERADMIN!\n\n¿Estás absolutamente seguro de que deseas limpiar el Dashboard Mensual?\n\n- SE BORRARÁN: Estadísticas de juegos diarios, transacciones, e historial de ganancias/pérdidas.\n- SE CONSERVARÁN: Las cuentas y los BITS de los jugadores.\n\nESTA ACCIÓN ES IRREVERSIBLE.';
+    if (!confirm(msg)) return;
+    
+    try {
+        const res = await fetch('/admin/api/dashboard/reset', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Dashboard reseteado exitosamente.', 'success');
+            loadDashboard();
+        } else {
+            showToast(data.message || 'Error al limpiar dashboard', 'error');
+        }
+    } catch (e) {
+        showToast('Error de conexión', 'error');
+    }
+}
+
 async function loadDashboard() {
     try {
         const res = await fetch('/admin/api/dashboard');
@@ -1567,4 +1585,112 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('supportChatsList')) {
         loadSupportChats();
     }
+    if(document.getElementById('withdrawalsList')) {
+        loadWithdrawals('pending');
+    }
 });
+
+// ─── WITHDRAWAL MANAGEMENT ────────────────────────────────────────────────
+
+const STATUS_LABELS = {
+    pending:   '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:600"><i class="fas fa-clock"></i> Pendiente</span>',
+    approved:  '<span style="background:rgba(16,185,129,0.12);color:#10b981;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:600"><i class="fas fa-check"></i> Aprobado</span>',
+    completed: '<span style="background:rgba(16,185,129,0.2);color:#34d399;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:600"><i class="fas fa-check-double"></i> Pagado</span>',
+    rejected:  '<span style="background:rgba(239,68,68,0.12);color:#ef4444;padding:3px 10px;border-radius:20px;font-size:0.78rem;font-weight:600"><i class="fas fa-times"></i> Rechazado</span>',
+};
+
+async function loadWithdrawals(statusFilter = 'all') {
+    const container = document.getElementById('withdrawalsList');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    
+    try {
+        const res = await fetch(`/admin/api/withdrawals?status=${statusFilter}`);
+        const data = await res.json();
+        if (!data.success) { container.innerHTML = '<div style="padding:2rem;color:var(--danger)">Error cargando retiros.</div>'; return; }
+        
+        if (!data.withdrawals || data.withdrawals.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)"><i class="fas fa-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:12px"></i>No hay solicitudes de retiro.</div>';
+            return;
+        }
+        
+        const rows = data.withdrawals.map(w => {
+            const fecha = (w.created_at || '').substring(0, 16).replace('T', ' ');
+            const method = w.method === 'paypal' ? '<i class="fab fa-paypal" style="color:#003087"></i> PayPal' : '<i class="fas fa-handshake" style="color:var(--warning)"></i> P2P';
+            const status = STATUS_LABELS[w.status] || w.status;
+            const key = w._key;
+            const paypalEmail = w.paypal_email ? `<br><small style="color:var(--text-muted)">${w.paypal_email}</small>` : '';
+            
+            let actions = '';
+            if (w.status === 'pending') {
+                actions = `
+                    <button class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981" onclick="approveWithdrawal('${key}')"><i class="fas fa-check"></i> Aprobar</button>
+                    <button class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444" onclick="rejectWithdrawal('${key}')"><i class="fas fa-times"></i> Rechazar</button>`;
+            } else if (w.status === 'approved') {
+                actions = `<button class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.3);color:var(--primary)" onclick="completeWithdrawal('${key}')"><i class="fas fa-check-double"></i> Marcar Pagado</button>`;
+            }
+            
+            return `<tr>
+                <td style="font-size:0.82rem;color:var(--text-muted)">${fecha}</td>
+                <td><b>@${w.username || '—'}</b><br><small style="color:var(--text-muted)">#${w.telegram_id}</small></td>
+                <td><b style="color:var(--gold)">${(w.bits||0).toLocaleString()}</b></td>
+                <td><b style="color:var(--success)">$${parseFloat(w.usd||0).toFixed(2)}</b></td>
+                <td>${method}${paypalEmail}</td>
+                <td>${status}</td>
+                <td><div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div></td>
+            </tr>`;
+        }).join('');
+        
+        container.innerHTML = `
+            <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border)">
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">Fecha</th>
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">Jugador</th>
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">Bits</th>
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">USD</th>
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">Método</th>
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">Estado</th>
+                        <th style="padding:10px;text-align:left;color:var(--text-muted);font-size:0.78rem;text-transform:uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+            </div>`;
+    } catch(e) {
+        container.innerHTML = '<div style="padding:2rem;color:var(--danger)">Error de conexión.</div>';
+    }
+}
+
+async function approveWithdrawal(key) {
+    if(!confirm('¿Aprobar este retiro? Los bits serán descontados del jugador automáticamente.')) return;
+    try {
+        const res = await fetch(`/admin/api/withdrawals/${key}/approve`, {method: 'POST'});
+        const data = await res.json();
+        showToast(data.message || (data.success ? 'Retiro aprobado.' : 'Error'), data.success ? 'success' : 'error');
+        if(data.success) loadWithdrawals('pending');
+    } catch(e) { showToast('Error de conexión', 'error'); }
+}
+
+async function rejectWithdrawal(key) {
+    const reason = prompt('Motivo del rechazo (opcional):') ?? '';
+    try {
+        const res = await fetch(`/admin/api/withdrawals/${key}/reject`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reason})
+        });
+        const data = await res.json();
+        showToast(data.message || (data.success ? 'Retiro rechazado.' : 'Error'), data.success ? 'success' : 'error');
+        if(data.success) loadWithdrawals('pending');
+    } catch(e) { showToast('Error de conexión', 'error'); }
+}
+
+async function completeWithdrawal(key) {
+    if(!confirm('¿Marcar este retiro como pagado? (Confirma que ya transferiste el dinero.)')) return;
+    try {
+        const res = await fetch(`/admin/api/withdrawals/${key}/complete`, {method: 'POST'});
+        const data = await res.json();
+        showToast(data.message || (data.success ? 'Marcado como pagado.' : 'Error'), data.success ? 'success' : 'error');
+        if(data.success) loadWithdrawals('approved');
+    } catch(e) { showToast('Error de conexión', 'error'); }
+}

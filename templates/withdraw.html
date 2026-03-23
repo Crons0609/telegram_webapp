@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Retirar Bits — Ghost Plague Casino</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <link rel="stylesheet" href="/static/css/themes.css"/>
+    <style>
+        :root {
+            --bg: #0d0f1a;
+            --bg-card: #141726;
+            --bg-card2: #1a1f35;
+            --primary: #6366f1;
+            --primary-dim: rgba(99,102,241,0.15);
+            --gold: #f59e0b;
+            --gold-dim: rgba(245,158,11,0.15);
+            --success: #10b981;
+            --success-dim: rgba(16,185,129,0.12);
+            --danger: #ef4444;
+            --danger-dim: rgba(239,68,68,0.12);
+            --text: #f1f5f9;
+            --text-muted: #64748b;
+            --border: rgba(255,255,255,0.07);
+            --radius: 14px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
+                              radial-gradient(ellipse at 20% 80%, rgba(245,158,11,0.06) 0%, transparent 60%);
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 10px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .page-container { max-width: 700px; margin: 0 auto; padding: 20px 16px 60px; }
+        .page-header { text-align: center; padding: 32px 0 24px; }
+        .page-header .icon { font-size: 3rem; margin-bottom: 12px; }
+        .page-header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #f59e0b, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .page-header p { color: var(--text-muted); margin-top: 6px; font-size: 0.95rem; }
+
+        /* Balance Card */
+        .balance-card {
+            background: linear-gradient(135deg, #1a1f35 0%, #141728 100%);
+            border: 1px solid rgba(99,102,241,0.25);
+            border-radius: var(--radius);
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            top: -30px; right: -30px;
+            width: 120px; height: 120px;
+            background: radial-gradient(circle, rgba(99,102,241,0.2), transparent);
+            border-radius: 50%;
+        }
+        .balance-label { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 6px; }
+        .balance-value { font-size: 2rem; font-weight: 800; color: var(--gold); }
+        .balance-usd { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
+        .limits-info { text-align: right; }
+        .limit-item { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 4px; }
+        .limit-used { color: var(--danger); }
+
+        /* Card */
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+        .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .card-title i { color: var(--primary); }
+
+        /* Form */
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .form-control {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            color: var(--text);
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--primary); background: rgba(99,102,241,0.06); }
+        .form-control::placeholder { color: var(--text-muted); }
+        .form-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; }
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+        /* Converter display */
+        .converter-box {
+            background: var(--success-dim);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .converter-box .label { font-size: 0.85rem; color: var(--text-muted); }
+        .converter-box .amount { font-size: 1.5rem; font-weight: 800; color: var(--success); }
+        .rate-tag { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; }
+
+        /* Method selector */
+        .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px; }
+        .method-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .method-card:hover { border-color: var(--primary); background: var(--primary-dim); }
+        .method-card.selected { border-color: var(--primary); background: var(--primary-dim); }
+        .method-card i { font-size: 1.5rem; margin-bottom: 8px; display: block; }
+        .method-card .name { font-weight: 700; font-size: 0.95rem; }
+        .method-card .desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+        .method-paypal i { color: #003087; }
+        .method-p2p i { color: var(--gold); }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* History table */
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .history-table th { padding: 10px 12px; text-align: left; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .history-table td { padding: 12px; border-bottom: 1px solid var(--border); }
+        .history-table tr:last-child td { border: none; }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .badge-approved { background: var(--success-dim); color: var(--success); }
+        .badge-completed { background: rgba(16,185,129,0.2); color: #34d399; }
+        .badge-rejected { background: var(--danger-dim); color: var(--danger); }
+        .empty-state { text-align: center; padding: 32px; color: var(--text-muted); }
+        .empty-state i { font-size: 2rem; margin-bottom: 12px; display: block; opacity: 0.4; }
+
+        /* Alert */
+        .alert { padding: 14px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 0.9rem; display: flex; align-items: flex-start; gap: 10px; }
+        .alert-warning { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); color: #fbbf24; }
+        .alert-danger { background: var(--danger-dim); border: 1px solid rgba(239,68,68,0.25); color: var(--danger); }
+        .alert-success { background: var(--success-dim); border: 1px solid rgba(16,185,129,0.25); color: var(--success); }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; border-radius: 12px; font-size: 0.9rem; font-weight: 600; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 9999; max-width: 90vw; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: #10b981; color: #fff; }
+        .toast.error { background: #ef4444; color: #fff; }
+    </style>
+</head>
+<body>
+<div class="page-container">
+    <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Volver al Casino</a>
+
+    <div class="page-header">
+        <div class="icon">💸</div>
+        <h1>Retirar Bits</h1>
+        <p>Convierte tus bits en dinero real — 1,000 bits = $1 USD</p>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="balance-card">
+        <div>
+            <div class="balance-label">Tu saldo disponible</div>
+            <div class="balance-value" id="balanceBits">{{ "{:,}".format(bits) }} <small style="font-size:0.6em">bits</small></div>
+            <div class="balance-usd">≈ ${{ "%.2f"|format(bits / rate) }} USD disponibles</div>
+        </div>
+        <div class="limits-info">
+            <div class="limit-item"><i class="fas fa-calendar-day"></i> Retiros hoy: <b id="retirosHoy">{{ limits_info.retiros_hoy }}</b>/{{ max_per_day }}</div>
+            <div class="limit-item"><i class="fas fa-dollar-sign"></i> USD hoy: <b>${{ "%.2f"|format(limits_info.usd_hoy) }}</b>/${{ "%.0f"|format(max_usd_day) }}</div>
+            <div class="limit-item">Mínimo: {{ "{:,}".format(min_bits) }} bits</div>
+        </div>
+    </div>
+
+    {% if not limits_info.ok %}
+    <div class="alert alert-danger">
+        <i class="fas fa-ban"></i>
+        <span>{{ limits_info.blocked }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Withdrawal Form -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-coins"></i> Nueva Solicitud de Retiro</div>
+
+        <div class="form-group">
+            <label class="form-label">Cantidad de Bits a Retirar</label>
+            <input type="number" class="form-control" id="bitsInput" placeholder="Ej: 10000"
+                   min="{{ min_bits }}" max="{{ bits }}" step="1000"
+                   oninput="updateConverter()" {% if not limits_info.ok %}disabled{% endif %}/>
+            <div class="form-hint">Mínimo {{ "{:,}".format(min_bits) }} bits · Máximo ${{ "%.0f"|format(max_usd_day) }} USD por día</div>
+        </div>
+
+        <div class="converter-box">
+            <div>
+                <div class="label">Recibirás</div>
+                <div class="amount" id="usdDisplay">$0.00 USD</div>
+            </div>
+            <div style="text-align:right">
+                <div class="label">Tasa</div>
+                <div style="font-weight:700; color:var(--text)">{{ "{:,}".format(rate) }} bits = $1</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Método de Retiro</label>
+            <div class="method-grid">
+                <div class="method-card method-paypal" id="methodPaypal" onclick="selectMethod('paypal')">
+                    <i class="fab fa-paypal"></i>
+                    <div class="name">PayPal</div>
+                    <div class="desc">Automático en 24-48h</div>
+                </div>
+                <div class="method-card method-p2p selected" id="methodP2p" onclick="selectMethod('p2p')">
+                    <i class="fas fa-handshake"></i>
+                    <div class="name">P2P Admin</div>
+                    <div class="desc">El admin te paga directamente</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group" id="paypalEmailGroup" style="display:none">
+            <label class="form-label">Tu Email de PayPal</label>
+            <input type="email" class="form-control" id="paypalEmail" placeholder="tu@email.com"/>
+            <div class="form-hint">El pago se enviará a esta cuenta PayPal</div>
+        </div>
+
+        <div id="formAlert"></div>
+
+        <button class="btn btn-primary" id="submitBtn" onclick="submitWithdrawal()" {% if not limits_info.ok %}disabled{% endif %}>
+            <i class="fas fa-paper-plane"></i> Solicitar Retiro
+        </button>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-history"></i> Historial de Retiros</div>
+        {% if historial %}
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Bits</th>
+                    <th>USD</th>
+                    <th>Método</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in historial %}
+                <tr>
+                    <td style="color:var(--text-muted); font-size:0.82rem;">{{ r.created_at[:10] if r.created_at else '—' }}</td>
+                    <td><b>{{ "{:,}".format(r.bits|int) }}</b></td>
+                    <td>${{ "%.2f"|format(r.usd|float) }}</td>
+                    <td>
+                        {% if r.method == 'paypal' %}<i class="fab fa-paypal" style="color:#003087"></i> PayPal
+                        {% else %}<i class="fas fa-handshake" style="color:var(--gold)"></i> P2P{% endif %}
+                    </td>
+                    <td>
+                        {% if r.status == 'pending' %}<span class="badge badge-pending"><i class="fas fa-clock"></i> Pendiente</span>
+                        {% elif r.status == 'approved' %}<span class="badge badge-approved"><i class="fas fa-check"></i> Aprobado</span>
+                        {% elif r.status == 'completed' %}<span class="badge badge-completed"><i class="fas fa-check-double"></i> Pagado</span>
+                        {% elif r.status == 'rejected' %}<span class="badge badge-rejected"><i class="fas fa-times"></i> Rechazado</span>
+                        {% else %}<span class="badge">{{ r.status }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <div>No tienes retiros registrados todavía.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const RATE = {{ rate }};
+const MIN_BITS = {{ min_bits }};
+const MAX_USD = {{ max_usd_day }};
+const USER_BITS = {{ bits }};
+const TELEGRAM_ID = {{ telegram_id }};
+let selectedMethod = 'p2p';
+
+function updateConverter() {
+    const bits = parseInt(document.getElementById('bitsInput').value) || 0;
+    const usd = bits / RATE;
+    document.getElementById('usdDisplay').textContent = `$${usd.toFixed(2)} USD`;
+}
+
+function selectMethod(method) {
+    selectedMethod = method;
+    document.getElementById('methodPaypal').classList.toggle('selected', method === 'paypal');
+    document.getElementById('methodP2p').classList.toggle('selected', method === 'p2p');
+    document.getElementById('paypalEmailGroup').style.display = method === 'paypal' ? 'block' : 'none';
+}
+
+function showAlert(msg, type='warning') {
+    const el = document.getElementById('formAlert');
+    el.innerHTML = `<div class="alert alert-${type}"><i class="fas fa-exclamation-triangle"></i><span>${msg}</span></div>`;
+}
+
+function clearAlert() { document.getElementById('formAlert').innerHTML = ''; }
+
+function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.className = 'toast', 3500);
+}
+
+async function submitWithdrawal() {
+    clearAlert();
+    const bits = parseInt(document.getElementById('bitsInput').value) || 0;
+    const paypalEmail = document.getElementById('paypalEmail').value.trim();
+
+    if (bits < MIN_BITS) { showAlert(`El mínimo de retiro es ${MIN_BITS.toLocaleString()} bits.`); return; }
+    if (bits > USER_BITS) { showAlert('No tienes suficientes bits.', 'danger'); return; }
+    const usd = bits / RATE;
+    if (usd > MAX_USD) { showAlert(`El máximo por retiro es $${MAX_USD.toFixed(0)} USD.`); return; }
+    if (selectedMethod === 'paypal' && !paypalEmail) { showAlert('Ingresa tu email de PayPal.'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+    try {
+        const res = await fetch('/withdraw/api/request', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ telegram_id: TELEGRAM_ID, bits, method: selectedMethod, paypal_email: paypalEmail })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ Solicitud enviada. ID: ${data.tx_id}`, 'success');
+            document.getElementById('bitsInput').value = '';
+            updateConverter();
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showAlert(data.message || 'Error al enviar la solicitud.', 'danger');
+        }
+    } catch(e) {
+        showAlert('Error de conexión. Intenta de nuevo.', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Retiro';
+    }
+}
+</script>
+</body>
+</html>

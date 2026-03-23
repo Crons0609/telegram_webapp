@@ -718,3 +718,161 @@ def notify_bits_added_paypal(telegram_id, usd_paid, bits_received, new_balance) 
         "¡Gracias por apoyar <b>Ghost Plague Casino</b>!"
     )
     _send_tg(telegram_id, msg)
+
+# ─────────────────────────────────────────────────────────
+# SISTEMA DE RETIROS
+# ─────────────────────────────────────────────────────────
+
+def crear_solicitud_retiro(telegram_id: str, username: str, nombre: str, bits: int, usd: float, method: str, paypal_email: str = '') -> str:
+    """Creates a withdrawal request in Firebase and returns the transaction ID."""
+    import uuid
+    tx_id = str(uuid.uuid4())[:12].upper()
+    data = {
+        'telegram_id': str(telegram_id),
+        'username': username or '',
+        'nombre': nombre or '',
+        'bits': int(bits),
+        'usd': float(usd),
+        'method': method,  # 'p2p' or 'paypal'
+        'paypal_email': paypal_email or '',
+        'status': 'pending',
+        'created_at': datetime.utcnow().isoformat(),
+        'processed_at': None,
+        'paypal_tx_id': None,
+        'tx_id': tx_id,
+    }
+    res = post_fb('retiros', data)
+    if res and 'name' in res:
+        # Also patch the withdrawal tx_id with the Firebase key for easy lookup
+        put_fb(f"retiros/{res['name']}/firebase_key", res['name'])
+    return tx_id
+
+def verificar_limite_retiro(telegram_id: str) -> dict:
+    """
+    Checks daily withdrawal limits for a user.
+    Returns {'ok': bool, 'retiros_hoy': int, 'usd_hoy': float, 'blocked': str|None}
+    """
+    import config
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    todos = _to_dict(get_fb('retiros') or {})
+    retiros_hoy = 0
+    usd_hoy = 0.0
+    for r in todos.values():
+        if str(r.get('telegram_id')) == str(telegram_id) and r.get('status') not in ('rejected',):
+            if (r.get('created_at') or '')[:10] == today:
+                retiros_hoy += 1
+                usd_hoy += float(r.get('usd', 0))
+    blocked = None
+    if retiros_hoy >= config.WITHDRAWAL_MAX_PER_DAY:
+        blocked = f'Has alcanzado el máximo de {config.WITHDRAWAL_MAX_PER_DAY} retiros por día.'
+    elif usd_hoy >= config.WITHDRAWAL_MAX_USD_DAY:
+        blocked = f'Has alcanzado el límite diario de ${config.WITHDRAWAL_MAX_USD_DAY:.2f} USD.'
+    return {'ok': blocked is None, 'retiros_hoy': retiros_hoy, 'usd_hoy': usd_hoy, 'blocked': blocked}
+
+def obtener_retiros_usuario(telegram_id: str) -> list:
+    """Gets all withdrawal requests for a specific user, sorted by date desc."""
+    todos = _to_dict(get_fb('retiros') or {})
+    user_retiros = []
+    for k, r in todos.items():
+        if str(r.get('telegram_id')) == str(telegram_id):
+            r['_key'] = k
+            user_retiros.append(r)
+    return sorted(user_retiros, key=lambda x: x.get('created_at', ''), reverse=True)
+
+def obtener_todos_retiros() -> list:
+    """Gets all withdrawal requests, sorted by date desc."""
+    todos = _to_dict(get_fb('retiros') or {})
+    result = []
+    for k, r in todos.items():
+        r['_key'] = k
+        result.append(r)
+    return sorted(result, key=lambda x: x.get('created_at', ''), reverse=True)
+
+def _find_retiro_key(tx_id_or_key: str) -> tuple:
+    """Returns (firebase_key, retiro_data) for a transaction by tx_id or firebase key."""
+    todos = _to_dict(get_fb('retiros') or {})
+    for k, r in todos.items():
+        if k == tx_id_or_key or r.get('tx_id') == tx_id_or_key:
+            return k, r
+    return None, None
+
+def aprobar_retiro(firebase_key: str) -> bool:
+    """Approves a P2P withdrawal: deducts bits and marks as approved."""
+    retiro = get_fb(f'retiros/{firebase_key}')
+    if not retiro or retiro.get('status') != 'pending':
+        return False
+    telegram_id = str(retiro.get('telegram_id'))
+    bits = int(retiro.get('bits', 0))
+    usuario = obtener_usuario(int(telegram_id))
+    if not usuario:
+        return False
+    new_bits = max(0, int(usuario.get('bits', 0)) - bits)
+    patch_fb(f'usuarios/{telegram_id}', {'bits': new_bits})
+    patch_fb(f'retiros/{firebase_key}', {
+        'status': 'approved',
+        'processed_at': datetime.utcnow().isoformat()
+    })
+    registrar_transaccion(int(telegram_id), retiro.get('username',''), 'retiro', bits, 0,
+                          f'Retiro aprobado (P2P) - {retiro.get("tx_id","")}')
+    return True
+
+def completar_retiro(firebase_key: str) -> bool:
+    """Marks a withdrawal as paid/completed by admin."""
+    retiro = get_fb(f'retiros/{firebase_key}')
+    if not retiro:
+        return False
+    patch_fb(f'retiros/{firebase_key}', {
+        'status': 'completed',
+        'processed_at': datetime.utcnow().isoformat()
+    })
+    return True
+
+def rechazar_retiro(firebase_key: str, reason: str = '') -> bool:
+    """Rejects a withdrawal and leaves user bits untouched."""
+    retiro = get_fb(f'retiros/{firebase_key}')
+    if not retiro:
+        return False
+    patch_fb(f'retiros/{firebase_key}', {
+        'status': 'rejected',
+        'processed_at': datetime.utcnow().isoformat(),
+        'rejection_reason': reason
+    })
+    return True
+
+def notify_withdrawal_received(telegram_id: str, bits: int, usd: float, method: str, tx_id: str) -> None:
+    """Notifies user that withdrawal request was received."""
+    method_label = 'PayPal' if method == 'paypal' else 'P2P (Admin)'
+    msg = (
+        "💸 <b>Solicitud de Retiro Recibida</b>\n\n"
+        f"Tu solicitud de retiro está siendo procesada.\n\n"
+        f"🪙 Bits a retirar: <b>{int(bits):,}</b>\n"
+        f"💵 Equivalente: <b>${float(usd):.2f} USD</b>\n"
+        f"📤 Método: <b>{method_label}</b>\n"
+        f"🔖 ID: <code>{tx_id}</code>\n\n"
+        "Te notificaremos cuando sea procesado."
+    )
+    _send_tg(telegram_id, msg)
+
+def notify_withdrawal_approved(telegram_id: str, bits: int, usd: float, tx_id: str) -> None:
+    """Notifies user that withdrawal was approved and paid."""
+    msg = (
+        "✅ <b>Retiro Aprobado</b>\n\n"
+        f"Tu retiro ha sido procesado exitosamente.\n\n"
+        f"🪙 Bits retirados: <b>{int(bits):,}</b>\n"
+        f"💵 Importe pagado: <b>${float(usd):.2f} USD</b>\n"
+        f"🔖 ID: <code>{tx_id}</code>\n\n"
+        "¡Gracias por jugar en <b>Ghost Plague Casino</b>!"
+    )
+    _send_tg(telegram_id, msg)
+
+def notify_withdrawal_rejected(telegram_id: str, bits: int, tx_id: str, reason: str = '') -> None:
+    """Notifies user that withdrawal was rejected. Bits are NOT deducted."""
+    reason_line = f"\n📋 Motivo: {reason}" if reason else ""
+    msg = (
+        "❌ <b>Retiro Rechazado</b>\n\n"
+        f"Tu solicitud de retiro fue rechazada.{reason_line}\n\n"
+        f"🪙 Bits: <b>{int(bits):,}</b> (devueltos a tu cuenta)\n"
+        f"🔖 ID: <code>{tx_id}</code>\n\n"
+        "Contacta al soporte si tienes preguntas."
+    )
+    _send_tg(telegram_id, msg)

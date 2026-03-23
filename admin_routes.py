@@ -129,6 +129,17 @@ def api_dashboard():
     }
     return jsonify({'success': True, 'stats': res_stats})
 
+@admin_bp.route('/api/dashboard/reset', methods=['POST'])
+@role_required_api('superadmin')
+def api_dashboard_reset():
+    try:
+        database.delete_fb("user_stats")
+        database.delete_fb("transacciones")
+        database.delete_fb("juegos_historial")
+        return jsonify({'success': True, 'message': 'Métricas reiniciadas.'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @admin_bp.route('/api/players')
 @admin_required_api
 def api_players():
@@ -649,3 +660,13 @@ def api_support_chat_reply(chat_id):
 def api_support_chat_delete(chat_id):
     database.delete_fb(f"user_telegrams/{chat_id}")
     return jsonify({"success": True, "message": "Conversación eliminada"})
+
+# RETIROS - Admin Management
+@admin_bp.route('/api/withdrawals')
+@admin_required_api
+def api_list_withdrawals():
+    status_filter = request.args.get('status')
+    todos = database.obtener_todos_retiros()
+    if status_filter and status_filter != 'all':
+        todos = [r for r in todos if r.get('status') == status_filter]
+    return jsonify({'success': True, 'withdrawals': todos, 'total': len(todos)})

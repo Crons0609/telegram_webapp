@@ -41,6 +41,10 @@ app.register_blueprint(admin_bp)
 from sports_routes import sports_bp
 app.register_blueprint(sports_bp)
 
+# Registrar Sistema de Retiros
+from withdrawal_routes import withdrawal_bp
+app.register_blueprint(withdrawal_bp)
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
