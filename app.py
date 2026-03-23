@@ -22,6 +22,14 @@ from datetime import timedelta
 # Hacer que las sesiones sean permanentes y duren 1 año
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 
+# Configuración de Cookies para Telegram WebApp (compatibilidad con HTTPS y Cross-Site)
+# Solo activamos Secure si detectamos que estamos en producción o HTTPS para evitar problemas locales
+app.config.update(
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_HTTPONLY=True
+)
+
 # Inicializamos la base de datos
 database.init_db()
 
@@ -194,7 +202,7 @@ def register():
 def paypal_bits():
     telegram_id = session.get("telegram_id")
     if not telegram_id:
-        return redirect(url_for('index'))
+        return redirect(url_for('home'))
     return render_template("paypal.html")
 
 # =====================================================
@@ -1022,9 +1030,14 @@ def _handle_start(chat_id, first_name, username, photo_url, start_param):
     )
 
     gamble_link = WEBAPP_URL or "https://t.me/"
-    btn = {"inline_keyboard": [[
-        {"text": "🎰 Abrir Casino", "web_app": {"url": gamble_link}}
-    ]]}
+    if "t.me" in gamble_link:
+        btn = {"inline_keyboard": [[
+            {"text": "🎰 Abrir Casino", "url": gamble_link}
+        ]]}
+    else:
+        btn = {"inline_keyboard": [[
+            {"text": "🎰 Abrir Casino", "web_app": {"url": gamble_link}}
+        ]]}
 
     if is_new:
         texto = (

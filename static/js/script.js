@@ -316,7 +316,13 @@
     if (!action) return;
 
     switch (action) {
-      case "login":
+      case "paypal":
+        if (!window.Telegram?.WebApp?.initDataUnsafe?.user) {
+          alert("Por favor, abre el casino desde Telegram para poder comprar bits con PayPal.");
+          return;
+        }
+        window.location.href = '/paypal_bits';
+        break;
         const loginBotUsername = "Zona_Jackpot_777bot";
         const loginUrl = `https://t.me/${loginBotUsername}`;
         if (window.Telegram?.WebApp) {
@@ -327,6 +333,11 @@
         break;
 
       case "recargar":
+        // Check if we are in Telegram and have user data
+        if (!window.Telegram?.WebApp?.initDataUnsafe?.user) {
+          alert("Por favor, abre el casino desde Telegram para poder recargar bits.");
+          return;
+        }
         // Redirect to P2P Bits page where user selects the amount
         window.location.href = '/p2p_bits';
         break;

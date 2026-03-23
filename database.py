@@ -644,19 +644,30 @@ def save_user_telegram_msg(chat_id, first_name: str, username: str, text: str, s
     now = datetime.utcnow().isoformat()
 
     # Upsert conversation metadata
-    info = get_fb(f"user_telegrams/{chat_id_str}/info") or {}
+    info_path = f"user_telegrams/{chat_id_str}/info"
+    info = get_fb(info_path) or {}
     unread = int(info.get("unread", 0))
     if sender == "user":
         unread += 1
 
-    patch_fb(f"user_telegrams/{chat_id_str}/info", {
+    meta = {
         "chat_id": chat_id_str,
-        "first_name": first_name,
-        "username": username or "",
         "last_message": text[:80],
         "last_time": now,
         "unread": unread
-    })
+    }
+    
+    # Solo actualizamos el nombre si el mensaje viene del usuario
+    # para evitar que el nombre del admin sobrescriba el del usuario en la lista
+    if sender == "user":
+        meta["first_name"] = first_name
+        meta["username"] = username or ""
+    elif not info.get("first_name"):
+        # Si es el admin el que inicia o no hay nombre, intentamos poner algo
+        meta["first_name"] = info.get("first_name") or "Usuario"
+        meta["username"] = info.get("username") or ""
+
+    patch_fb(info_path, meta)
 
     # Push individual message
     post_fb(f"user_telegrams/{chat_id_str}/messages", {

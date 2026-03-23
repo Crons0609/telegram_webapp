@@ -1435,8 +1435,8 @@ async function updateSupportThread() {
             const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
             return `
             <div class="support-msg ${cls}">
-                <div>${m.text}</div>
-                <div style="font-size:0.7rem; opacity:0.6; text-align:right; margin-top:4px;">${time}</div>
+                <div class="msg-text">${(m.text || '').trim()}</div>
+                <div class="msg-time">${time}</div>
             </div>`;
         }).join('');
         
@@ -1516,6 +1516,51 @@ setInterval(() => {
         });
     }
 }, 15000);
+
+async function loadSupportChats() {
+    try {
+        const res = await fetch('/admin/api/support_chats');
+        const data = await res.json();
+        const listContainer = document.getElementById('supportChatsList');
+        if(!listContainer) return;
+
+        if(!data.success) {
+            listContainer.innerHTML = '<div style="color:red; padding:1rem; text-align:center;">Error cargando soporte</div>';
+            return;
+        }
+
+        if(data.chats.length === 0) {
+            listContainer.innerHTML = '<div style="padding:2rem; text-align:center; color:#64748b;">No hay mensajes.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = data.chats.map(chat => {
+            const isActive = chat.chat_id === activeSupportChatId;
+            const name = chat.username ? `@${chat.username}` : (chat.first_name || 'Usuario');
+            const unreadCount = parseInt(chat.unread) || 0;
+            const unreadBadge = unreadCount > 0 ? `<span style="background:var(--primary); color:black; font-weight:bold; border-radius:50%; padding:2px 8px; font-size:0.8rem;">${unreadCount}</span>` : '';
+            const dateStr = chat.last_time ? new Date(chat.last_time).toLocaleDateString() : '';
+
+            return `
+            <div style="padding:1rem; border-radius:8px; cursor:pointer; background:${isActive ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)'}; border:1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.05)'}; transition:all 0.2s;" onclick="openSupportChat('${chat.chat_id}', '${name}')">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <div style="font-weight:bold; color:${isActive ? 'var(--gold-1)' : '#fff'};"><i class="fas fa-user-circle"></i> ${name}</div>
+                    <div style="font-size:0.8rem; opacity:0.6;">${dateStr}</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:0.9rem; opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80%;">${chat.last_msg || '...'}</div>
+                    <div>${unreadBadge}</div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        console.error("Error loadSupportChats:", e);
+        const listContainer = document.getElementById('supportChatsList');
+        if(listContainer) {
+            listContainer.innerHTML = '<div style="color:red; padding:1rem; text-align:center;">Error de conexión.</div>';
+        }
+    }
+}
 
 // Load initially if support view
 document.addEventListener('DOMContentLoaded', () => {

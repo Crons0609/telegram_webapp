@@ -310,9 +310,11 @@
                     .support-item { padding:12px; border-radius:8px; cursor:pointer; border:1px solid transparent; transition:0.2s; position:relative; }
                     .support-item:hover { background:rgba(255,255,255,0.05); }
                     .support-item.active { background:rgba(99,102,241,0.1); border-color:var(--primary); }
-                    .support-msg { max-width:75%; padding:10px 14px; border-radius:12px; margin-bottom:4px; font-size:0.95rem; line-height:1.4; white-space:pre-wrap; }
-                    .support-msg.user { background:#334155; align-self:flex-start; border-bottom-left-radius:2px; color:#f8fafc; }
-                    .support-msg.admin { background:var(--primary); align-self:flex-end; border-bottom-right-radius:2px; color:white; }
+                    .support-msg { flex: 0 0 auto !important; height: auto !important; min-height: 0 !important; max-width: 80% !important; padding: 6px 10px !important; border-radius: 8px !important; margin: 0 0 8px 0 !important; font-size: 15px !important; line-height: 1.3 !important; white-space: pre-wrap !important; word-break: break-word !important; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.2) !important; display: flex; flex-direction: column; align-items: flex-end; }
+                    .support-msg .msg-text { align-self: flex-start; word-break: break-word; overflow-wrap: anywhere; width: 100%; margin-bottom: 2px; }
+                    .support-msg .msg-time { font-size: 11px !important; opacity: 0.65; white-space: nowrap; line-height: 1; }
+                    .support-msg.user { background: #2b5278 !important; align-self: flex-start !important; border-top-left-radius: 0 !important; color: #fff !important; }
+                    .support-msg.admin { background: #2b5278 !important; align-self: flex-end !important; border-top-right-radius: 0 !important; color: #fff !important; background: #005c4b !important; }
                     .support-unread { position:absolute; right:10px; top:12px; background:#ef4444; color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px; font-weight:bold; }
                     @media(max-width:900px){ #view-support > div { grid-template-columns: 1fr !important; height:auto; } #supportChatsList { max-height:250px; } }
                 </style>
