@@ -220,8 +220,8 @@ async function loadTransactions() {
                     <td>${typeFormat}</td>
                     <td>${tx.user_name || 'Desconocido'}</td>
                     <td style="font-family:monospace; color:#94a3b8;">${tx.telegram_id || '-'}</td>
-                    <td style="color:#f59e0b; font-weight:bold;">+${tx.bits.toLocaleString()}</td>
-                    <td>$${tx.usd.toFixed(2)}</td>
+                    <td style="color:#f59e0b; font-weight:bold;">+${(tx.bits || 0).toLocaleString()}</td>
+                    <td>$${(tx.usd || tx.usd_amount || 0).toFixed(2)}</td>
                 </tr>`;
             }).join('');
         } else {

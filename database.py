@@ -1,5 +1,7 @@
 import json
 import httpx
+import requests
+import config
 from contextlib import contextmanager
 from typing import Optional
 from datetime import datetime
@@ -275,31 +277,7 @@ def resetear_bits_demo(telegram_id: str) -> bool:
         print(f"Error reseteando bits clave: {e}")
         return False
 
-def recargar_bits(telegram_id: str, amount: int) -> bool:
-    """Asigna bits reales a un usuario (usado por recarga_admin o pagos)"""
-    try:
-        user = get_fb(f"usuarios/{telegram_id}")
-        if user:
-            current = int(user.get("bits", 0))
-            patch_fb(f"usuarios/{telegram_id}", {"bits": current + int(amount)})
-            return True
-        return False
-    except Exception as e:
-        print(f"Error recargando bits: {e}")
-        return False
 
-def registrar_transaccion(telegram_id: str, bits: int, usd: float, tipo: str) -> None:
-    """Registra una transacción en el historial global"""
-    import uuid
-    tx_id = str(uuid.uuid4())
-    tx = {
-        "telegram_id": telegram_id,
-        "bits": bits,
-        "usd": usd,
-        "tipo": tipo,
-        "fecha": datetime.utcnow().isoformat()
-    }
-    put_fb(f"transacciones/{tx_id}", tx)
 
 # ---------------------------------------------------------------------------
 # BOT INVITE / REFERRAL HELPERS
@@ -519,11 +497,33 @@ def actualizar_nombre_usuario(telegram_id: str, nuevo_nombre: str) -> bool:
 def incrementar_tiempo_jugado(telegram_id: str, minutos: int) -> bool:
     return incrementar_stat(telegram_id, 'tiempo_jugado', minutos)
 
-def registrar_transaccion(telegram_id: str, bits: int, usd_amount: float, tipo: str) -> bool:
-    post_fb("transacciones", {
-        "telegram_id": str(telegram_id), "bits": bits, "usd_amount": usd_amount, "tipo": tipo, "fecha": datetime.utcnow().isoformat()
-    })
+def registrar_transaccion(telegram_id: str, bits: int, usd: float, tipo: str) -> bool:
+    """Registra una transacción en el historial global usando push IDs de Firebase"""
+    tx = {
+        "telegram_id": str(telegram_id),
+        "bits": bits,
+        "usd": usd,
+        "usd_amount": usd,  # Legacy field
+        "tipo": tipo,
+        "fecha": datetime.utcnow().isoformat()
+    }
+    post_fb("transacciones", tx)
     return True
+
+def recargar_bits(telegram_id: str, amount: int) -> Optional[int]:
+    """Asigna bits reales a un usuario (usado por recarga_admin o pagos)"""
+    try:
+        telegram_id = str(telegram_id)
+        u = get_fb(f"usuarios/{telegram_id}")
+        if u:
+            current = int(u.get("bits", 0))
+            new_bits = current + int(amount)
+            patch_fb(f"usuarios/{telegram_id}", {"bits": new_bits})
+            return new_bits
+        return None
+    except Exception as e:
+        print(f"Error recargando bits para {telegram_id}: {e}")
+        return None
 
 def registrar_partida(telegram_id: str, juego: str, apuesta: int, ganancia: int, resultado: str) -> bool:
     post_fb("juegos_historial", {
@@ -664,3 +664,46 @@ def save_user_telegram_msg(chat_id, first_name: str, username: str, text: str, s
         "text": text,
         "timestamp": now
     })
+
+# =====================================================
+# TELEGRAM NOTIFICATIONS FOR PLAYERS
+# =====================================================
+
+def _send_tg(chat_id, text, parse_mode="HTML") -> None:
+    """Internal helper to send a message via Telegram Bot API."""
+    token = getattr(config, 'BOT_TOKEN', None)
+    if not token:
+        return
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": str(chat_id),
+        "text": text,
+        "parse_mode": parse_mode
+    }
+    try:
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        print(f"[TG Notification Error] {e}")
+
+def notify_bits_added_admin(telegram_id, amount_received, new_balance) -> None:
+    """Sends a notification to the player when an admin adds bits manually."""
+    msg = (
+        "🎁 <b>¡Has recibido bits!</b>\n\n"
+        "Un administrador ha agregado bits a tu cuenta.\n\n"
+        f"💰 Bits recibidos: <b>{int(amount_received):,}</b>\n"
+        f"💼 Balance actual: <b>{int(new_balance):,} Bits</b>\n\n"
+        "¡Disfruta jugando en <b>Ghost Plague Casino</b>!"
+    )
+    _send_tg(telegram_id, msg)
+
+def notify_bits_added_paypal(telegram_id, usd_paid, bits_received, new_balance) -> None:
+    """Sends a notification to the player when a PayPal purchase is confirmed."""
+    msg = (
+        "✅ <b>Recarga exitosa</b>\n\n"
+        "Tu compra de bits ha sido confirmada.\n\n"
+        f"💳 Pago realizado: <b>${float(usd_paid):.2f}</b>\n"
+        f"💰 Bits recibidos: <b>{int(bits_received):,}</b>\n"
+        f"💼 Balance actual: <b>{int(new_balance):,} Bits</b>\n\n"
+        "¡Gracias por apoyar <b>Ghost Plague Casino</b>!"
+    )
+    _send_tg(telegram_id, msg)

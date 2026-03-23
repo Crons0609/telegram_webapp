@@ -158,6 +158,8 @@ def api_player_action(player_id):
 
     if request.method == 'POST':
         data = request.json
+        old_bits = int(user.get('bits', 0))
+        
         # Only extract the fields we want to allow editing
         update_data = {}
         target_fields = ['username', 'nombre', 'bits', 'bits_demo', 'xp', 'nivel', 'Estado', 'marco_actual', 'avatar_frame', 'tema_actual']
@@ -173,6 +175,15 @@ def api_player_action(player_id):
         
         if update_data:
             database.patch_fb(f"usuarios/{tid}", update_data)
+            
+            # Check if bits changed to log transaction and notify
+            new_bits = update_data.get('bits')
+            if new_bits is not None and new_bits != old_bits:
+                diff = new_bits - old_bits
+                usd_equiv = abs(diff) / 1000.0
+                database.registrar_transaccion(tid, diff, usd_equiv, 'admin_edit')
+                if diff > 0:
+                    database.notify_bits_added_admin(tid, diff, new_bits)
             
         return jsonify({'success': True, 'message': 'Jugador actualizado'})
 
@@ -191,9 +202,12 @@ def api_player_add_bits():
         return jsonify({'success': False, 'message': 'Jugador no encontrado'})
         
     tid = str(user.get('telegram_id'))
-    database.recargar_bits(tid, amount)
+    new_balance = database.recargar_bits(tid, amount)
     usd_amount = amount / 1000.0
     database.registrar_transaccion(tid, amount, usd_amount, 'recarga_admin')
+    
+    if new_balance is not None:
+        database.notify_bits_added_admin(tid, amount, new_balance)
         
     return jsonify({'success': True, 'message': f'Se añadieron {amount} bits'})
 

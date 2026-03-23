@@ -251,13 +251,14 @@ def paypal_capture():
 
     try:
         # Añadir los bits al usuario
-        database.recargar_bits(telegram_id, bits_amount)
+        new_balance = database.recargar_bits(telegram_id, bits_amount)
         # Registrar la transacción
         database.registrar_transaccion(telegram_id, bits_amount, amount_usd, 'deposito')
         
-        # Obtener nuevo saldo para retornar
-        new_balance = database.obtener_bits(telegram_id)
-        return jsonify({"success": True, "new_bits": new_balance})
+        if new_balance is not None:
+            database.notify_bits_added_paypal(telegram_id, amount_usd, bits_amount, new_balance)
+            
+        return jsonify({"success": True, "new_bits": new_balance or 0})
     except Exception as e:
         print(f"Error procesando PayPal: {e}")
         return jsonify({"success": False, "message": "Error interno"}), 500
