@@ -5,6 +5,21 @@ from functools import wraps
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+# ────────────────────────────────────────────────────────────
+# ROLE HIERARCHY
+# superadmin > admin > recargador > espectador
+# ────────────────────────────────────────────────────────────
+ROLE_HIERARCHY = ['espectador', 'recargador', 'admin', 'superadmin']
+
+def _role_rank(role: str) -> int:
+    try:
+        return ROLE_HIERARCHY.index(role)
+    except ValueError:
+        return -1
+
+def _current_role() -> str:
+    return session.get('admin_role', 'espectador')
+
 def admin_required_api(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -12,6 +27,19 @@ def admin_required_api(f):
             return jsonify({'error': 'Unauthorized'}), 401
         return f(*args, **kwargs)
     return decorated_function
+
+def role_required_api(*allowed_roles):
+    """Restrict an API endpoint to admins whose role is in allowed_roles."""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            if 'admin_logged_in' not in session:
+                return jsonify({'error': 'Unauthorized'}), 401
+            if _current_role() not in allowed_roles:
+                return jsonify({'error': 'Forbidden', 'message': 'No tienes permisos para esta acción'}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
 
 def admin_required(f):
     @wraps(f)
@@ -40,6 +68,10 @@ def login():
         if admin_user and check_password_hash(admin_user.get('password_hash', ''), password):
             session['admin_logged_in'] = True
             session['admin_email'] = email
+            admin_nombre = admin_user.get('nombre') or admin_user.get('name') or admin_user.get('username') or email.split('@')[0].capitalize()
+            session['admin_name'] = admin_nombre
+            # Role: default to 'admin' for backward-compat with existing records
+            session['admin_role'] = admin_user.get('role', 'admin')
             return jsonify({'success': True, 'redirect': url_for('admin.index')})
         else:
             return jsonify({'success': False, 'message': 'Credenciales incorrectas'})
@@ -50,6 +82,8 @@ def login():
 def logout():
     session.pop('admin_logged_in', None)
     session.pop('admin_email', None)
+    session.pop('admin_name', None)
+    session.pop('admin_role', None)
     return redirect(url_for('admin.login'))
 
 @admin_bp.route('/')
@@ -124,17 +158,21 @@ def api_player_action(player_id):
 
     if request.method == 'POST':
         data = request.json
-        username = data.get('username')
-        bits = data.get('bits', 0)
-        xp = data.get('xp', 0)
-        nivel = data.get('nivel', 1)
+        # Only extract the fields we want to allow editing
+        update_data = {}
+        target_fields = ['username', 'nombre', 'bits', 'bits_demo', 'xp', 'nivel', 'Estado', 'marco_actual', 'avatar_frame', 'tema_actual']
+        for field in target_fields:
+            if field in data:
+                val = data.get(field)
+                if field in ['bits', 'bits_demo', 'xp', 'nivel']:
+                    try:
+                        val = int(val)
+                    except (ValueError, TypeError):
+                        val = 0
+                update_data[field] = val
         
-        database.patch_fb(f"usuarios/{tid}", {
-            "username": username,
-            "bits": int(bits),
-            "xp": int(xp),
-            "nivel": int(nivel)
-        })
+        if update_data:
+            database.patch_fb(f"usuarios/{tid}", update_data)
             
         return jsonify({'success': True, 'message': 'Jugador actualizado'})
 
@@ -159,8 +197,27 @@ def api_player_add_bits():
         
     return jsonify({'success': True, 'message': f'Se añadieron {amount} bits'})
 
-@admin_bp.route('/api/admins', methods=['GET', 'POST'])
+@admin_bp.route('/api/transactions', methods=['GET'])
 @admin_required_api
+def api_transactions():
+    txs = database.get_fb("transacciones") or {}
+    tx_list = []
+    # Merge basic user info if possible (optional, but JS can also handle it or we just show IDs)
+    users = database.get_fb("usuarios") or {}
+    
+    for k, v in txs.items():
+        v['id'] = k
+        tid = str(v.get('telegram_id', ''))
+        if tid in users:
+            v['user_name'] = users[tid].get('nombre', 'Desconocido')
+            v['username'] = users[tid].get('username', '')
+        tx_list.append(v)
+        
+    tx_list.sort(key=lambda x: x.get('fecha', ''), reverse=True)
+    return jsonify({'success': True, 'transactions': tx_list})
+
+@admin_bp.route('/api/admins', methods=['GET', 'POST'])
+@role_required_api('superadmin')
 def api_admins():
     admins = database.get_fb("Administradores") or {}
     
@@ -169,7 +226,9 @@ def api_admins():
         for k, a in admins.items():
             admin_list.append({
                 "id": k, 
-                "email": a.get('Email') or a.get('email'), 
+                "nombre": a.get('nombre') or a.get('name'),
+                "email": a.get('Email') or a.get('email'),
+                "role": a.get('role', 'admin'),
                 "created_at": a.get('created_at')
             })
         return jsonify({'success': True, 'admins': admin_list})
@@ -177,28 +236,34 @@ def api_admins():
     if request.method == 'POST':
         from werkzeug.security import generate_password_hash
         data = request.json
+        nombre = (data.get('nombre') or '').strip()
         email = (data.get('email') or '').strip()
         password = data.get('password', '')
+        role = data.get('role', 'admin')
+        if role not in ROLE_HIERARCHY:
+            role = 'admin'
 
         if not email or len(password) < 6:
             return jsonify({'success': False, 'message': 'Datos inválidos'})
+        if not nombre:
+            return jsonify({'success': False, 'message': 'El nombre es requerido'})
 
         for k, a in admins.items():
             if a.get('Email') == email or a.get('email') == email:
                 return jsonify({'success': False, 'message': 'Ese correo electrónico ya existe'})
                 
         from datetime import datetime
-        # As per the requirements from the user {"rules": {"Administradores": {".indexOn": ["Email"]}}}
-        # We save "Email" capitalized if requested, but "email" is also safe. I'll save "Email" since their rule explicitly shows "Email".
         database.post_fb("Administradores", {
+            "nombre": nombre,
             "Email": email,
+            "role": role,
             "password_hash": generate_password_hash(password),
             "created_at": datetime.utcnow().isoformat()
         })
-        return jsonify({'success': True, 'message': f'Admin "{email}" creado correctamente'})
+        return jsonify({'success': True, 'message': f'Admin "{nombre}" creado correctamente'})
 
 @admin_bp.route('/api/admins/<admin_id>', methods=['DELETE'])
-@admin_required_api
+@role_required_api('superadmin')
 def api_admin_delete(admin_id):
     current = session.get('admin_email')
     admins = database.get_fb("Administradores") or {}
@@ -213,6 +278,19 @@ def api_admin_delete(admin_id):
         
     database.delete_fb(f"Administradores/{admin_id}")
     return jsonify({'success': True})
+
+@admin_bp.route('/api/admins/<admin_id>/role', methods=['PATCH'])
+@role_required_api('superadmin')
+def api_admin_change_role(admin_id):
+    data = request.get_json()
+    new_role = data.get('role', 'admin')
+    if new_role not in ROLE_HIERARCHY:
+        return jsonify({'success': False, 'message': 'Rol inválido'}), 400
+    admins = database.get_fb("Administradores") or {}
+    if admin_id not in admins:
+        return jsonify({'success': False, 'message': 'Admin no encontrado'}), 404
+    database.patch_fb(f"Administradores/{admin_id}", {"role": new_role})
+    return jsonify({'success': True, 'message': f'Rol actualizado a {new_role}'})
 
 @admin_bp.route('/api/missions')
 @admin_required_api
@@ -304,6 +382,106 @@ def api_notifications_read():
     database.marcar_notificaciones_leidas()
     return jsonify({'success': True})
 
+# ─── MENSAJES ADMIN → JUGADORES ─────────────────────────────────────────────
+
+@admin_bp.route('/api/messages', methods=['GET'])
+@admin_required_api
+def api_messages_list():
+    """Return the last 100 admin-sent messages."""
+    msgs = database.get_fb("admin_messages") or {}
+    result = []
+    for k, m in msgs.items():
+        result.append({**m, 'id': k})
+    result.sort(key=lambda x: x.get('sent_at', ''), reverse=True)
+    return jsonify({'success': True, 'messages': result[:100]})
+
+@admin_bp.route('/api/messages/clear', methods=['DELETE'])
+@role_required_api('superadmin', 'admin')
+def api_messages_clear():
+    """Clears the admin_messages history."""
+    database.delete_fb("admin_messages")
+    return jsonify({'success': True, 'message': 'Historial de mensajes limpiado correctamente'})
+
+@admin_bp.route('/api/messages/send', methods=['POST'])
+@role_required_api('superadmin', 'admin')
+def api_messages_send():
+    """
+    Send a message to one player (recipient=uid) or all (recipient='all').
+    Stored in Firebase:
+      - admin_messages/{auto_id} : metadata + preview (for admin history)
+      - mensajes/{uid}/{auto_id}  : actual notification (for each player)
+    """
+    data = request.get_json()
+    recipient = (data.get('recipient') or 'all').strip()
+    msg_type  = data.get('type', 'info')
+    title     = (data.get('title') or '').strip()
+    body      = (data.get('body') or '').strip()
+    sender    = session.get('admin_name', 'Admin')
+
+    if not title or not body:
+        return jsonify({'success': False, 'message': 'Título y mensaje son requeridos'}), 400
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+
+    payload = {
+        'type':      msg_type,
+        'title':     title,
+        'body':      body,
+        'sent_at':   now,
+        'sender':    sender,
+        'recipient': recipient,
+        'read':      False
+    }
+
+    # Store in admin history
+    database.post_fb("admin_messages", payload)
+
+    try:
+        import config
+        bot_token = getattr(config, 'BOT_TOKEN', None)
+    except ImportError:
+        bot_token = None
+
+    import httpx
+
+    def send_telegram_msg(tid, msg_title, msg_body, m_type):
+        if not bot_token: return
+        icons = {'promo': '🎁', 'alerta': '⚠️', 'update': '🔄', 'vip': '⭐', 'info': 'ℹ️'}
+        icon = icons.get(m_type, 'ℹ️')
+        text = f"{icon} *{msg_title}*\n\n{msg_body}"
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        try:
+            # Send message asynchronously to avoid blocking if many users
+            import threading
+            def _send():
+                try:
+                    httpx.post(url, json={"chat_id": tid, "text": text, "parse_mode": "Markdown"}, timeout=5.0)
+                except:
+                    pass
+            threading.Thread(target=_send).start()
+        except:
+            pass
+
+    # Deliver to players
+    players = database.get_fb("usuarios") or {}
+    sent_count = 0
+    for uid, p in players.items():
+        if recipient == 'all' or uid == recipient:
+            database.post_fb(f"mensajes/{uid}", {
+                'type':    msg_type,
+                'title':   title,
+                'body':    body,
+                'sent_at': now,
+                'sender':  sender,
+                'read':    False
+            })
+            send_telegram_msg(uid, title, body, msg_type)
+            sent_count += 1
+
+    label = "todos los jugadores" if recipient == 'all' else f"1 jugador"
+    return jsonify({'success': True, 'message': f'Mensaje enviado a {label} ({sent_count} destinatarios)'})
+
 # ─── TEMAS GLOBALES ─────────────────────────────────────────────────────────
 
 @admin_bp.route('/api/themes', methods=['GET'])
@@ -313,14 +491,14 @@ def api_themes_list():
     return jsonify({'success': True, 'themes': themes})
 
 @admin_bp.route('/api/themes/<theme_slug>/activate', methods=['POST'])
-@admin_required_api
+@role_required_api('superadmin')
 def api_theme_activate(theme_slug):
     database.activate_theme(str(theme_slug))
     active = database.get_active_theme()
     return jsonify({'success': True, 'active_theme': active})
 
 @admin_bp.route('/api/themes', methods=['POST'])
-@admin_required_api
+@role_required_api('superadmin')
 def api_theme_create():
     data = request.get_json()
     required = ['name', 'slug', 'primary_color', 'secondary_color', 'bg_color']
@@ -343,7 +521,7 @@ def api_theme_create():
     return jsonify({'success': True, 'id': new_id}), 201
 
 @admin_bp.route('/api/themes/<theme_slug>', methods=['PUT'])
-@admin_required_api
+@role_required_api('superadmin')
 def api_theme_update(theme_slug):
     data = request.get_json()
     database.update_theme(str(theme_slug), data)
@@ -356,7 +534,7 @@ def api_schedules_list():
     return jsonify({'success': True, 'schedules': schedules})
 
 @admin_bp.route('/api/themes/schedules', methods=['POST'])
-@admin_required_api
+@role_required_api('superadmin')
 def api_schedule_create():
     data = request.get_json()
     required = ['theme_id', 'event_name', 'start_date', 'end_date']
@@ -372,7 +550,88 @@ def api_schedule_create():
     return jsonify({'success': True, 'id': new_id}), 201
 
 @admin_bp.route('/api/themes/schedules/<int:schedule_id>', methods=['DELETE'])
-@admin_required_api
+@role_required_api('superadmin')
 def api_schedule_delete(schedule_id):
     database.delete_schedule(schedule_id)
     return jsonify({'success': True})
+
+# ─── SUPPORT CHATS (TELEGRAM 2-WAY) ─────────────────────────────────────────
+
+@admin_bp.route('/api/support_chats', methods=['GET'])
+@admin_required_api
+def api_support_chats():
+    chats = database.get_fb("user_telegrams") or {}
+    results = []
+    for chat_id, data in chats.items():
+        info = data.get("info", {}) if isinstance(data, dict) else {}
+        info["chat_id"] = chat_id
+        results.append(info)
+    # Sort by last_time descending
+    results.sort(key=lambda x: x.get("last_time", ""), reverse=True)
+    return jsonify({"success": True, "chats": results})
+
+@admin_bp.route('/api/support_chats/<chat_id>', methods=['GET'])
+@admin_required_api
+def api_support_chat_history(chat_id):
+    chat_data = database.get_fb(f"user_telegrams/{chat_id}")
+    if not chat_data or not isinstance(chat_data, dict):
+        return jsonify({"success": False, "message": "Chat not found"}), 404
+        
+    # Mark as read
+    info = chat_data.get("info", {})
+    if isinstance(info, dict) and int(info.get("unread", 0)) > 0:
+        database.patch_fb(f"user_telegrams/{chat_id}/info", {"unread": 0})
+        info["unread"] = 0
+        
+    msgs_raw = chat_data.get("messages", {})
+    messages = []
+    if isinstance(msgs_raw, dict):
+        for msg_id, msg in msgs_raw.items():
+            if isinstance(msg, dict):
+                msg["id"] = msg_id
+                messages.append(msg)
+    
+    # Sort chronologically
+    messages.sort(key=lambda x: x.get("timestamp", ""))
+    return jsonify({"success": True, "messages": messages, "info": info})
+
+@admin_bp.route('/api/support_chats/<chat_id>/reply', methods=['POST'])
+@role_required_api('superadmin', 'admin')
+def api_support_chat_reply(chat_id):
+    data = request.json or {}
+    text = data.get("text", "").strip()
+    if not text:
+        return jsonify({"success": False, "message": "El mensaje no puede estar vacío"}), 400
+        
+    # Guardar en BD localmente
+    admin_name = session.get('admin_name', 'Admin')
+    database.save_user_telegram_msg(chat_id, admin_name, "", text, sender="admin")
+    
+    # Enviar a Telegram
+    try:
+        import config
+        bot_token = getattr(config, 'BOT_TOKEN', None)
+    except Exception:
+        bot_token = None
+        
+    if bot_token:
+        import requests
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        try:
+            import threading
+            def _send():
+                try:
+                    requests.post(url, json={"chat_id": chat_id, "text": f"👨‍💻 *Soporte ({admin_name}):*\n{text}", "parse_mode": "Markdown"}, timeout=5)
+                except Exception as e:
+                    print("Error enviando Telegram reply", e)
+            threading.Thread(target=_send).start()
+        except Exception: 
+            pass
+        
+    return jsonify({"success": True})
+
+@admin_bp.route('/api/support_chats/<chat_id>', methods=['DELETE'])
+@role_required_api('superadmin', 'admin')
+def api_support_chat_delete(chat_id):
+    database.delete_fb(f"user_telegrams/{chat_id}")
+    return jsonify({"success": True, "message": "Conversación eliminada"})

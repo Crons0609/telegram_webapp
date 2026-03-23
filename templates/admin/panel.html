@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v=3.1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
 </head>
 <body>
 
@@ -64,32 +65,48 @@
         </div>
 
         <div class="sidebar-user">
-            <div class="avatar">{{ session.get('admin_email', 'A')[0] | upper }}</div>
+            <div class="avatar">{{ session.get('admin_name', session.get('admin_email', 'A'))[0] | upper }}</div>
             <div class="user-info">
-                <span class="name">{{ session.get('admin_email', 'Admin') }}</span>
+                <span class="name">{{ session.get('admin_name', session.get('admin_email', 'Admin')) }}</span>
                 <span class="role">Executive Admin</span>
             </div>
         </div>
 
-        <nav class="sidebar-nav">
+        <div class="sidebar-nav">
             <div class="nav-group-title">Overview</div>
             <a href="#" class="nav-item active" data-view="dashboard">
                 <i class="fas fa-chart-line"></i> <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-view="mensajes">
+                <i class="fas fa-paper-plane"></i> <span>Mensajes</span>
+                <span id="msgBadge" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:0.65rem; padding:1px 5px; margin-left:auto; font-weight:700;"></span>
+            </a>
+            <a href="#" class="nav-item" data-view="support">
+                <i class="fas fa-headset"></i> <span>Soporte (Telegram)</span>
+                <span id="supportBadge" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:0.65rem; padding:1px 5px; margin-left:auto; font-weight:700;"></span>
             </a>
 
             <div class="nav-group-title">Gestión</div>
             <a href="#" class="nav-item" data-view="players">
                 <i class="fas fa-users"></i> <span>Players</span>
             </a>
+            <a href="#" class="nav-item" data-view="transactions">
+                <i class="fas fa-exchange-alt"></i> <span>Transacciones</span>
+            </a>
+            {% if session.get('admin_role', 'admin') not in ['recargador', 'espectador'] %}
             <a href="#" class="nav-item" data-view="missions">
                 <i class="fas fa-bullseye"></i> <span>Missions</span>
             </a>
+            {% endif %}
 
+            {% if session.get('admin_role', 'admin') not in ['recargador', 'espectador'] %}
             <div class="nav-group-title">Reportes</div>
             <a href="#" class="nav-item" data-view="history">
                 <i class="fas fa-history"></i> <span>Historial</span>
             </a>
+            {% endif %}
 
+            {% if session.get('admin_role', 'admin') == 'superadmin' %}
             <div class="nav-group-title">Sistema</div>
             <a href="#" class="nav-item" data-view="admins">
                 <i class="fas fa-user-shield"></i> <span>Admins</span>
@@ -97,6 +114,7 @@
             <a href="#" class="nav-item" data-view="temas">
                 <i class="fas fa-palette"></i> <span>Temas Globales</span>
             </a>
+            {% endif %}
 
             <a href="/admin/logout" class="nav-item logout">
                 <i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
@@ -171,6 +189,135 @@
                 </div>
             </section>
 
+            <!-- ── VIEW: MENSAJES ── -->
+            <section id="view-mensajes" class="view-section">
+                <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:1.5rem; align-items:start;">
+
+                    <!-- Compose Panel -->
+                    <div class="content-card" style="position:sticky; top:1rem;">
+                        <div class="card-header">
+                            <h2><i class="fas fa-paper-plane" style="color:#6366f1;"></i> Nuevo Mensaje</h2>
+                        </div>
+                        <div class="modal-body" style="padding:1.5rem;">
+                            <div class="form-group">
+                                <label>Destinatario</label>
+                                <select id="msg_recipient" class="form-control" onchange="onMsgRecipientChange()">
+                                    <option value="all">📢 Todos los jugadores (Broadcast)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Mensaje</label>
+                                <select id="msg_type" class="form-control">
+                                    <option value="info">ℹ️ Información general</option>
+                                    <option value="promo">🎁 Promoción / Oferta</option>
+                                    <option value="update">🔄 Actualización / Nuevo juego</option>
+                                    <option value="alerta">⚠️ Alerta importante</option>
+                                    <option value="vip">⭐ Mensaje VIP</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Título</label>
+                                <input type="text" id="msg_title" class="form-control" placeholder="Ej: ¡Nuevo juego disponible!" maxlength="80" oninput="updateMsgPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Mensaje</label>
+                                <textarea id="msg_body" class="form-control" rows="5" placeholder="Escribe tu mensaje aquí..." maxlength="500" oninput="updateMsgPreview()" style="resize:vertical; font-family:inherit;"></textarea>
+                                <small style="color:#64748b; float:right;" id="msg_char_count">0 / 500</small>
+                            </div>
+
+                            <!-- Live preview -->
+                            <div id="msgPreview" style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:12px; padding:1rem; margin-bottom:1rem; display:none;">
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                                    <span id="msgPreviewIcon" style="font-size:1.2rem;">ℹ️</span>
+                                    <strong id="msgPreviewTitle" style="color:#e2e8f0; font-size:0.95rem;"></strong>
+                                </div>
+                                <p id="msgPreviewBody" style="color:#94a3b8; font-size:0.85rem; margin:0; white-space:pre-wrap;"></p>
+                            </div>
+
+                            <button onclick="sendAdminMessage()" class="btn-primary" id="sendMsgBtn" style="width:100%; background:linear-gradient(135deg,#6366f1,#4f46e5);">
+                                <i class="fas fa-paper-plane"></i> Enviar Mensaje
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- History Panel -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <div class="flex-header">
+                                <h2><i class="fas fa-inbox" style="color:#f59e0b;"></i> Mensajes Enviados</h2>
+                                <div>
+                                    <button class="btn-secondary" onclick="loadMessages()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
+                                    <button class="btn-secondary" onclick="clearMessagesHistory()" title="Limpiar todo el historial" style="color:#ef4444; border-color:#ef4444;"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="msgHistoryList" style="padding:1rem; display:flex; flex-direction:column; gap:0.75rem; max-height:600px; overflow-y:auto;">
+                            <div style="text-align:center; color:#475569; padding:2rem;">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p style="margin-top:1rem;">Cargando mensajes...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Responsive: stack on mobile -->
+                <style>
+                    @media(max-width:900px){
+                        #view-mensajes > div { grid-template-columns: 1fr !important; }
+                    }
+                </style>
+            </section>
+
+            <!-- ── VIEW: SUPPORT (TELEGRAM 2-WAY) ── -->
+            <section id="view-support" class="view-section">
+                <div style="display:grid; grid-template-columns:300px 1fr; gap:1.5rem; align-items:start; height:75vh;">
+                    
+                    <!-- Chat List -->
+                    <div class="content-card" style="height:100%; display:flex; flex-direction:column;">
+                        <div class="card-header" style="position:sticky; top:0; z-index:10;">
+                            <div class="flex-header">
+                                <h2><i class="fas fa-comments" style="color:#10b981;"></i> Chats</h2>
+                                <button class="btn-secondary" onclick="loadSupportChats()" title="Actualizar"><i class="fas fa-sync-alt"></i></button>
+                            </div>
+                        </div>
+                        <div id="supportChatsList" style="flex:1; overflow-y:auto; padding:0.5rem; display:flex; flex-direction:column; gap:0.5rem;">
+                            <div style="text-align:center; padding:2rem; color:#64748b;">Cargando...</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Thread -->
+                    <div class="content-card" style="height:100%; display:flex; flex-direction:column;" id="supportThreadContainer">
+                        <div class="card-header" style="border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; padding:15px 20px;">
+                            <div>
+                                <h2 id="supportActiveTitle" style="margin:0; font-size:1.1rem;"><i class="fas fa-headset"></i> Selecciona un chat</h2>
+                                <small id="supportActiveId" style="color:#64748b; font-family:monospace;"></small>
+                            </div>
+                            <button id="supportBtnClear" class="btn-secondary" style="display:none; color:#ef4444; border-color:#ef4444;" title="Eliminar conversación completa" onclick="clearActiveSupportChat()"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div id="supportThreadMsgs" style="flex:1; padding:1.5rem; overflow-y:auto; display:flex; flex-direction:column; gap:1rem; background:var(--bg-card); scroll-behavior:smooth;">
+                            <div style="text-align:center; color:#64748b; margin-top:3rem;">Selecciona una conversación a la izquierda.</div>
+                        </div>
+                        <div style="border-top:1px solid var(--border); padding:1rem; display:flex; align-items:center; gap:0.75rem; background:rgba(0,0,0,0.1);">
+                            <input type="text" id="supportReplyText" class="form-control" placeholder="Escribe tu respuesta aquí..." disabled style="flex:1; min-width:0; padding:12px 18px; border-radius:24px; border:1px solid rgba(255,255,255,0.1);" onkeypress="if(event.key==='Enter') sendSupportReply()">
+                            <button id="supportReplyBtn" class="btn-primary" disabled onclick="sendSupportReply()" style="width:46px; height:46px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="fas fa-paper-plane" style="margin-left:-2px;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+                <style>
+                    .support-item { padding:12px; border-radius:8px; cursor:pointer; border:1px solid transparent; transition:0.2s; position:relative; }
+                    .support-item:hover { background:rgba(255,255,255,0.05); }
+                    .support-item.active { background:rgba(99,102,241,0.1); border-color:var(--primary); }
+                    .support-msg { max-width:75%; padding:10px 14px; border-radius:12px; margin-bottom:4px; font-size:0.95rem; line-height:1.4; white-space:pre-wrap; }
+                    .support-msg.user { background:#334155; align-self:flex-start; border-bottom-left-radius:2px; color:#f8fafc; }
+                    .support-msg.admin { background:var(--primary); align-self:flex-end; border-bottom-right-radius:2px; color:white; }
+                    .support-unread { position:absolute; right:10px; top:12px; background:#ef4444; color:white; font-size:0.7rem; padding:2px 6px; border-radius:10px; font-weight:bold; }
+                    @media(max-width:900px){ #view-support > div { grid-template-columns: 1fr !important; height:auto; } #supportChatsList { max-height:250px; } }
+                </style>
+            </section>
+
             <!-- ── VIEW: PLAYERS ── -->
             <section id="view-players" class="view-section">
                 <div class="content-card">
@@ -197,6 +344,33 @@
                                     <th>Bits</th>
                                     <th>Partidas</th>
                                     <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── VIEW: TRANSACTIONS ── -->
+            <section id="view-transactions" class="view-section">
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="flex-header">
+                            <h2><i class="fas fa-exchange-alt"></i> Historial de Transacciones</h2>
+                            <button class="btn-secondary" onclick="loadTransactions()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table" id="transactionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Jugador (ID)</th>
+                                    <th>Telegram ID</th>
+                                    <th>Bits</th>
+                                    <th>USD</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -263,9 +437,10 @@
                         <table class="data-table" id="adminsTable">
                             <thead>
                                 <tr>
-                                    <th>Administrador ID</th>
-                                    <th>Usuario</th>
-                                    <th>Fecha de Creación</th>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Rol</th>
+                                    <th>Fecha</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -308,35 +483,76 @@
 
 <!-- Edit Player -->
 <div class="modal-overlay" id="editPlayerModal">
-    <div class="modal-container">
+    <div class="modal-container" style="max-width: 550px;">
         <div class="modal-header">
-            <h3>Editar Jugador</h3>
-            <button class="close-modal"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-user-edit"></i> Editar Jugador</h3>
+            <button type="button" class="close-modal"><i class="fas fa-times"></i></button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding-right: 1rem;">
             <form id="editPlayerForm">
                 <input type="hidden" id="edit_player_id">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="edit_username" class="form-control">
-                </div>
+                
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Bits</label>
+                        <label>Nombre</label>
+                        <input type="text" id="edit_nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Username (Telegram)</label>
+                        <input type="text" id="edit_username" class="form-control" placeholder="sin @">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bits (Saldo)</label>
                         <input type="number" id="edit_bits" class="form-control" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Nivel</label>
-                        <input type="number" id="edit_nivel" class="form-control" min="1">
+                        <label>Bits (Demo)</label>
+                        <input type="number" id="edit_bits_demo" class="form-control" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Estado de la cuenta</label>
+                        <select id="edit_estado" class="form-control">
+                            <option value="activo">Activo</option>
+                            <option value="banned">Baneado / Inactivo</option>
+                        </select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>XP</label>
-                    <input type="number" id="edit_xp" class="form-control" min="0">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nivel General</label>
+                        <input type="number" id="edit_nivel" class="form-control" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>XP Total Registrada</label>
+                        <input type="number" id="edit_xp" class="form-control" min="0">
+                    </div>
                 </div>
-                <div class="modal-actions">
+
+                <div class="form-row">
+                    <div class="form-group" style="flex:1;">
+                        <label>Tema Visual</label>
+                        <input type="text" id="edit_tema_actual" class="form-control" placeholder="Ej: default">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Marco de Perfil</label>
+                        <input type="text" id="edit_marco_actual" class="form-control" placeholder="Ej: none">
+                    </div>
+                    <div class="form-group">
+                        <label>Avatar Ring</label>
+                        <input type="text" id="edit_avatar_frame" class="form-control" placeholder="Ej: none">
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 1.5rem;">
                     <button type="button" class="btn-secondary close-modal-btn">Cancelar</button>
-                    <button type="submit" class="btn-primary" id="savePlayerBtn">Guardar</button>
+                    <button type="submit" class="btn-primary" id="savePlayerBtn"><i class="fas fa-save"></i> Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -412,8 +628,21 @@
         <div class="modal-body">
             <form id="addAdminForm">
                 <div class="form-group">
+                    <label>Nombre (Nombre que aparece en el panel)</label>
+                    <input type="text" id="new_admin_nombre" class="form-control" placeholder="Ej: Carlos Mendoza" autocomplete="off" required>
+                </div>
+                <div class="form-group">
                     <label>Correo Electrónico</label>
                     <input type="email" id="new_admin_email" class="form-control" placeholder="Ej: admin@dominio.com" autocomplete="off" required>
+                </div>
+                <div class="form-group">
+                    <label>Rol / Jerarquía</label>
+                    <select id="new_admin_role" class="form-control">
+                        <option value="superadmin">⭐ SuperAdmin — Acceso total</option>
+                        <option value="admin" selected>🛡️ Admin — Sin acceso a Admins/Temas</option>
+                        <option value="recargador">💰 Recargador — Solo Players y Dashboard</option>
+                        <option value="espectador">👁️ Espectador — Solo lectura</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Contraseña</label>
@@ -447,86 +676,102 @@
 </div>
 
 
-<!-- Modal: Theme Builder -->
+<!-- Modal: Theme Builder (Optimized for PC) -->
 <div class="modal-overlay" id="themeBuilderModal">
-    <div class="modal-container" style="max-width:480px;">
-        <div class="modal-header">
-            <h3><i class="fas fa-paint-brush" style="color:#a855f7;"></i> Nuevo Tema</h3>
-            <button class="close-modal-btn" style="background:transparent;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
+    <div class="modal-container modal-lg">
+        <div class="modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.5rem;"><i class="fas fa-paint-brush" style="color:#a855f7;"></i> Creador de Temas Globales</h3>
+            <button type="button" class="close-modal-btn" style="background:transparent;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form id="themeBuilderForm">
-            <div class="form-group">
-                <label>Nombre del Tema</label>
-                <input type="text" id="tb_name" class="form-control" placeholder="Ej: Navidad 2025" required>
-            </div>
-            <div class="form-group">
-                <label>Slug (identificador único)</label>
-                <input type="text" id="tb_slug" class="form-control" placeholder="ej: navidad_2025" required pattern="[a-z0-9_]+">
-            </div>
-            <div class="form-group">
-                <label>Descripción</label>
-                <input type="text" id="tb_description" class="form-control" placeholder="Descripción breve (opcional)">
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                <div class="form-group">
-                    <label>Color Principal</label>
-                    <div style="display:flex;gap:0.5rem;align-items:center;">
-                        <input type="color" id="tb_primary" value="#c9a227" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
-                        <input type="text" id="tb_primary_hex" class="form-control" value="#c9a227" maxlength="7" style="flex:1;">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Color Secundario</label>
-                    <div style="display:flex;gap:0.5rem;align-items:center;">
-                        <input type="color" id="tb_secondary" value="#f0cc55" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
-                        <input type="text" id="tb_secondary_hex" class="form-control" value="#f0cc55" maxlength="7" style="flex:1;">
-                    </div>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Color de Fondo</label>
-                <div style="display:flex;gap:0.5rem;align-items:center;">
-                    <input type="color" id="tb_bg" value="#0a0a0f" style="width:40px;height:36px;border:none;background:none;cursor:pointer;">
-                    <input type="text" id="tb_bg_hex" class="form-control" value="#0a0a0f" maxlength="7" style="flex:1;">
-                </div>
-            </div>
-            <!-- Opciones Avanzadas -->
-            <div style="margin-top:1rem; border-top:1px solid #333; padding-top:1rem;">
-                <h4 style="margin-bottom:0.5rem; color:#a855f7;"><i class="fas fa-magic"></i> Opciones Avanzadas</h4>
-                
-                <div class="form-group">
-                    <label>URL de Imagen de Fondo</label>
-                    <input type="text" id="tb_bg_image" class="form-control" placeholder="Ej: https://.../fondo.jpg">
-                </div>
-                <div class="form-group">
-                    <label>Fondo Superpuesto (Overlay) <span style="font-size:0.7rem; color:var(--text-muted);">(Opaca la imagen)</span></label>
-                    <input type="text" id="tb_bg_overlay" class="form-control" placeholder="Ej: rgba(10, 10, 15, 0.85)">
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="theme-builder-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Columna Izquierda: Información Básica y Colores -->
+                <div>
+                    <h4 style="margin-bottom:1rem; color:var(--text-main); font-weight:600;"><i class="fas fa-info-circle"></i> Información Básica</h4>
                     <div class="form-group">
-                        <label>Tipografía (font-family)</label>
-                        <input type="text" id="tb_font_family" class="form-control" placeholder="Ej: 'Cinzel', serif">
+                        <label>Nombre del Tema</label>
+                        <input type="text" id="tb_name" class="form-control" placeholder="Ej: Especial de Verano" required>
                     </div>
-                    <div class="form-group">
-                        <label>Animaciones</label>
-                        <div style="display:flex; gap:1rem; margin-top:0.5rem;">
-                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.3rem;">
-                                <input type="checkbox" id="tb_anim_hearts"> Corazones
-                            </label>
-                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.3rem;">
-                                <input type="checkbox" id="tb_anim_snow"> Nieve
-                            </label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Slug (Identificador)</label>
+                            <input type="text" id="tb_slug" class="form-control" placeholder="ej: summer_25" required pattern="[a-z0-9_]+">
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <input type="text" id="tb_description" class="form-control" placeholder="Breve detalle (opcional)">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top:2rem; margin-bottom:1rem; color:var(--text-main); font-weight:600;"><i class="fas fa-palette"></i> Paleta de Colores</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Color Principal (Acento)</label>
+                            <div style="display:flex;gap:0.5rem;align-items:center; background:rgba(0,0,0,0.15); border:1px solid var(--border); padding:0.5rem; border-radius:8px;">
+                                <input type="color" id="tb_primary" value="#c9a227" style="width:36px;height:36px;border:none;background:none;cursor:pointer;">
+                                <input type="text" id="tb_primary_hex" class="form-control" value="#c9a227" maxlength="7" style="flex:1; border:none; background:transparent;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Color Secundario (Botones)</label>
+                            <div style="display:flex;gap:0.5rem;align-items:center; background:rgba(0,0,0,0.15); border:1px solid var(--border); padding:0.5rem; border-radius:8px;">
+                                <input type="color" id="tb_secondary" value="#f0cc55" style="width:36px;height:36px;border:none;background:none;cursor:pointer;">
+                                <input type="text" id="tb_secondary_hex" class="form-control" value="#f0cc55" maxlength="7" style="flex:1; border:none; background:transparent;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 0.5rem;">
+                        <label>Color de Fondo General</label>
+                        <div style="display:flex;gap:0.5rem;align-items:center; background:rgba(0,0,0,0.15); border:1px solid var(--border); padding:0.5rem; border-radius:8px;">
+                            <input type="color" id="tb_bg" value="#0a0a0f" style="width:36px;height:36px;border:none;background:none;cursor:pointer;">
+                            <input type="text" id="tb_bg_hex" class="form-control" value="#0a0a0f" maxlength="7" style="flex:1; border:none; background:transparent;">
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Live Preview -->
-            <div id="themePreviewBar" style="height:10px; border-radius:6px; background:linear-gradient(90deg,#c9a227,#f0cc55); margin:0.75rem 0; transition:background 0.3s;"></div>
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary close-modal-btn">Cancelar</button>
-                <button type="submit" class="btn-primary" style="background:linear-gradient(135deg,#a855f7,#6d28d9);"><i class="fas fa-save"></i> Crear Tema</button>
+                <!-- Columna Derecha: Opciones Avanzadas -->
+                <div>
+                    <h4 style="margin-bottom:1rem; color:#a855f7; font-weight:600;"><i class="fas fa-magic"></i> Personalización Visual</h4>
+                    <div class="form-group">
+                        <label>URL de Imagen de Fondo <span style="font-size:0.75rem; color:var(--text-muted);">(Opaca al color bg)</span></label>
+                        <input type="url" id="tb_bg_image" class="form-control" placeholder="Ej: https://tudominio.com/fondo.jpg">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Filtro Superpuesto (Overlay) <span style="font-size:0.75rem; color:var(--text-muted);">(Opacidad sombre imagen)</span></label>
+                        <input type="text" id="tb_bg_overlay" class="form-control" placeholder="Ej: rgba(10, 10, 15, 0.85)">
+                    </div>
+
+                    <div class="form-row" style="margin-top: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Tipografía (font-family)</label>
+                            <input type="text" id="tb_font_family" class="form-control" placeholder="Ej: 'Cinzel', serif">
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-top:1.5rem; margin-bottom:1rem; color:var(--text-main); font-weight:600;"><i class="fas fa-film"></i> Efectos y Animaciones</h4>
+                    <div class="form-group" style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex; gap:1.5rem; margin-top:0.5rem;">
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.5rem; font-weight:500;">
+                                <input type="checkbox" id="tb_anim_hearts" style="width:16px; height:16px;"> Corazones
+                            </label>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:0.5rem; font-weight:500;">
+                                <input type="checkbox" id="tb_anim_snow" style="width:16px; height:16px;"> Nieve
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Live Preview -->
+                    <div style="margin-top: 1.5rem;">
+                        <label style="display:block; margin-bottom:0.5rem; font-weight:600; color:var(--text-muted);">Preview (Degradado Base):</label>
+                        <div id="themePreviewBar" style="height:12px; border-radius:8px; background:linear-gradient(90deg,#c9a227,#f0cc55); transition:background 0.3s; box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="margin-top: 2.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem; justify-content: flex-end; gap: 1rem;">
+                <button type="button" class="btn-secondary close-modal-btn" style="padding: 0.8rem 1.5rem;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="background:linear-gradient(135deg,#a855f7,#6d28d9); padding: 0.8rem 2rem; font-size: 1rem;"><i class="fas fa-save"></i> Publicar / Crear Tema</button>
             </div>
         </form>
     </div>
@@ -578,6 +823,11 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="{{ url_for('static', filename='js/firebase.js') }}"></script>
-<script src="{{ url_for('static', filename='js/admin.js') }}?v=3.1"></script>
+<script>
+    // Inject server-side session role into JS for client-side role checks
+    window.ADMIN_ROLE = "{{ session.get('admin_role', 'admin') }}";
+</script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v=3.2"></script>
+<script src="/static/js/theme-manager.js"></script>
 </body>
 </html>

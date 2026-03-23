@@ -1052,6 +1052,11 @@ input:checked + .slider:before {
   max-width: 400px;
 }
 
+.modal-lg {
+  max-width: 900px !important;
+  width: 95%;
+}
+
 .modal-header {
   padding: 1.25rem 1.75rem;
   border-bottom: 1px solid var(--border-light);
@@ -1302,6 +1307,10 @@ input:checked + .slider:before {
   
   .charts-row, .form-row {
     flex-direction: column;
+  }
+  
+  .theme-builder-grid {
+    grid-template-columns: 1fr !important;
   }
   
   .table-responsive {

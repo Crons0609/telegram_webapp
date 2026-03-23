@@ -252,3 +252,78 @@ body[data-casino-theme="noir"] .profile-content {
 .reward-badge.bits {
     color: var(--gold, #c9a227);
 }
+
+/* ==========================================================================
+   UNIVERSAL DYNAMIC THEME BRIDGE
+   Applies CSS vars set by theme-manager.js to ALL key UI elements.
+   Makes any NEW admin-created theme work across the entire site automatically.
+   ========================================================================== */
+
+/* Default fallback values (overridden by theme-manager.js at runtime) */
+:root {
+    --theme-primary:   #c9a227;
+    --theme-secondary: #f0cc55;
+    --theme-bg:        #0a0a0f;
+}
+
+/* ── Global background + text ── */
+html body {
+    background-color: var(--theme-bg, #0a0a0f) !important;
+    transition: background-color 0.5s ease, color 0.4s ease;
+}
+
+/* ── Admin panel: remap admin vars to theme vars ── */
+.admin-body { --primary: var(--theme-primary); --primary-hover: var(--theme-secondary); --gold: var(--theme-primary); }
+
+/* ── Buttons ── */
+.btn-primary, .btn-login, .mission-claim-btn {
+    background: linear-gradient(135deg, var(--theme-primary, #c9a227), var(--theme-secondary, #f0cc55)) !important;
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--theme-primary, #c9a227) 40%, transparent) !important;
+}
+
+/* ── Headings + value labels ── */
+h1, h2, .stat-value, .bits-amount, .trophy-count, .bits-val, .kpi-value {
+    color: var(--theme-secondary, #f0cc55);
+    transition: color 0.4s ease;
+}
+
+/* ── Cards ── */
+.game-card, .stat-card, .hero-section, .kpi-card, .content-card, .card {
+    border-color: color-mix(in srgb, var(--theme-primary, #c9a227) 30%, transparent) !important;
+    transition: border-color 0.4s ease;
+}
+
+/* ── Navbar ── */
+.navbar {
+    background: color-mix(in srgb, var(--theme-bg, #0a0a0f) 95%, transparent) !important;
+    border-bottom-color: color-mix(in srgb, var(--theme-primary, #c9a227) 20%, transparent) !important;
+    transition: background 0.4s ease, border-color 0.4s ease;
+}
+
+/* ── Progress bars ── */
+.mission-progress-bar-fill, .progress-fill {
+    background: linear-gradient(90deg, var(--theme-primary, #c9a227), var(--theme-secondary, #f0cc55)) !important;
+}
+
+/* ── Active tabs / selected items ── */
+.profile-tab.active, .elite-menu-btn, .nav-item.active {
+    border-color: var(--theme-primary, #c9a227) !important;
+    color: var(--theme-secondary, #f0cc55) !important;
+}
+.nav-item.active { background: color-mix(in srgb, var(--theme-primary, #c9a227) 10%, transparent) !important; }
+.nav-item.active i, .sidebar-brand i { color: var(--theme-primary, #c9a227) !important; }
+
+/* ── Background Image (from theme.background_image) ── */
+body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -2;
+    background-image: var(--theme-bg-image, none);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    pointer-events: none;
+}
+body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: -1;
+    background: var(--theme-bg-overlay, transparent);
+    pointer-events: none;
+}

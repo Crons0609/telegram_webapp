@@ -141,7 +141,10 @@ function refreshCurrentView() {
         case 'players': loadPlayers(); break;
         case 'missions': loadMissions(); break;
         case 'history': loadHistory(); break;
+        case 'history': loadHistory(); break;
         case 'admins': loadAdmins(); break;
+        case 'mensajes': loadMessages(); break;
+        case 'transactions': loadTransactions(); break;
     }
 }
 
@@ -173,7 +176,9 @@ function switchView(viewName) {
         'missions': 'Missions Config',
         'history': 'Games History',
         'admins': 'Admins Management',
-        'temas': 'Temas Globales'
+        'temas': 'Temas Globales',
+        'mensajes': 'Mensajes a Jugadores',
+        'transactions': 'Historial de Transacciones'
     };
     document.getElementById('currentPageTitle').textContent = titleMap[viewName] || 'Dashboard';
 
@@ -185,10 +190,187 @@ function switchView(viewName) {
         case 'history': loadHistory(); break;
         case 'admins': loadAdmins(); break;
         case 'temas': loadTemas(); break;
+        case 'mensajes': loadMessages(); break;
+        case 'transactions': loadTransactions(); break;
     }
 }
 
 // --- API FETCHERS ---
+
+// TRANSACTIONS
+async function loadTransactions() {
+    const tbody = document.querySelector('#transactionsTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+    
+    try {
+        const res = await fetch('/admin/api/transactions');
+        const data = await res.json();
+        if (data.success) {
+            if (!data.transactions || data.transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No hay transacciones registradas</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.transactions.map(tx => {
+                const date = new Date(tx.fecha).toLocaleString();
+                const typeFormat = tx.tipo === 'recarga_admin' ? '<span class="badge" style="background:#10b98120;color:#10b981;">Recarga Admin</span>' : `<span class="badge" style="background:#3b82f620;color:#3b82f6;">${tx.tipo}</span>`;
+                return `
+                <tr>
+                    <td>${date}</td>
+                    <td>${typeFormat}</td>
+                    <td>${tx.user_name || 'Desconocido'}</td>
+                    <td style="font-family:monospace; color:#94a3b8;">${tx.telegram_id || '-'}</td>
+                    <td style="color:#f59e0b; font-weight:bold;">+${tx.bits.toLocaleString()}</td>
+                    <td>$${tx.usd.toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">Error de servidor</td></tr>';
+        }
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">Error de red</td></tr>';
+    }
+}
+
+// MENSAJES
+async function loadMessages() {
+    // Populate recipient dropdown if it's empty (except for 'all')
+    const sel = document.getElementById('msg_recipient');
+    if (sel && sel.options.length <= 1) {
+        try {
+            const pr = await fetch('/admin/api/players');
+            const pd = await pr.json();
+            if (pd.success && pd.players) {
+                pd.players.forEach(p => {
+                    const opt = document.createElement('option');
+                    // Must use telegram_id for Firebase routing
+                    opt.value = p.telegram_id || p.id;
+                    opt.textContent = `👤 ${p.nombre || 'Desconocido'} (@${p.username || p.telegram_id})`;
+                    sel.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading players for messages:", e);
+        }
+    }
+
+    const list = document.getElementById('msgHistoryList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+    try {
+        const res = await fetch('/admin/api/messages');
+        const data = await res.json();
+        if (data.success) {
+            if (!data.messages || data.messages.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">No hay mensajes enviados</div>';
+                return;
+            }
+            list.innerHTML = data.messages.map(m => {
+                const icon = m.type === 'promo' ? '🎁' : m.type === 'alerta' ? '⚠️' : m.type === 'update' ? '🔄' : m.type === 'vip' ? '⭐' : 'ℹ️';
+                const date = new Date(m.sent_at).toLocaleString();
+                const to = m.recipient === 'all' ? '📢 Todos' : `👤 ${m.recipient.substring(0,8)}...`;
+                return `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:1rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.2rem;">${icon}</span>
+                            <strong style="color:#e2e8f0; font-size:0.95rem;">${m.title}</strong>
+                        </div>
+                        <span style="font-size:0.75rem; color:#64748b;">${date}</span>
+                    </div>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 0.75rem 0; white-space:pre-wrap;">${m.body}</p>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                        <span style="color:#6366f1;">Enviado por: ${m.sender}</span>
+                        <span style="color:#10b981;">Para: ${to}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        } else {
+            list.innerHTML = '<div style="text-align:center; color:#ef4444; padding:2rem;">Error al cargar</div>';
+        }
+    } catch (e) {
+        list.innerHTML = '<div style="text-align:center; color:#ef4444; padding:2rem;">Error de red</div>';
+    }
+}
+
+function updateMsgPreview() {
+    const title = document.getElementById('msg_title').value;
+    const body = document.getElementById('msg_body').value;
+    const type = document.getElementById('msg_type').value;
+    const preview = document.getElementById('msgPreview');
+    
+    document.getElementById('msg_char_count').textContent = `${body.length} / 500`;
+
+    if (!title && !body) {
+        preview.style.display = 'none';
+        return;
+    }
+    preview.style.display = 'block';
+    
+    const icons = { info: 'ℹ️', promo: '🎁', update: '🔄', alerta: '⚠️', vip: '⭐' };
+    document.getElementById('msgPreviewIcon').textContent = icons[type] || 'ℹ️';
+    document.getElementById('msgPreviewTitle').textContent = title || 'Sin título';
+    document.getElementById('msgPreviewBody').textContent = body || 'Escribe un mensaje para ver la vista previa...';
+}
+
+function onMsgRecipientChange() {
+    // Just a stub if needed
+}
+
+async function sendAdminMessage() {
+    const btn = document.getElementById('sendMsgBtn');
+    const recipient = document.getElementById('msg_recipient').value;
+    const type = document.getElementById('msg_type').value;
+    const title = document.getElementById('msg_title').value.trim();
+    const body = document.getElementById('msg_body').value.trim();
+
+    if (!title || !body) {
+        showToast('Título y mensaje son requeridos', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+    try {
+        const res = await fetch('/admin/api/messages/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipient, type, title, body })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            document.getElementById('msg_title').value = '';
+            document.getElementById('msg_body').value = '';
+            updateMsgPreview();
+            loadMessages();
+        } else {
+            showToast(data.message || 'Error al enviar', 'error');
+        }
+    } catch {
+        showToast('Error de red', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Mensaje';
+}
+
+async function clearMessagesHistory() {
+    if (!confirm("¿Estás seguro de que quieres eliminar TODO el historial de mensajes enviados?")) return;
+    
+    try {
+        const res = await fetch('/admin/api/messages/clear', { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            loadMessages();
+        } else {
+            showToast(data.message || 'Error al limpiar', 'error');
+        }
+    } catch (e) {
+        showToast('Error de conexión', 'error');
+    }
+}
 
 // DASHBOARD
 async function loadDashboard() {
@@ -373,11 +555,14 @@ function renderPlayersTable(players) {
                 <div style="font-weight: 600; color: var(--primary);">Level ${p.nivel}</div>
                 <div style="font-size: 0.8rem; color: #94a3b8;">${p.xp} XP</div>
             </td>
-            <td style="font-family: var(--font-heading); font-weight: 600;">${p.bits.toLocaleString()}</td>
+            <td style="font-family: var(--font-heading); font-weight: 600;">
+                <div style="color:var(--gold);">${(p.bits || 0).toLocaleString()} 💎</div>
+                <div style="font-size:0.8rem; color:#a855f7;">${(p.bits_demo || 0).toLocaleString()} 🎮</div>
+            </td>
             <td>${p.juegos_jugados || 0}</td>
             <td>
-                <button class="btn-action edit" onclick="openEditPlayerModal(${p.id})" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="btn-action delete" onclick="confirmDeletePlayer(${p.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                <button class="btn-action edit" onclick="openEditPlayerModal('${p.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn-action delete" onclick="confirmDeletePlayer('${p.id}')" title="Delete"><i class="fas fa-trash-alt"></i></button>
             </td>
         </tr>
     `).join('');
@@ -516,28 +701,56 @@ async function loadAdmins() {
     } catch { showToast('Error de red', 'error'); }
 }
 
+const ROLE_LABELS = {
+    superadmin: { label: '\u2b50 SuperAdmin', color: '#f59e0b' },
+    admin:      { label: '\ud83d\udee1\ufe0f Admin',      color: '#6366f1' },
+    recargador: { label: '\ud83d\udcb0 Recargador', color: '#10b981' },
+    espectador: { label: '\ud83d\udc41\ufe0f Espectador', color: '#64748b' }
+};
+
 function renderAdminsTable(admins) {
     const tbody = document.querySelector('#adminsTable tbody');
     if (!admins || admins.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No hay administradores</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay administradores</td></tr>';
         return;
     }
-    tbody.innerHTML = admins.map(a => `
+    const isSuperAdmin = (window.ADMIN_ROLE || 'admin') === 'superadmin';
+    tbody.innerHTML = admins.map(a => {
+        const roleInfo = ROLE_LABELS[a.role] || ROLE_LABELS.admin;
+        const roleSelect = isSuperAdmin ? `
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="background:${roleInfo.color}22; color:${roleInfo.color}; border:1px solid ${roleInfo.color}44; border-radius:20px; padding:3px 10px; font-size:0.78rem; font-weight:700;">${roleInfo.label}</span>
+                <select id="role_sel_${a.id}" style="background:#1e293b; color:#fff; border:1px solid #334155; border-radius:6px; padding:3px 6px; font-size:0.75rem; cursor:pointer;">
+                    <option value="superadmin" ${a.role==='superadmin'?'selected':''}>⭐ SuperAdmin</option>
+                    <option value="admin"      ${a.role==='admin'?'selected':''}>🛡️ Admin</option>
+                    <option value="recargador" ${a.role==='recargador'?'selected':''}>💰 Recargador</option>
+                    <option value="espectador" ${a.role==='espectador'?'selected':''}>👁️ Espectador</option>
+                </select>
+                <button onclick="changeAdminRole('${a.id}')" style="background:#6366f1; border:none; color:#fff; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem;"><i class="fas fa-save"></i></button>
+            </div>` : `<span style="background:${roleInfo.color}22; color:${roleInfo.color}; border:1px solid ${roleInfo.color}44; border-radius:20px; padding:3px 10px; font-size:0.78rem; font-weight:700;">${roleInfo.label}</span>`;
+        return `
         <tr>
-            <td><span class="badge-status" style="background:rgba(255,255,255,0.05); color:#94a3b8;">#${a.id}</span></td>
-            <td style="font-weight:600; color:#fff;"><i class="fas fa-envelope" style="color:var(--gold);margin-right:6px;"></i>${a.email}</td>
-            <td style="color:#94a3b8; font-size:0.85rem;">${a.created_at || 'N/A'}</td>
+            <td style="font-weight:700; color:#fff;">${a.nombre || '—'}</td>
+            <td style="color:#94a3b8; font-size:0.85rem;"><i class="fas fa-envelope" style="color:var(--gold);margin-right:6px;"></i>${a.email}</td>
+            <td>${roleSelect}</td>
+            <td style="color:#64748b; font-size:0.8rem;">${a.created_at ? a.created_at.substring(0,10) : 'N/A'}</td>
             <td>
-                <button class="btn-danger" onclick="deleteAdmin('${a.id}', '${a.email}')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;"><i class="fas fa-trash"></i> Eliminar</button>
+                <button onclick="deleteAdmin('${a.id}', '${a.nombre || a.email}')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:0.8rem;"><i class="fas fa-trash"></i> Eliminar</button>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 function openAddAdminModal() {
+    if ((window.ADMIN_ROLE || 'admin') !== 'superadmin') {
+        showToast('Solo el SuperAdmin puede crear administradores', 'error');
+        return;
+    }
+    document.getElementById('new_admin_nombre').value = '';
     document.getElementById('new_admin_email').value = '';
     document.getElementById('new_admin_password').value = '';
     document.getElementById('new_admin_password2').value = '';
+    document.getElementById('new_admin_role').value = 'admin';
     document.getElementById('addAdminModal').classList.add('active');
 }
 
@@ -551,6 +764,26 @@ async function deleteAdmin(id, email) {
             loadAdmins();
         } else {
             showToast(data.message || 'Error al eliminar', 'error');
+        }
+    } catch { showToast('Error de red', 'error'); }
+}
+
+async function changeAdminRole(adminId) {
+    const sel = document.getElementById(`role_sel_${adminId}`);
+    if (!sel) return;
+    const newRole = sel.value;
+    try {
+        const res = await fetch(`/admin/api/admins/${adminId}/role`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: newRole })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Rol actualizado a "${newRole}" ✅`, 'success');
+            loadAdmins();
+        } else {
+            showToast(data.message || 'Error al cambiar rol', 'error');
         }
     } catch { showToast('Error de red', 'error'); }
 }
@@ -569,10 +802,15 @@ function setupModals() {
     // Add Admin Form
     document.getElementById('addAdminForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const nombre = document.getElementById('new_admin_nombre').value.trim();
         const email = document.getElementById('new_admin_email').value.trim();
         const password = document.getElementById('new_admin_password').value;
         const password2 = document.getElementById('new_admin_password2').value;
 
+        if (!nombre) {
+            showToast('Ingresa el nombre del administrador', 'error');
+            return;
+        }
         if (password !== password2) {
             showToast('Las contraseñas no coinciden', 'error');
             return;
@@ -585,16 +823,18 @@ function setupModals() {
         const btn = document.getElementById('saveAdminBtn');
         btn.disabled = true; btn.textContent = 'Creando...';
 
+        const role = document.getElementById('new_admin_role').value;
         try {
             const res = await fetch('/admin/api/admins', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ nombre, email, password, role })
             });
             const result = await res.json();
             if (result.success) {
-                showToast(`Admin "${email}" creado exitosamente`, 'success');
+                showToast(`Admin "${nombre}" creado exitosamente`, 'success');
                 document.getElementById('addAdminModal').classList.remove('active');
+                document.getElementById('addAdminForm').reset();
                 loadAdmins();
             } else {
                 showToast(result.message || 'Error al crear admin', 'error');
@@ -609,10 +849,16 @@ function setupModals() {
         e.preventDefault();
         const id = document.getElementById('edit_player_id').value;
         const data = {
+            nombre: document.getElementById('edit_nombre').value,
             username: document.getElementById('edit_username').value,
             bits: parseInt(document.getElementById('edit_bits').value),
+            bits_demo: parseInt(document.getElementById('edit_bits_demo').value || 0),
+            Estado: document.getElementById('edit_estado').value,
             nivel: parseInt(document.getElementById('edit_nivel').value),
-            xp: parseInt(document.getElementById('edit_xp').value)
+            xp: parseInt(document.getElementById('edit_xp').value),
+            tema_actual: document.getElementById('edit_tema_actual').value,
+            marco_actual: document.getElementById('edit_marco_actual').value,
+            avatar_frame: document.getElementById('edit_avatar_frame').value
         };
 
         const btn = document.getElementById('savePlayerBtn');
@@ -717,6 +963,10 @@ function setupModals() {
 }
 
 function openAddBitsModal() {
+    if ((window.ADMIN_ROLE || 'admin') === 'espectador') {
+        showToast('\ud83d\udc41\ufe0f Modo Espectador: no puedes modificar datos', 'error');
+        return;
+    }
     if (playersData.length === 0) {
         showToast('Espera a que carguen los jugadores', 'warning');
         return;
@@ -730,14 +980,24 @@ function openAddBitsModal() {
 }
 
 function openEditPlayerModal(id) {
-    const player = playersData.find(p => p.id === id);
+    if ((window.ADMIN_ROLE || 'admin') === 'espectador') {
+        showToast('\ud83d\udc41\ufe0f Modo Espectador: solo puedes ver los datos', 'error');
+        return;
+    }
+    const player = playersData.find(p => p.id == id);
     if (!player) return;
 
     document.getElementById('edit_player_id').value = player.id;
+    document.getElementById('edit_nombre').value = player.nombre || '';
     document.getElementById('edit_username').value = player.username || '';
     document.getElementById('edit_bits').value = player.bits || 0;
+    document.getElementById('edit_bits_demo').value = player.bits_demo || 0;
+    document.getElementById('edit_estado').value = player.Estado || 'activo';
     document.getElementById('edit_nivel').value = player.nivel || 1;
     document.getElementById('edit_xp').value = player.xp || 0;
+    document.getElementById('edit_tema_actual').value = player.tema_actual || 'default';
+    document.getElementById('edit_marco_actual').value = player.marco_actual || 'none';
+    document.getElementById('edit_avatar_frame').value = player.avatar_frame || 'none';
 
     document.getElementById('editPlayerModal').classList.add('active');
 }
@@ -953,7 +1213,7 @@ function renderThemeCards(themes) {
                     <span title="Secundario" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.secondary_color};border:2px solid rgba(255,255,255,0.2);"></span>
                     <span title="Fondo" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${t.bg_color};border:2px solid rgba(255,255,255,0.2);"></span>
                 </div>
-                ${!t.is_active ? `<button onclick="activateTheme(${t.id})" class="btn-primary" style="font-size:0.78rem;padding:4px 12px;margin-left:auto;"><i class="fas fa-bolt"></i> Activar</button>` : '<button class="btn-secondary" style="font-size:0.78rem;padding:4px 12px;margin-left:auto;cursor:default;" disabled><i class="fas fa-check"></i> Activo</button>'}
+                ${!t.is_active ? `<button onclick="activateTheme('${t.id}')" class="btn-primary" style="font-size:0.78rem;padding:4px 12px;margin-left:auto;"><i class="fas fa-bolt"></i> Activar</button>` : '<button class="btn-secondary" style="font-size:0.78rem;padding:4px 12px;margin-left:auto;cursor:default;" disabled><i class="fas fa-check"></i> Activo</button>'}
             </div>
         </div>
     `).join('');
@@ -989,7 +1249,7 @@ function renderSchedulesTable(schedules) {
                     <td style="font-size:0.82rem;">${s.start_date}</td>
                     <td style="font-size:0.82rem;">${s.end_date}</td>
                     <td>${s.priority}</td>
-                    <td><button onclick="deleteSchedule(${s.id})" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button></td>
+                    <td><button onclick="deleteSchedule('${s.id}')" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('')}</tbody>
         </table>`;
@@ -1006,11 +1266,11 @@ function openAddScheduleModal() {
     // Populate theme select
     const sel = document.getElementById('sched_theme');
     if (sel) sel.innerHTML = _allThemes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-    document.getElementById('addScheduleModal')?.classList.add('open');
+    document.getElementById('addScheduleModal')?.classList.add('active');
 }
 
 function openThemeBuilderModal() {
-    document.getElementById('themeBuilderModal')?.classList.add('open');
+    document.getElementById('themeBuilderModal')?.classList.add('active');
     // Wire color pickers <-> hex inputs
     [['tb_primary','tb_primary_hex'],['tb_secondary','tb_secondary_hex'],['tb_bg','tb_bg_hex']].forEach(([picId, hexId]) => {
         const pic = document.getElementById(picId);
@@ -1057,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resp.success) {
             showToast('✅ Tema creado', 'success');
             tbForm.reset();
-            document.getElementById('themeBuilderModal')?.classList.remove('open');
+            document.getElementById('themeBuilderModal')?.classList.remove('active');
             loadTemas();
         } else { showToast('Error: ' + (resp.message||''), 'error'); }
     });
@@ -1078,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resp.success) {
             showToast('✅ Evento programado', 'success');
             schedForm.reset();
-            document.getElementById('addScheduleModal')?.classList.remove('open');
+            document.getElementById('addScheduleModal')?.classList.remove('active');
             loadTemas();
         } else { showToast('Error: ' + (resp.message||''), 'error'); }
     });
@@ -1088,3 +1348,178 @@ window.openAddScheduleModal = openAddScheduleModal;
 window.openThemeBuilderModal = openThemeBuilderModal;
 window.activateTheme = activateTheme;
 window.deleteSchedule = deleteSchedule;
+
+// ============================================================
+// SOPORTE TELEGRAM (2-WAY CHAT)
+// ============================================================
+let activeSupportChatId = null;
+let supportPollInterval = null;
+
+async function loadSupportChats() {
+    try {
+        const res = await fetch('/admin/api/support_chats');
+        const data = await res.json();
+        if(!data.success) return;
+        
+        const list = document.getElementById('supportChatsList');
+        const badge = document.getElementById('supportBadge');
+        if(!list) return;
+        
+        if(data.chats.length === 0) {
+            list.innerHTML = '<div style="text-align:center; padding:2rem; color:#64748b;">No hay conversaciones</div>';
+            if(badge) badge.style.display = 'none';
+            return;
+        }
+        
+        let totalUnread = 0;
+        list.innerHTML = data.chats.map(c => {
+            const unread = parseInt(c.unread || 0);
+            totalUnread += unread;
+            const time = c.last_time ? new Date(c.last_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+            return `
+            <div class="support-item ${c.chat_id === activeSupportChatId ? 'active' : ''}" onclick="openSupportChat('${c.chat_id}', '${c.nombre || c.username || c.chat_id}')">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <strong style="color:var(--text-main); font-size:0.95rem;">${c.nombre || c.username || 'Usuario'}</strong>
+                    <span style="font-size:0.75rem; color:#64748b;">${time}</span>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.last_msg || ''}</div>
+                ${unread > 0 ? `<div class="support-unread">${unread > 9 ? '9+' : unread}</div>` : ''}
+            </div>`;
+        }).join('');
+        
+        if(badge) {
+            badge.style.display = totalUnread > 0 ? 'inline-block' : 'none';
+            badge.textContent = totalUnread;
+        }
+    } catch(e) { console.error('Error loading support chats', e); }
+}
+
+async function openSupportChat(chatId, titleName) {
+    activeSupportChatId = chatId;
+    document.getElementById('supportActiveTitle').innerHTML = `<i class="fas fa-user-circle"></i> ${titleName}`;
+    document.getElementById('supportActiveId').textContent = chatId;
+    document.getElementById('supportBtnClear').style.display = 'inline-block';
+    
+    document.getElementById('supportReplyText').disabled = false;
+    document.getElementById('supportReplyBtn').disabled = false;
+    
+    // Refresh list to highlight active
+    await loadSupportChats();
+    await updateSupportThread();
+    
+    // Poll active thread
+    if(supportPollInterval) clearInterval(supportPollInterval);
+    supportPollInterval = setInterval(updateSupportThread, 5000);
+}
+
+async function updateSupportThread() {
+    if(!activeSupportChatId) return;
+    try {
+        const res = await fetch(`/admin/api/support_chats/${activeSupportChatId}`);
+        const data = await res.json();
+        if(!data.success) return;
+        
+        const container = document.getElementById('supportThreadMsgs');
+        if(!container) return;
+        
+        if(data.messages.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#64748b; margin-top:3rem;">No hay mensajes.</div>';
+            return;
+        }
+        
+        const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+        
+        container.innerHTML = data.messages.map(m => {
+            const isUser = m.sender === 'user';
+            const cls = isUser ? 'user' : 'admin';
+            const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+            return `
+            <div class="support-msg ${cls}">
+                <div>${m.text}</div>
+                <div style="font-size:0.7rem; opacity:0.6; text-align:right; margin-top:4px;">${time}</div>
+            </div>`;
+        }).join('');
+        
+        if(wasAtBottom) container.scrollTop = container.scrollHeight;
+    } catch(e) { console.error(e); }
+}
+
+async function sendSupportReply() {
+    if(!activeSupportChatId) return;
+    const input = document.getElementById('supportReplyText');
+    const text = input.value.trim();
+    if(!text) return;
+    
+    input.disabled = true;
+    document.getElementById('supportReplyBtn').disabled = true;
+    
+    try {
+        const res = await fetch(`/admin/api/support_chats/${activeSupportChatId}/reply`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text})
+        });
+        const data = await res.json();
+        if(data.success) {
+            input.value = '';
+            await updateSupportThread();
+            await loadSupportChats();
+            setTimeout(() => {
+                const c = document.getElementById('supportThreadMsgs');
+                c.scrollTop = c.scrollHeight;
+            }, 100);
+        } else {
+            showToast('Error enviando mensaje', 'error');
+        }
+    } catch(e) {
+        showToast('Error de red', 'error');
+    }
+    input.disabled = false;
+    document.getElementById('supportReplyBtn').disabled = false;
+    input.focus();
+}
+
+async function clearActiveSupportChat() {
+    if(!activeSupportChatId) return;
+    if(!confirm('¿Estás seguro de eliminar todo el historial de esta conversación? Esto no se puede deshacer.')) return;
+    
+    try {
+        const res = await fetch(`/admin/api/support_chats/${activeSupportChatId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if(data.success) {
+            showToast('Conversación eliminada', 'success');
+            activeSupportChatId = null;
+            document.getElementById('supportActiveTitle').innerHTML = `<i class="fas fa-headset"></i> Selecciona un chat`;
+            document.getElementById('supportActiveId').textContent = '';
+            document.getElementById('supportBtnClear').style.display = 'none';
+            document.getElementById('supportReplyText').disabled = true;
+            document.getElementById('supportReplyBtn').disabled = true;
+            document.getElementById('supportThreadMsgs').innerHTML = '<div style="text-align:center; color:#64748b; margin-top:3rem;">Selecciona una conversación a la izquierda.</div>';
+            if(supportPollInterval) clearInterval(supportPollInterval);
+            loadSupportChats();
+        }
+    } catch(e) { showToast('Error eliminando conversación', 'error'); }
+}
+
+// Global Poll every 15s to check unread
+setInterval(() => {
+    if(window.currentView && window.currentView !== 'support') {
+        fetch('/admin/api/support_chats').then(r=>r.json()).then(d=>{
+            if(d.success) {
+                const unread = d.chats.reduce((a,c)=>a+(parseInt(c.unread)||0), 0);
+                const badge = document.getElementById('supportBadge');
+                if(badge) {
+                    badge.style.display = unread > 0 ? 'inline-block' : 'none';
+                    badge.textContent = unread;
+                }
+            }
+        });
+    }
+}, 15000);
+
+// Load initially if support view
+document.addEventListener('DOMContentLoaded', () => {
+    if(document.getElementById('supportChatsList')) {
+        loadSupportChats();
+    }
+});

@@ -219,6 +219,19 @@
        MODALS
   =================================================== -->
 
+  <!-- User Inbox (Messages) -->
+  <div id="inbox-modal" class="modal-overlay hidden">
+    <div class="modal-content browser-content">
+      <header class="modal-header">
+        <h2><span style="font-size:1.2rem; margin-right:8px;">🔔</span> Mensajes recibidos</h2>
+        <button class="btn-close" onclick="UserProfileManager.closeInboxModal()">×</button>
+      </header>
+      <div class="modal-body" id="inbox-list-container" style="max-height:60vh; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:12px;">
+        <p class="muted" style="text-align:center;">Cargando mensajes...</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Room Create -->
   <div id="room-create-modal" class="modal-overlay hidden">
     <div class="modal-content">

@@ -81,6 +81,13 @@
     .then(data => {
       // Si la página cargó sin sesión y ahora recibimos el perfil del server:
       if (data.status === 'ok' && data.profile) {
+          
+        // Si no existe el contenedor del menú élite (ej: carga inicial sin sesión)
+        if (!document.querySelector('.elite-menu-container')) {
+            window.location.reload();
+            return;
+        }
+
         // Actualizar BITS en la cabecera si estaba en 0 (típico cuando no había sesión pre-render)
         const bitsDisplay = document.querySelector(".header-user .user-info strong, .user-info strong.text-gold");
         if (bitsDisplay && (bitsDisplay.textContent.trim() === "0" || bitsDisplay.textContent.trim() === "")) {

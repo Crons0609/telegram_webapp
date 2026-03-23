@@ -568,7 +568,8 @@
 
 .elite-menu-container {
     position: relative;
-    display: inline-block;
+    display: flex;
+    align-items: center;
 }
 
 .elite-menu-btn {

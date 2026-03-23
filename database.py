@@ -240,6 +240,7 @@ def agregar_usuario(telegram_id: str, nombre: str, username: Optional[str] = Non
             "username": username or "",
             "photo_url": photo_url or "",
             "bits": 0,
+            "bits_demo": 5500,
             "xp": 0,
             "nivel": 1,
             "marco_actual": "none",
@@ -261,7 +262,77 @@ def agregar_usuario(telegram_id: str, nombre: str, username: Optional[str] = Non
             "username": username or user.get("username", ""),
             "photo_url": photo_url or user.get("photo_url", "")
         })
-        return True
+        return False  # User already existed — NOT new
+
+def resetear_bits_demo(telegram_id: str) -> bool:
+    try:
+        user = get_fb(f"usuarios/{telegram_id}")
+        if user:
+            patch_fb(f"usuarios/{telegram_id}", {"bits_demo": 5500})
+            return True
+        return False
+    except Exception as e:
+        print(f"Error reseteando bits clave: {e}")
+        return False
+
+def recargar_bits(telegram_id: str, amount: int) -> bool:
+    """Asigna bits reales a un usuario (usado por recarga_admin o pagos)"""
+    try:
+        user = get_fb(f"usuarios/{telegram_id}")
+        if user:
+            current = int(user.get("bits", 0))
+            patch_fb(f"usuarios/{telegram_id}", {"bits": current + int(amount)})
+            return True
+        return False
+    except Exception as e:
+        print(f"Error recargando bits: {e}")
+        return False
+
+def registrar_transaccion(telegram_id: str, bits: int, usd: float, tipo: str) -> None:
+    """Registra una transacción en el historial global"""
+    import uuid
+    tx_id = str(uuid.uuid4())
+    tx = {
+        "telegram_id": telegram_id,
+        "bits": bits,
+        "usd": usd,
+        "tipo": tipo,
+        "fecha": datetime.utcnow().isoformat()
+    }
+    put_fb(f"transacciones/{tx_id}", tx)
+
+# ---------------------------------------------------------------------------
+# BOT INVITE / REFERRAL HELPERS
+# ---------------------------------------------------------------------------
+
+def register_new_user_from_bot(telegram_id: str, nombre: str, username: str, photo_url: str, referrer_id: str = None) -> bool:
+    """Register a completely new user from a bot /start interaction.
+    Returns True if the user was NEWLY created (so we can reward the referrer),
+    False if the user already existed.
+    """
+    telegram_id = str(telegram_id)
+    is_new = agregar_usuario(telegram_id, nombre, username or "", photo_url or "")
+    if is_new and referrer_id:
+        referrer_id = str(referrer_id)
+        # Only reward if invitee is genuinely new and the referrer is not themselves
+        if referrer_id != telegram_id and get_fb(f"usuarios/{referrer_id}"):
+            # Credit 1000 demo bits to referrer
+            current = obtener_bits(referrer_id, is_demo=True)
+            patch_fb(f"usuarios/{referrer_id}", {"bits_demo": current + 1000})
+            # Log the invite
+            patch_fb(f"usuarios/{referrer_id}", {"total_invitaciones": (get_fb(f"usuarios/{referrer_id}/total_invitaciones") or 0) + 1})
+            post_fb(f"invite_log/{referrer_id}", {
+                "invitee_id": telegram_id,
+                "invitee_name": nombre,
+                "timestamp": datetime.utcnow().isoformat(),
+                "reward_demo_bits": 1000
+            })
+    return is_new
+
+def get_invite_stats(telegram_id: str) -> dict:
+    """Return invite count and demo-bits earned for a user."""
+    count = get_fb(f"usuarios/{str(telegram_id)}/total_invitaciones") or 0
+    return {"total_invitaciones": int(count)}
 
 def obtener_perfil_completo(telegram_id: str) -> dict:
     telegram_id = str(telegram_id)
@@ -277,8 +348,9 @@ def obtener_perfil_completo(telegram_id: str) -> dict:
     perfil['unlocked_items'] = [{'type': v['item_type'], 'id': v['item_id']} for v in unlocked.values()]
     return perfil
 
-def obtener_bits(telegram_id: str) -> int:
-    b = get_fb(f"usuarios/{str(telegram_id)}/bits")
+def obtener_bits(telegram_id: str, is_demo: bool = False) -> int:
+    campo = "bits_demo" if is_demo else "bits"
+    b = get_fb(f"usuarios/{str(telegram_id)}/{campo}")
     return int(b) if b is not None else 0
 
 def obtener_todos_usuarios() -> list:
@@ -310,23 +382,27 @@ def recargar_bits(telegram_id: str, cantidad: int) -> bool:
         return True
     return False
 
-def descontar_bits(telegram_id: str, cantidad: int) -> bool:
+def descontar_bits(telegram_id: str, cantidad: int, is_demo: bool = False) -> bool:
     telegram_id = str(telegram_id)
     u = get_fb(f"usuarios/{telegram_id}")
     if u and cantidad > 0:
-        b = int(u.get('bits', 0))
+        campo = "bits_demo" if is_demo else "bits"
+        b = int(u.get(campo, 0))
         if b >= cantidad:
-            patch_fb(f"usuarios/{telegram_id}", {"bits": b - cantidad})
+            patch_fb(f"usuarios/{telegram_id}", {campo: b - cantidad})
             return True
     return False
 
-def registrar_ganancia(telegram_id: str, cantidad: int) -> bool:
+def registrar_ganancia(telegram_id: str, cantidad: int, is_demo: bool = False) -> bool:
     telegram_id = str(telegram_id)
     u = get_fb(f"usuarios/{telegram_id}")
     if u and cantidad > 0:
-        new_bits = int(u.get('bits', 0)) + cantidad
-        new_gan = int(u.get('total_ganados', 0)) + cantidad
-        patch_fb(f"usuarios/{telegram_id}", {"bits": new_bits, "total_ganados": new_gan})
+        campo = "bits_demo" if is_demo else "bits"
+        new_bits = int(u.get(campo, 0)) + cantidad
+        updates = {campo: new_bits}
+        if not is_demo:
+            updates["total_ganados"] = int(u.get('total_ganados', 0)) + cantidad
+        patch_fb(f"usuarios/{telegram_id}", updates)
         return True
     return False
 
@@ -552,3 +628,39 @@ def obtener_usuario(identifier) -> dict:
                 return u
     # Assume telegram_id
     return get_fb(f"usuarios/{str(identifier)}")
+
+# =====================================================
+# TELEGRAM SUPPORT CHAT HELPERS
+# =====================================================
+
+def save_user_telegram_msg(chat_id, first_name: str, username: str, text: str, sender: str = "user") -> None:
+    """
+    Save a message (from user or admin) into Firebase under user_telegrams/{chat_id}.
+    Structure:
+      user_telegrams/{chat_id}/info  — conversation metadata
+      user_telegrams/{chat_id}/messages/{push_id} — individual messages
+    """
+    chat_id_str = str(chat_id)
+    now = datetime.utcnow().isoformat()
+
+    # Upsert conversation metadata
+    info = get_fb(f"user_telegrams/{chat_id_str}/info") or {}
+    unread = int(info.get("unread", 0))
+    if sender == "user":
+        unread += 1
+
+    patch_fb(f"user_telegrams/{chat_id_str}/info", {
+        "chat_id": chat_id_str,
+        "first_name": first_name,
+        "username": username or "",
+        "last_message": text[:80],
+        "last_time": now,
+        "unread": unread
+    })
+
+    # Push individual message
+    post_fb(f"user_telegrams/{chat_id_str}/messages", {
+        "sender": sender,
+        "text": text,
+        "timestamp": now
+    })

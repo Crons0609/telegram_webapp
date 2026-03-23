@@ -54,7 +54,9 @@ def inject_user_profile():
             progress = UserProfileManager.get_progress(perfil['xp'])
             perfil['rank'] = rank_info
             perfil['progress'] = progress
+            perfil['play_mode'] = session.get('play_mode', 'real')
             context['global_profile'] = perfil
+            context['play_mode'] = session.get('play_mode', 'real')
             return context
     context['global_profile'] = None
     return context
@@ -70,8 +72,9 @@ def home():
     photo_url = session.get("photo_url", "")
 
     if telegram_id and nombre:
-        bits = database.obtener_bits(telegram_id)
-        return render_template("index.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url)
+        is_demo = session.get('play_mode') == 'demo'
+        bits = database.obtener_bits(telegram_id, is_demo)
+        return render_template("index.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url, play_mode=session.get('play_mode', 'real'))
     else:
         # Si no hay sesión, aún renderizamos la página. 
         # El frontend (script.js) extraerá los datos nativos de Telegram y llamará a /register.
@@ -137,8 +140,9 @@ def juegos():
     photo_url = session.get("photo_url", "")
 
     if telegram_id and nombre:
-        bits = database.obtener_bits(telegram_id)
-        return render_template("juegos.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url)
+        is_demo = session.get('play_mode') == 'demo'
+        bits = database.obtener_bits(telegram_id, is_demo)
+        return render_template("juegos.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url, play_mode=session.get('play_mode', 'real'))
     else:
         # TEST MODE
         test_id = "12345"
@@ -505,11 +509,12 @@ def api_spin():
         return jsonify({"status": "error", "message": "Cantidad inválida"}), 400
 
     telegram_id = session["telegram_id"]
+    is_demo = session.get('play_mode') == 'demo'
 
     # Deduct bet securely
-    success = database.descontar_bits(telegram_id, bet_amount)
+    success = database.descontar_bits(telegram_id, bet_amount, is_demo)
     if not success:
-        return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": database.obtener_bits(telegram_id)}), 400
+        return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": database.obtener_bits(telegram_id, is_demo)}), 400
 
     # Draw mathematical outcome from Deck Engine
     outcome = slot_engine.draw_spin()
@@ -530,10 +535,11 @@ def api_spin():
     # Register win securely if any
     profile_updates = None
     if total_win > 0:
-        database.registrar_ganancia(telegram_id, total_win)
-        database.incrementar_stat(telegram_id, 'bits_ganados', total_win)
-        database.incrementar_stat(telegram_id, 'wins_total', 1)
-        database.actualizar_racha_victorias(telegram_id, True)
+        database.registrar_ganancia(telegram_id, total_win, is_demo)
+        if not is_demo:
+            database.incrementar_stat(telegram_id, 'bits_ganados', total_win)
+            database.incrementar_stat(telegram_id, 'wins_total', 1)
+            database.actualizar_racha_victorias(telegram_id, True)
     else:
         database.actualizar_racha_victorias(telegram_id, False)
         
@@ -557,7 +563,7 @@ def api_spin():
         except Exception:
             pass
 
-    bits_actuales = database.obtener_bits(telegram_id)
+    bits_actuales = database.obtener_bits(telegram_id, is_demo)
 
     # Check for newly completable missions
     newly_completed_missions = []
@@ -592,7 +598,8 @@ def bet():
         return jsonify({"status": "error", "message": "Cantidad inválida"}), 400
 
     telegram_id = session["telegram_id"]
-    success = database.descontar_bits(telegram_id, cantidad)
+    is_demo = session.get('play_mode') == 'demo'
+    success = database.descontar_bits(telegram_id, cantidad, is_demo)
     
     if success:
         profile_updates = {}
@@ -620,10 +627,10 @@ def bet():
         except Exception:
             pass
             
-        bits_actuales = database.obtener_bits(telegram_id)
+        bits_actuales = database.obtener_bits(telegram_id, is_demo)
         return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates, "newly_completed_missions": newly_completed_missions})
     else:
-        bits_actuales = database.obtener_bits(telegram_id)
+        bits_actuales = database.obtener_bits(telegram_id, is_demo)
         return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": bits_actuales}), 400
 
 # =====================================================
@@ -643,10 +650,13 @@ def win():
         return jsonify({"status": "error", "message": "Cantidad inválida"}), 400
 
     telegram_id = session["telegram_id"]
+    is_demo = session.get('play_mode') == 'demo'
     database.actualizar_ultima_partida_ganada(telegram_id, source, cantidad)
-    database.registrar_ganancia(telegram_id, cantidad)
-    database.incrementar_stat(telegram_id, 'bits_ganados', cantidad)
-    database.actualizar_racha_victorias(telegram_id, True)
+    database.registrar_ganancia(telegram_id, cantidad, is_demo)
+    
+    if not is_demo:
+        database.incrementar_stat(telegram_id, 'bits_ganados', cantidad)
+        database.actualizar_racha_victorias(telegram_id, True)
     
     profile_updates = None
     if source == "moche":
@@ -681,7 +691,7 @@ def win():
     except Exception:
         pass
 
-    bits_actuales = database.obtener_bits(telegram_id)
+    bits_actuales = database.obtener_bits(telegram_id, is_demo)
     return jsonify({"status": "ok", "bits": bits_actuales, "profile_updates": profile_updates, "newly_completed_missions": newly_completed_missions})
 
 # =====================================================
@@ -730,7 +740,20 @@ def get_profile():
 
     perfil['rank'] = rank_info
     perfil['progress'] = progress
+    perfil['play_mode'] = session.get('play_mode', 'real')
     return jsonify({"status": "ok", "profile": perfil})
+
+@app.route('/api/user/set_mode', methods=["POST"])
+def set_play_mode():
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    data = request.get_json() or {}
+    mode = data.get("mode", "real")
+    if mode not in ["real", "demo"]:
+        mode = "real"
+    session['play_mode'] = mode
+    uid = session["telegram_id"]
+    return jsonify({"status": "ok", "mode": mode, "bits": database.obtener_bits(uid, mode == 'demo')})
 
 @app.route('/api/profile/ping', methods=["POST"])
 def ping_playtime():
@@ -863,6 +886,40 @@ def get_public_profile(user_id):
     }
     return jsonify({"status": "ok", "profile": public_data})
 
+# =====================================================
+# USER INBOX (MESSAGES FROM ADMIN)
+# =====================================================
+@app.route('/api/user/messages', methods=['GET'])
+def get_user_messages():
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    uid = session["telegram_id"]
+    msgs = database.get_fb(f"mensajes/{uid}") or {}
+    
+    result = []
+    for k, m in msgs.items():
+        result.append({**m, 'id': k})
+    
+    # Sort newest first
+    result.sort(key=lambda x: x.get('sent_at', ''), reverse=True)
+    
+    unread_count = sum(1 for m in result if not m.get('read'))
+    return jsonify({"status": "ok", "messages": result, "unread": unread_count})
+
+@app.route('/api/user/messages/read', methods=['POST'])
+def mark_message_read():
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    
+    data = request.get_json() or {}
+    msg_id = data.get('msg_id')
+    if not msg_id:
+        return jsonify({"status": "error", "message": "msg_id requerido"}), 400
+        
+    uid = session["telegram_id"]
+    database.patch_fb(f"mensajes/{uid}/{msg_id}", {"read": True})
+    return jsonify({"status": "ok"})
+
 
 # =====================================================
 # TROPHIES & MISSIONS API
@@ -926,6 +983,362 @@ def api_active_theme():
 # =====================================================
 # ADMIN (Manejado por admin_routes.py Blueprint)
 # =====================================================
+
+# =====================================================
+# TELEGRAM POLLING THREAD + BOT COMMANDS
+# =====================================================
+import threading
+import time
+import requests
+
+try:
+    from config import BOT_TOKEN, WEBAPP_URL
+except ImportError:
+    BOT_TOKEN = None
+    WEBAPP_URL = ""
+
+def _send_bot(chat_id, text, reply_markup=None, parse_mode="HTML"):
+    """Send a message via Telegram Bot API."""
+    if not BOT_TOKEN:
+        return
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    try:
+        requests.post(url, json=payload, timeout=8)
+    except Exception as e:
+        print(f"[TG Send Error] {e}")
+
+def _handle_start(chat_id, first_name, username, photo_url, start_param):
+    """Handle /start — register user and optionally process referral."""
+    referrer_id = None
+    if start_param and start_param.startswith("ref_"):
+        referrer_id = start_param[4:]
+
+    is_new = database.register_new_user_from_bot(
+        str(chat_id), first_name, username, photo_url or "", referrer_id
+    )
+
+    gamble_link = WEBAPP_URL or "https://t.me/"
+    btn = {"inline_keyboard": [[
+        {"text": "🎰 Abrir Casino", "web_app": {"url": gamble_link}}
+    ]]}
+
+    if is_new:
+        texto = (
+            f"👋 ¡Bienvenido, <b>{first_name}</b>! 🎉\n\n"
+            f"Tu perfil ha sido creado exitosamente.\n"
+            f"💎 Has recibido <b>5,500 Bits Demo</b> de regalo para empezar a jugar.\n\n"
+            f"🎮 Pulsa el botón para abrir el casino:"
+        )
+    else:
+        perfil = database.obtener_perfil_completo(str(chat_id)) or {}
+        bits = database.obtener_bits(str(chat_id))
+        texto = (
+            f"👋 ¡Hola de nuevo, <b>{first_name}</b>!\n\n"
+            f"💰 Tus bits reales: <b>{bits:,}</b>\n"
+            f"⭐ Nivel: {perfil.get('nivel', 1)}\n\n"
+            f"🎮 Pulsa el botón para continuar jugando:"
+        )
+    _send_bot(chat_id, texto, reply_markup=btn)
+
+def _handle_info(chat_id, first_name):
+    """Handle /info — show player stats."""
+    chat_id_str = str(chat_id)
+    perfil = database.obtener_perfil_completo(chat_id_str)
+    if not perfil:
+        _send_bot(chat_id, "❌ No tienes un perfil registrado. Usa /start para comenzar.")
+        return
+
+    invite_stats = database.get_invite_stats(chat_id_str)
+    bits = database.obtener_bits(chat_id_str)
+    bits_demo = database.obtener_bits(chat_id_str, is_demo=True)
+    username = perfil.get("username", "")
+    username_str = f"@{username}" if username else "—"
+
+    texto = (
+        f"📊 <b>Tu Perfil — {first_name}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🆔 ID Telegram: <code>{chat_id}</code>\n"
+        f"👤 Usuario: {username_str}\n"
+        f"💰 Bits Reales: <b>{bits:,}</b>\n"
+        f"🎭 Bits Demo: <b>{bits_demo:,}</b>\n"
+        f"⭐ XP: <b>{perfil.get('xp', 0):,}</b>\n"
+        f"🏆 Nivel: <b>{perfil.get('nivel', 1)}</b>\n"
+        f"📨 Invitaciones realizadas: <b>{invite_stats['total_invitaciones']}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━"
+    )
+    _send_bot(chat_id, texto)
+
+def _handle_invite(chat_id, first_name):
+    """Handle /invite — generate personal referral link."""
+    link = f"https://t.me/Zona_Jackpot_777bot?start=ref_{chat_id}"
+    texto = (
+        f"🎁 <b>Tu link de invitación personal:</b>\n\n"
+        f"<code>{link}</code>\n\n"
+        f"📌 Comparte este link con tus amigos.\n"
+        f"✅ Cuando un amigo <b>nuevo</b> abra el casino por primera vez usando tu link, "
+        f"recibirás <b>+1,000 Bits Demo</b> de regalo automáticamente.\n\n"
+        f"⚠️ La recompensa solo se otorga si el jugador no tenía cuenta previa."
+    )
+    share_url = f"https://t.me/share/url?url={link}&text=%F0%9F%8E%B0+%C3%9Anete+al+casino+conmigo%21"
+    btn = {"inline_keyboard": [[
+        {"text": "📤 Compartir link", "url": share_url}
+    ]]}
+    _send_bot(chat_id, texto, reply_markup=btn)
+
+# Admin Telegram usernames that receive recharge notifications
+ADMIN_TELEGRAM_USERS = ["@Cortezalex17", "@antraxx_g59", "@Young_plague_FTP"]
+
+# Recharge packages: USD -> (bits label, bonus bits)
+RECHARGE_PACKAGES = {
+    "1":  {"usd": 1,  "bits": 1000,  "bonus": 0,     "label": "💵 1 USD → 1,000 Bits"},
+    "5":  {"usd": 5,  "bits": 5500,  "bonus": 500,   "label": "💵 5 USD → 5,500 Bits (+500)"},
+    "10": {"usd": 10, "bits": 12000, "bonus": 2000,  "label": "💵 10 USD → 12,000 Bits (+2,000)"},
+    "20": {"usd": 20, "bits": 26000, "bonus": 6000,  "label": "💵 20 USD → 26,000 Bits (+6,000)"},
+    "50": {"usd": 50, "bits": 70000, "bonus": 20000, "label": "💵 50 USD → 70,000 Bits (+20,000)"},
+}
+
+def _answer_callback(callback_query_id, text=""):
+    """Dismiss the loading spinner on the user's Telegram button."""
+    if not BOT_TOKEN:
+        return
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/answerCallbackQuery",
+            json={"callback_query_id": callback_query_id, "text": text},
+            timeout=5
+        )
+    except Exception:
+        pass
+
+def _handle_recharge(chat_id):
+    """Step 1 — Player picks which admin to contact."""
+    texto = (
+        f"💳 <b>Recarga de Bits Reales</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 <b>Elige el administrador</b> al que deseas enviar tu solicitud de recarga:\n\n"
+        f"💵 1 USD  →  <b>1,000 Bits</b>\n"
+        f"💵 5 USD  →  <b>5,500 Bits</b>  (+500)\n"
+        f"💵 10 USD →  <b>12,000 Bits</b> (+2,000)\n"
+        f"💵 20 USD →  <b>26,000 Bits</b> (+6,000)\n"
+        f"💵 50 USD →  <b>70,000 Bits</b> (+20,000)\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"⤵️ Selecciona un administrador para continuar:"
+    )
+    btn = {"inline_keyboard": [
+        [{"text": "👨‍💻 Young plague FTP",  "callback_data": "adm_0"}],
+        [{"text": "👨‍💻 antraxx g59",       "callback_data": "adm_1"}],
+        [{"text": "👨‍💻 Cortezalex17",     "callback_data": "adm_2"}],
+    ]}
+    _send_bot(chat_id, texto, reply_markup=btn)
+
+def _handle_admin_pick(callback_query_id, chat_id, adm_idx):
+    """Step 2 — Player picked an admin, now choose the amount."""
+    admin_names = ["Young_plague_FTP", "antraxx_g59", "Cortezalex17"]
+    adm_display = ["@Young_plague_FTP", "@antraxx_g59", "@Cortezalex17"]
+    if adm_idx < 0 or adm_idx >= len(admin_names):
+        _answer_callback(callback_query_id, "Administrador no válido.")
+        return
+    _answer_callback(callback_query_id)
+    texto = (
+        f"📄 <b>Solicitud para {adm_display[adm_idx]}</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"Ahora elige el <b>monto de recarga</b> que deseas:\n"
+    )
+    btn = {"inline_keyboard": [
+        [{"text": "💵 1 USD — 1,000 Bits",   "callback_data": f"rc_1_{adm_idx}"}],
+        [{"text": "💵 5 USD — 5,500 Bits",   "callback_data": f"rc_5_{adm_idx}"}],
+        [{"text": "💵 10 USD — 12,000 Bits", "callback_data": f"rc_10_{adm_idx}"}],
+        [{"text": "💵 20 USD — 26,000 Bits", "callback_data": f"rc_20_{adm_idx}"}],
+        [{"text": "💵 50 USD — 70,000 Bits", "callback_data": f"rc_50_{adm_idx}"}],
+        [{"text": "⬅️ Volver",                  "callback_data": "back_recharge"}],
+    ]}
+    _send_bot(chat_id, texto, reply_markup=btn)
+
+# Known admin usernames (without @) for auto-registration
+ADMIN_USERNAMES_LOWER = {"young_plague_ftp", "antraxx_g59", "cortezalex17"}
+
+def _get_admin_chat_id(username_key: str):
+    """Look up stored numeric chat_id for an admin by their username (no @)."""
+    return database.get_fb(f"admin_telegram_chat_ids/{username_key.lower()}")
+
+def _save_admin_chat_id(username: str, chat_id):
+    """Persist admin username → numeric chat_id mapping in Firebase."""
+    if username:
+        database.patch_fb("admin_telegram_chat_ids", {username.lower(): str(chat_id)})
+
+def _handle_recharge_callback(callback_query_id, chat_id, first_name, username, pkg_key, adm_idx):
+    """Step 3 — Player confirmed amount. Notify the chosen admin ONLY."""
+    pkg = RECHARGE_PACKAGES.get(pkg_key)
+    if not pkg:
+        _answer_callback(callback_query_id, "Opción no válida.")
+        return
+
+    admin_display     = ["@Young_plague_FTP", "@antraxx_g59", "@Cortezalex17"]
+    admin_usernames_k = ["young_plague_ftp",  "antraxx_g59",  "cortezalex17"]
+    if adm_idx < 0 or adm_idx >= len(admin_display):
+        _answer_callback(callback_query_id, "Administrador no válido.")
+        return
+    target_display  = admin_display[adm_idx]
+    target_uname_k  = admin_usernames_k[adm_idx]
+
+    # Look up the admin's real numeric chat_id from Firebase
+    admin_numeric_id = _get_admin_chat_id(target_uname_k)
+
+    username_str = f"@{username}" if username else "(sin usuario)"
+    usd      = pkg["usd"]
+    bits     = pkg["bits"]
+    bonus    = pkg["bonus"]
+    bits_fmt = f"{bits:,}"
+
+    # 1. Dismiss spinner and confirm to the player
+    _answer_callback(callback_query_id, "✅ ¡Solicitud enviada!")
+    _send_bot(chat_id,
+        f"✅ <b>¡Solicitud de recarga enviada!</b>\n\n"
+        f"💵 Monto: <b>{usd} USD</b>\n"
+        f"💎 Recibirás: <b>{bits_fmt} Bits</b>"
+        + (f" (+{bonus:,} bonus)" if bonus else "") +
+        f"\n👤 Administrador: <b>{target_display}</b>\n\n"
+        f"📩 El administrador revisará tu solicitud y acreditará los bits pronto. "
+        f"Si tienes dudas, escríbenos directamente aquí."
+    )
+
+    # 2. Notify the CHOSEN admin via their numeric chat_id
+    admin_msg = (
+        f"🔔 <b>SOLICITUD DE RECARGA — {usd} USD</b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 Jugador: <b>{first_name}</b>\n"
+        f"🆔 Telegram ID: <code>{chat_id}</code>\n"
+        f"📛 Usuario: {username_str}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"💵 Monto: <b>{usd} USD</b>\n"
+        f"💎 Bits a acreditar: <b>{bits_fmt} Bits</b>"
+        + (f" (+{bonus:,} bonus)" if bonus else "") +
+        f"\n━━━━━━━━━━━━━━━━━━━━\n"
+        f"⚡ Busca al jugador en el panel admin por ID: <code>{chat_id}</code>"
+    )
+    if admin_numeric_id:
+        _send_bot(int(admin_numeric_id), admin_msg)
+        print(f"[Recharge] Notification sent to {target_display} (id={admin_numeric_id})")
+    else:
+        # Admin hasn't started the bot yet — notify player and log
+        _send_bot(chat_id,
+            f"⚠️ El administrador {target_display} aún no ha iniciado el bot.\n"
+            f"Por favor inténtalo de nuevo o contacta directamente a {target_display} en Telegram."
+        )
+        print(f"[Recharge] No chat_id stored for admin {target_display}. Ask them to /start the bot.")
+
+def _handle_unknown(chat_id):
+    _send_bot(chat_id, (
+        "🤖 <b>Comandos disponibles:</b>\n\n"
+        "/start — Iniciar o reanudar el juego\n"
+        "/info — Ver tu perfil e información\n"
+        "/invite — Obtener tu link de referidos\n"
+        "/recharge — Ver opciones de recarga\n\n"
+        "💡 O simplemente escríbeme para chatear con soporte."
+    ))
+
+def poll_telegram_updates():
+    """Background thread that polls Telegram getUpdates and routes commands."""
+    if not BOT_TOKEN:
+        return
+
+    offset = 0
+    time.sleep(3)  # Small startup delay
+
+    while True:
+        try:
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
+            res = requests.get(url, params={"offset": offset, "timeout": 30}, timeout=35)
+            data = res.json()
+            if data.get("ok"):
+                for update in data.get("result", []):
+                    offset = update["update_id"] + 1
+                    msg = update.get("message")
+
+                    # ── Handle inline button presses (callback queries) ──────
+                    cq = update.get("callback_query")
+                    if cq:
+                        cq_id        = cq["id"]
+                        cq_data      = cq.get("data", "")
+                        cq_from      = cq.get("from", {})
+                        cq_chat_id   = cq_from.get("id") or cq.get("message", {}).get("chat", {}).get("id")
+                        cq_first_name = cq_from.get("first_name", f"Usuario{cq_chat_id}")
+                        cq_username   = cq_from.get("username", "")
+
+                        if cq_data.startswith("adm_"):
+                            # Step 1 → 2: admin selected
+                            try:
+                                adm_idx = int(cq_data.split("_", 1)[1])
+                            except (ValueError, IndexError):
+                                adm_idx = -1
+                            _handle_admin_pick(cq_id, cq_chat_id, adm_idx)
+
+                        elif cq_data.startswith("rc_"):
+                            # Step 2 → 3: amount selected (format: rc_AMOUNT_ADMIDX)
+                            parts_cq = cq_data.split("_")
+                            # parts_cq: ['rc', AMOUNT, ADMIDX]
+                            try:
+                                pkg_key = parts_cq[1]
+                                adm_idx = int(parts_cq[2])
+                            except (ValueError, IndexError):
+                                _answer_callback(cq_id, "Error en la selección.")
+                                continue
+                            _handle_recharge_callback(cq_id, cq_chat_id, cq_first_name, cq_username, pkg_key, adm_idx)
+
+                        elif cq_data == "back_recharge":
+                            _answer_callback(cq_id)
+                            _handle_recharge(cq_chat_id)
+
+                        else:
+                            _answer_callback(cq_id)
+                        continue
+                    # ── End callback handling ────────────────────────────────
+
+                    if not msg or not msg.get("text"):
+                        continue
+
+                    text = msg["text"].strip()
+                    chat_id = msg["chat"]["id"]
+                    from_info = msg.get("from") or msg.get("chat") or {}
+                    first_name = from_info.get("first_name", f"Usuario{chat_id}")
+                    username = from_info.get("username", "")
+                    photo_url = ""
+
+                    # ── Auto-register admin chat_ids when they interact with the bot ──
+                    if username and username.lower() in ADMIN_USERNAMES_LOWER:
+                        _save_admin_chat_id(username, chat_id)
+                        print(f"[Admin] Registered chat_id {chat_id} for @{username}")
+                    # ──────────────────────────────────────────────────────
+
+                    # Extract base command (strip @botname suffix if present)
+                    parts = text.split()
+                    cmd_raw = parts[0].split("@")[0].lower() if text.startswith("/") else ""
+                    start_param = parts[1] if (cmd_raw == "/start" and len(parts) > 1) else None
+
+                    if cmd_raw == "/start":
+                        _handle_start(chat_id, first_name, username, photo_url, start_param)
+                    elif cmd_raw == "/info":
+                        _handle_info(chat_id, first_name)
+                    elif cmd_raw == "/invite":
+                        _handle_invite(chat_id, first_name)
+                    elif cmd_raw == "/recharge":
+                        _handle_recharge(chat_id)
+                    elif text.startswith("/"):
+                        _handle_unknown(chat_id)
+                    else:
+                        # Regular support message — save to Firebase
+                        database.save_user_telegram_msg(chat_id, first_name, username, text, "user")
+        except Exception as e:
+            print(f"[poll_telegram_updates] error: {e}")
+            time.sleep(5)
+        time.sleep(1)
+
+# Start polling in background (avoid duplicating in Werkzeug reloader)
+if not os.environ.get("WERKZEUG_RUN_MAIN"):
+    threading.Thread(target=poll_telegram_updates, daemon=True).start()
 
 # =====================================================
 # MAIN

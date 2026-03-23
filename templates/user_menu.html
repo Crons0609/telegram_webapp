@@ -3,6 +3,18 @@
 =========================================== -->
 {% if global_profile %}
 <div class="elite-menu-container">
+    <!-- Mode Toggle -->
+    <div class="mode-toggle" style="display:flex; align-items:center; background:rgba(0,0,0,0.4); border-radius:20px; padding:3px; margin-right:10px; border:1px solid rgba(255,255,255,0.1);">
+        <button onclick="UserProfileManager.setPlayMode('real')" id="btn-mode-real" style="border:none; border-radius:15px; padding:4px 10px; font-size:0.75rem; font-weight:bold; cursor:pointer; background:{{ 'var(--gold)' if global_profile.play_mode != 'demo' else 'transparent' }}; color:{{ '#000' if global_profile.play_mode != 'demo' else '#aaa' }}; transition:all 0.3s; margin-right:2px;">Real</button>
+        <button onclick="UserProfileManager.setPlayMode('demo')" id="btn-mode-demo" style="border:none; border-radius:15px; padding:4px 10px; font-size:0.75rem; font-weight:bold; cursor:pointer; background:{{ '#a855f7' if global_profile.play_mode == 'demo' else 'transparent' }}; color:{{ '#fff' if global_profile.play_mode == 'demo' else '#aaa' }}; transition:all 0.3s;">Demo</button>
+    </div>
+
+    <!-- Notifications Bell -->
+    <button class="elite-menu-btn notif-btn" type="button" onclick="UserProfileManager.openInboxModal()" style="margin-right:10px; position:relative; background:rgba(255,255,255,0.05); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center;">
+        <span style="font-size:1.1rem;">🔔</span>
+        <span id="nav-unread-badge" style="display:none; position:absolute; top:-2px; right:-2px; background:#ef4444; color:#fff; font-size:0.65rem; font-weight:bold; padding:2px 5px; border-radius:10px; min-width:16px; text-align:center; border:2px solid #0f172a;">0</span>
+    </button>
+
     <!-- Trigger Button - Opens Modal Directly -->
     <button class="elite-menu-btn" type="button" onclick="UserProfileManager.openModal('info')">
         <!-- Avatar Wrapper with Frame -->

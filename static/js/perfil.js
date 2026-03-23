@@ -78,6 +78,147 @@ window.UserProfileManager = {
             `;
             document.body.appendChild(mToast);
         }
+
+        // Fetch initial inbox status
+        setTimeout(() => this.loadInboxMessages(true), 1500);
+    },
+
+    openInboxModal: function() {
+        const modal = document.getElementById('inbox-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
+        this.loadInboxMessages(false);
+    },
+
+    closeInboxModal: function() {
+        const modal = document.getElementById('inbox-modal');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    setPlayMode: async function(mode) {
+        try {
+            const res = await fetch('/api/user/set_mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: mode })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error("Error setting play mode:", e);
+        }
+    },
+
+    loadInboxMessages: async function(badgeOnly = false) {
+        if (!badgeOnly) {
+            const container = document.getElementById('inbox-list-container');
+            if (container) container.innerHTML = '<p class="muted" style="text-align:center;">Cargando mensajes...</p>';
+        }
+
+        try {
+            const res = await fetch('/api/user/messages');
+            const data = await res.json();
+            
+            if (data.status === 'ok') {
+                // Update badge
+                const badge = document.getElementById('nav-unread-badge');
+                if (badge) {
+                    if (data.unread > 0) {
+                        badge.textContent = data.unread > 9 ? '9+' : data.unread;
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+
+                if (!badgeOnly) {
+                    this.renderInboxMessages(data.messages);
+                }
+            }
+        } catch (e) {
+            console.error("Error loading inbox:", e);
+        }
+    },
+
+    renderInboxMessages: function(messages) {
+        const container = document.getElementById('inbox-list-container');
+        if (!container) return;
+
+        if (!messages || messages.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:30px 10px; color:#888;">
+                    <div style="font-size:3rem; margin-bottom:10px; opacity:0.5;">📭</div>
+                    <p>Tu bandeja de entrada está vacía.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        messages.forEach(m => {
+            const unread = !m.read;
+            const date = new Date(m.sent_at).toLocaleString();
+            let iconText = '✉️';
+            if (m.type === 'update') iconText = '🔄';
+            if (m.type === 'gift') iconText = '🎁';
+            if (m.type === 'warning') iconText = '⚠️';
+            
+            const bg = unread ? 'background: rgba(212,175,55,0.08); border-left: 3px solid var(--gold-1);' : 'background: rgba(255,255,255,0.03); border-left: 3px solid transparent; opacity: 0.8;';
+            const dot = unread ? `<div style="width:8px; height:8px; background:#ef4444; border-radius:50%; position:absolute; top:12px; right:12px; box-shadow:0 0 8px #ef4444;"></div>` : '';
+
+            // Using standard quotes inside onclick so we don't break HTML attributes
+            html += `
+                <div style="${bg} padding:15px; border-radius:8px; position:relative; transition:0.2s; cursor:pointer;" onclick="UserProfileManager.markMessageRead('${m.id}', this)">
+                    ${dot}
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <span style="font-size:1.5rem;">${iconText}</span>
+                        <div>
+                            <div style="font-weight:bold; font-size:1rem; color:${unread ? '#fff' : '#ccc'};">${m.title}</div>
+                            <div style="font-size:0.75rem; color:#888;">${date}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.9rem; color:#ccc; line-height:1.4;">
+                        ${m.body}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    },
+
+    markMessageRead: async function(msgId, el) {
+        // Optimistic UI update
+        el.style.background = 'rgba(255,255,255,0.03)';
+        el.style.borderLeft = '3px solid transparent';
+        el.style.opacity = '0.8';
+        const dot = el.querySelector('div[style*="border-radius:50%"]');
+        if (dot) dot.remove();
+        
+        // Remove click listener after read
+        el.onclick = null;
+        
+        // Update badge optimistically
+        const badge = document.getElementById('nav-unread-badge');
+        if (badge && badge.style.display !== 'none') {
+            let countStr = badge.textContent.replace('+', '');
+            let count = parseInt(countStr);
+            if (!isNaN(count) && count > 0) {
+                count--;
+                if (count === 0) badge.style.display = 'none';
+                else badge.textContent = count;
+            }
+        }
+
+        try {
+            await fetch('/api/user/messages/read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ msg_id: msgId })
+            });
+        } catch(e) { console.error("Error marking read:", e); }
     },
 
     openModal: async function (targetTab) {
