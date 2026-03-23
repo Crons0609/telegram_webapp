@@ -115,19 +115,46 @@
         ⚽ APUESTAS DEPORTIVAS
       </button>
 
-      <!-- Bits Counter -->
-      <div class="reveal reveal-d3"
-        style="margin: 15px 0 5px 0; font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-1); text-shadow: 0 0 10px rgba(212,175,55,0.5);">
-        💎 Tus Bits: <strong><span id="hero-bits-display">{{ global_profile.bits if global_profile else 0
-            }}</span></strong>
+      <!-- Dual Bits Display + Mode Switcher -->
+      <div class="reveal reveal-d3" style="margin: 18px 0 8px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
+
+        <!-- Real / Demo Tab Switcher -->
+        <div id="hero-mode-switch" style="display:flex; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); border-radius:30px; padding:3px; gap:2px;">
+          <button id="hero-btn-real" onclick="setHeroMode('real')"
+            style="border:none; border-radius:25px; padding:6px 18px; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.25s; background:var(--gold-1,#d4af37); color:#000;">
+            💰 Real
+          </button>
+          <button id="hero-btn-demo" onclick="setHeroMode('demo')"
+            style="border:none; border-radius:25px; padding:6px 18px; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.25s; background:transparent; color:#aaa;">
+            🎮 Demo
+          </button>
+        </div>
+
+        <!-- Dual Balance Row -->
+        <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+          <div id="hero-balance-real" style="text-align:center; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:12px; padding:8px 16px; min-width:120px;">
+            <div style="font-size:0.75rem; color:rgba(212,175,55,0.7); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Cuenta Real</div>
+            <div style="font-size:1.3rem; font-weight:800; color:var(--gold-1,#d4af37);">💎 <span id="hero-bits-display">{{ global_profile.bits if global_profile else 0 }}</span></div>
+          </div>
+          <div id="hero-balance-demo" style="text-align:center; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:12px; padding:8px 16px; min-width:120px; opacity:0.6;">
+            <div style="font-size:0.75rem; color:rgba(168,85,247,0.7); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Cuenta Demo</div>
+            <div style="font-size:1.3rem; font-weight:800; color:#a855f7;">🎮 <span id="hero-bits-demo">{{ global_profile.bits_demo if global_profile else 0 }}</span></div>
+          </div>
+        </div>
       </div>
 
       <!-- Sub actions -->
-      <div class="hero-cta-sub reveal reveal-d3">
-        <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
-        <button class="btn-primary" type="button" data-action="paypal"
-          style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
-          <span style="font-weight:900; font-style: italic;">Pay<span style="color:#003087;">Pal</span></span> Bits
+      <div class="hero-cta-sub reveal reveal-d3" style="flex-direction:column; align-items:center; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+          <button class="btn-primary" type="button" data-action="paypal"
+            style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
+            <span style="font-weight:900; font-style: italic;">Pay<span style="color:#89b4e0;">Pal</span></span> Bits
+          </button>
+          <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
+        </div>
+        <button class="btn-primary" type="button" data-action="retirar"
+          style="background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; width:min(280px,90vw); display:flex; align-items:center; justify-content:center; gap:8px;">
+          💸 Retirar Bits
         </button>
       </div>
 

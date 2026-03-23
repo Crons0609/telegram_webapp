@@ -323,6 +323,8 @@
         }
         window.location.href = '/paypal_bits';
         break;
+
+      case "login":
         const loginBotUsername = "Zona_Jackpot_777bot";
         const loginUrl = `https://t.me/${loginBotUsername}`;
         if (window.Telegram?.WebApp) {
@@ -340,6 +342,15 @@
         }
         // Redirect to P2P Bits page where user selects the amount
         window.location.href = '/p2p_bits';
+        break;
+
+      case "retirar":
+        if (!window.Telegram?.WebApp?.initDataUnsafe?.user) {
+          alert("Por favor, abre el casino desde Telegram para poder retirar bits.");
+          return;
+        }
+        const tid = window.Telegram.WebApp.initDataUnsafe.user.id;
+        window.location.href = '/withdraw?telegram_id=' + tid;
         break;
 
       case "explorar":
@@ -553,5 +564,37 @@
       container.innerHTML = '<p class="muted" style="color:red; text-align:center;">Error al cargar las salas.</p>';
     }
   };
+
+  // ─── HERO MODE SWITCHER (Real / Demo) ────────────────────────────────────
+  window.setHeroMode = function(mode) {
+    const btnReal = document.getElementById('hero-btn-real');
+    const btnDemo = document.getElementById('hero-btn-demo');
+    const cardReal = document.getElementById('hero-balance-real');
+    const cardDemo = document.getElementById('hero-balance-demo');
+
+    if (mode === 'real') {
+      if (btnReal) { btnReal.style.background = 'var(--gold-1,#d4af37)'; btnReal.style.color = '#000'; }
+      if (btnDemo) { btnDemo.style.background = 'transparent'; btnDemo.style.color = '#aaa'; }
+      if (cardReal) cardReal.style.opacity = '1';
+      if (cardDemo) cardDemo.style.opacity = '0.45';
+    } else {
+      if (btnDemo) { btnDemo.style.background = '#a855f7'; btnDemo.style.color = '#fff'; }
+      if (btnReal) { btnReal.style.background = 'transparent'; btnReal.style.color = '#aaa'; }
+      if (cardDemo) cardDemo.style.opacity = '1';
+      if (cardReal) cardReal.style.opacity = '0.45';
+    }
+
+    // Sync with UserProfileManager if available
+    if (window.UserProfileManager && typeof window.UserProfileManager.setPlayMode === 'function') {
+      window.UserProfileManager.setPlayMode(mode);
+    }
+  };
+
+  // Auto-apply saved mode on load
+  (function applyInitialMode() {
+    const savedMode = (window.UserProfileManager?.getProfile?.()?.play_mode) || localStorage.getItem('play_mode') || 'real';
+    // Run after DOM paint
+    setTimeout(() => window.setHeroMode(savedMode), 100);
+  })();
 
 })();
