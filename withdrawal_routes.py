@@ -223,7 +223,7 @@ def api_p2p_admins():
     
     admin_list = []
     for telegram_id, admin_data in admins.items():
-        if admin_data.get('activo', False) and admin_data.get('rol') in ['admin', 'superadmin']:
+        if admin_data.get('rol') in ['admin', 'superadmin']:
             admin_list.append({
                 'telegram_id': telegram_id,
                 'nombre': admin_data.get('nombre', 'Administrador')

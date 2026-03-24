@@ -10,6 +10,8 @@ from user_profile_manager import UserProfileManager
 from trophy_manager import check_and_unlock_trophies, get_trophy_definitions
 from mission_manager import get_user_missions_with_progress, claim_mission_reward, check_newly_completed_missions
 import os
+import time
+import requests
 
 app = Flask(__name__)
 # Inicializar SocketIO (se usará eventlet como servidor asíncrono)
@@ -1308,8 +1310,9 @@ def poll_telegram_updates():
 
 # Start polling in background (avoid duplicating in Werkzeug reloader)
 if not os.environ.get("WERKZEUG_RUN_MAIN"):
-    print("[Bot] Starting Telegram bot polling background task...")
-    socketio.start_background_task(poll_telegram_updates)
+    import threading
+    print("[Bot] Starting Telegram bot polling background task via threading...")
+    threading.Thread(target=poll_telegram_updates, daemon=True).start()
 
 # =====================================================
 # MAIN
