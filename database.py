@@ -723,7 +723,8 @@ def notify_bits_added_paypal(telegram_id, usd_paid, bits_received, new_balance) 
 # SISTEMA DE RETIROS
 # ─────────────────────────────────────────────────────────
 
-def crear_solicitud_retiro(telegram_id: str, username: str, nombre: str, bits: int, usd: float, method: str, paypal_email: str = '') -> str:
+def crear_solicitud_retiro(telegram_id: str, username: str, nombre: str, bits: int, usd: float, method: str,
+                           paypal_email: str = '', status: str = 'pending', paypal_batch_id: str = None) -> str:
     """Creates a withdrawal request in Firebase and returns the transaction ID."""
     import uuid
     tx_id = str(uuid.uuid4())[:12].upper()
@@ -735,10 +736,10 @@ def crear_solicitud_retiro(telegram_id: str, username: str, nombre: str, bits: i
         'usd': float(usd),
         'method': method,  # 'p2p' or 'paypal'
         'paypal_email': paypal_email or '',
-        'status': 'pending',
+        'status': status,
         'created_at': datetime.utcnow().isoformat(),
-        'processed_at': None,
-        'paypal_tx_id': None,
+        'processed_at': datetime.utcnow().isoformat() if status == 'completed' else None,
+        'paypal_tx_id': paypal_batch_id,
         'tx_id': tx_id,
     }
     res = post_fb('retiros', data)

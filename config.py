@@ -1,10 +1,15 @@
 BOT_TOKEN = "8511146591:AAGZP46Bs0NaqzQvXeduDdwzvA3Tyd02JsU"
 WEBAPP_URL = "https://t.me/Zona_Jackpot_777bot/Zona_jackpot_777"  # luego lo cambias cuando lo subas a Render
 
-# PayPal API credentials (configurar antes de activar pagos automáticos)
-PAYPAL_CLIENT_ID = "TU_PAYPAL_CLIENT_ID"
-PAYPAL_CLIENT_SECRET = "TU_PAYPAL_CLIENT_SECRET"
+# PayPal API credentials
 PAYPAL_MODE = "sandbox"  # "sandbox" para pruebas, "live" para producción
+
+if PAYPAL_MODE == "sandbox":
+    PAYPAL_CLIENT_ID = "ARIbqolPZ_S8yK_AIsRvL1MjdvXk0i1t_QEig7OpXNiZIGNV6a0R6ixssDFdXP4VYPOl1NCNqz6STUHt"
+    PAYPAL_CLIENT_SECRET = "EOTApF7IxTuzc1Ht_hveKVsGtqpNkx25Zz0zRJmR5FlGt7FgiiqfDoFq2YagujcAlxHpaUjbwZ2OiZ79"
+else:
+    PAYPAL_CLIENT_ID = "AUp_WermC5CsF_EkBK6Wk5_4bov44u62qrMLgGWy7CklZ6WIWMQQJvlhy5fIwO1u0G968F3jmINv62LF"
+    PAYPAL_CLIENT_SECRET = "EAOhMDZzjgsGc7XJ1REFo3tef1lTe0DqSkHN5VAwMmQ5tr1ruD3DKuNOsOiBwwBntwXLWLwZZLYS3DZr"
 
 # Configuración del sistema de retiros
 BITS_TO_USD_RATE = 1000       # 1000 bits = 1 USD

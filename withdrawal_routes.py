@@ -60,10 +60,13 @@ def withdraw_page():
 @withdrawal_bp.route('/api/request', methods=['POST'])
 def api_request_withdrawal():
     """
-    Creates a new withdrawal request (P2P or PayPal placeholder).
+    Creates a new withdrawal request (P2P or PayPal automatic payout).
     Validates balance, daily limits, and minimum amounts.
+    For PayPal: triggers instant payout via PayPal Payouts API.
     Body: {telegram_id, bits, method, paypal_email (optional)}
     """
+    import paypal_service
+
     data = request.get_json() or {}
     telegram_id = data.get('telegram_id') or session.get('telegram_id')
     bits_str = data.get('bits', 0)
@@ -117,10 +120,42 @@ def api_request_withdrawal():
     if method == 'paypal' and not paypal_email:
         return jsonify({'success': False, 'message': 'Debes ingresar tu email de PayPal.'}), 400
 
-    # ── 6. Create the withdrawal request in Firebase ──────────────────────────
+    # ── 6. Handle PayPal automatic payout ────────────────────────────────────
     username = user.get('username') or user.get('nombre') or str(telegram_id)
-    nombre = user.get('nombre') or user.get('first_name') or username
+    nombre   = user.get('nombre') or user.get('first_name') or username
 
+    paypal_batch_id = None
+    tx_status = 'pending'
+    success_msg = 'Solicitud enviada. Recibirás una notificación cuando sea procesada.'
+
+    if method == 'paypal':
+        payout_result = paypal_service.execute_payout(
+            email=paypal_email,
+            amount_usd=usd,
+            note=f'Retiro de {bits:,} bits — Zona Jackpot 777'
+        )
+
+        if not payout_result['success']:
+            # Payment failed — do NOT deduct bits, reject immediately
+            friendly_err = payout_result.get('error_msg', 'Error desconocido.')
+            return jsonify({
+                'success': False,
+                'message': f'❌ Error al procesar el pago con PayPal: {friendly_err}'
+            }), 402
+
+        # Payment succeeded — mark as completed and deduct bits
+        paypal_batch_id = payout_result.get('batch_id')
+        tx_status = 'completed'
+        success_msg = f'✅ ¡Pago de ${usd:.2f} USD enviado a {paypal_email}! Revisa tu cuenta de PayPal.'
+
+        # Deduct bits immediately after successful payout
+        try:
+            database.descontar_bits(str(telegram_id), bits)
+        except Exception as e:
+            print(f"[Withdrawal] CRITICAL: payout succeeded but bits deduction failed: {e}")
+            # Log but don't fail the request since money was already sent
+
+    # ── 7. Create the withdrawal record in Firebase ───────────────────────────
     tx_id = database.crear_solicitud_retiro(
         telegram_id=str(telegram_id),
         username=username,
@@ -129,11 +164,16 @@ def api_request_withdrawal():
         usd=usd,
         method=method,
         paypal_email=paypal_email,
+        status=tx_status,
+        paypal_batch_id=paypal_batch_id,
     )
 
-    # ── 7. Notify user via Telegram ───────────────────────────────────────────
+    # ── 8. Notify user via Telegram ───────────────────────────────────────────
     try:
-        database.notify_withdrawal_received(str(telegram_id), bits, usd, method, tx_id)
+        if method == 'paypal' and tx_status == 'completed':
+            database.notify_withdrawal_approved(str(telegram_id), bits, usd, 'paypal', tx_id)
+        else:
+            database.notify_withdrawal_received(str(telegram_id), bits, usd, method, tx_id)
     except Exception:
         pass
 
@@ -143,7 +183,8 @@ def api_request_withdrawal():
         'bits': bits,
         'usd': usd,
         'method': method,
-        'message': 'Solicitud enviada. Recibirás una notificación cuando sea procesada.'
+        'auto_paid': (tx_status == 'completed'),
+        'message': success_msg
     })
 
 
