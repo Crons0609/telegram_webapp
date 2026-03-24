@@ -79,25 +79,23 @@ window.UserProfileManager = {
             document.body.appendChild(mToast);
         }
 
-        // Fetch initial inbox status
-        setTimeout(() => this.loadInboxMessages(true), 1500);
+        // Fetch initial inbox status (Removed for performance/cleanup)
+        // setTimeout(() => this.loadInboxMessages(true), 1500);
     },
 
     openInboxModal: function() {
-        const modal = document.getElementById('inbox-modal');
-        if (!modal) return;
-        modal.classList.remove('hidden');
-        document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show'));
-        this.loadInboxMessages(false);
+        // Notifications removed
     },
 
     closeInboxModal: function() {
-        const modal = document.getElementById('inbox-modal');
-        if (modal) modal.classList.add('hidden');
+        // Notifications removed
     },
 
     setPlayMode: async function(mode) {
         try {
+            // Locally save the intent so next page load retains it
+            localStorage.setItem('play_mode', mode);
+            
             const res = await fetch('/api/user/set_mode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -105,7 +103,8 @@ window.UserProfileManager = {
             });
             const data = await res.json();
             if (data.status === 'ok') {
-                window.location.reload();
+                // UI updates are handled proactively by setHeroMode(), no reload needed.
+                console.log("Play mode saved to:", mode);
             }
         } catch (e) {
             console.error("Error setting play mode:", e);

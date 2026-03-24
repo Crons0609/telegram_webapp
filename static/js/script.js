@@ -84,7 +84,19 @@
           
         // Si no existe el contenedor del menú élite (ej: carga inicial sin sesión)
         if (!document.querySelector('.elite-menu-container')) {
-            window.location.reload();
+            // Emulate the menu to avoid reloading
+            const loginBtn = document.querySelector('[data-action="login"]');
+            if (loginBtn) {
+                loginBtn.outerHTML = `<button class="elite-menu-btn" type="button" onclick="UserProfileManager.openModal('info')" style="padding:5px 15px; border-radius:20px; border:1px solid rgba(212,175,55,0.4); background:rgba(0,0,0,0.5); font-weight:bold; color:var(--gold); display:flex; align-items:center; gap:8px;">
+                    <div style="font-size:1.5rem;">👤</div>
+                    <span>${user.first_name}</span>
+                </button>`;
+            }
+            // Update real and demo hero balances locally
+            const realBits = document.getElementById("hero-bits-display");
+            const demoBits = document.getElementById("hero-bits-demo");
+            if (realBits && data.bits !== undefined) realBits.textContent = data.bits;
+            if (demoBits && data.demo_bits !== undefined) demoBits.textContent = data.demo_bits;
             return;
         }
 
