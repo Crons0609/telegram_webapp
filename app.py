@@ -1359,7 +1359,8 @@ def poll_telegram_updates():
 
 # Start polling in background (avoid duplicating in Werkzeug reloader)
 if not os.environ.get("WERKZEUG_RUN_MAIN"):
-    threading.Thread(target=poll_telegram_updates, daemon=True).start()
+    print("[Bot] Starting Telegram bot polling background task...")
+    socketio.start_background_task(poll_telegram_updates)
 
 # =====================================================
 # MAIN
