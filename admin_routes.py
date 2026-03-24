@@ -675,26 +675,51 @@ def api_list_withdrawals():
 @admin_required_api
 def api_withdrawals_complete(tx_id):
     """Marks a withdrawal as completed in Firebase."""
-    k, _ = database._find_retiro_key(tx_id)
-    if not k:
-        return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
-        
-    if database.completar_retiro(k):
-        return jsonify({'success': True, 'message': 'Retiro marcado como completado.'})
-    else:
-        return jsonify({'success': False, 'message': 'No se pudo completar. Puede que ya estuviera procesado.'}), 400
+    try:
+        k, _ = database._find_retiro_key(tx_id)
+        if not k:
+            return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
+            
+        if database.completar_retiro(k):
+            return jsonify({'success': True, 'message': 'Retiro marcado como completado.'})
+        else:
+            return jsonify({'success': False, 'message': 'No se pudo completar. Puede que ya estuviera procesado.'}), 400
+    except Exception as e:
+        print(f"[Admin] Error completing withdrawal: {e}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+@admin_bp.route('/api/withdrawals/<tx_id>/approve', methods=['POST'])
+@admin_required_api
+def api_withdrawals_approve(tx_id):
+    """Approves a P2P withdrawal: updates status to approved (bits were deducted at request)."""
+    try:
+        k, _ = database._find_retiro_key(tx_id)
+        if not k:
+            return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
+            
+        if database.aprobar_retiro(k):
+            return jsonify({'success': True, 'message': 'Retiro aprobado exitosamente.'})
+        else:
+            return jsonify({'success': False, 'message': 'No se pudo aprobar el retiro.'}), 400
+    except Exception as e:
+        print(f"[Admin] Error approving withdrawal: {e}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 @admin_bp.route('/api/withdrawals/<tx_id>/reject', methods=['POST'])
 @admin_required_api
 def api_withdrawals_reject(tx_id):
     """Rejects a withdrawal and refunds bits."""
-    data = request.json or {}
-    reason = data.get('reason', '')
-    k, _ = database._find_retiro_key(tx_id)
-    if not k:
-        return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
-        
-    if database.rechazar_retiro(k, reason):
-        return jsonify({'success': True, 'message': 'Retiro rechazado. Se han reembolsado los bits al jugador.'})
-    else:
-        return jsonify({'success': False, 'message': 'No se pudo rechazar el retiro.'}), 400
+    try:
+        data = request.json or {}
+        reason = data.get('reason', '')
+        k, _ = database._find_retiro_key(tx_id)
+        if not k:
+            return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
+            
+        if database.rechazar_retiro(k, reason):
+            return jsonify({'success': True, 'message': 'Retiro rechazado. Se han reembolsado los bits al jugador.'})
+        else:
+            return jsonify({'success': False, 'message': 'No se pudo rechazar el retiro.'}), 400
+    except Exception as e:
+        print(f"[Admin] Error rejecting withdrawal: {e}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500

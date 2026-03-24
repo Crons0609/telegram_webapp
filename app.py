@@ -96,53 +96,6 @@ def home():
         # Quitamos la lógica del usuario de prueba "12345" para no sobreescribir sesiones perdidas en Telegram.
         return render_template("index.html", nombre="", username="", telegram_id="", bits=0, photo_url="")
 
-# =====================================================
-# DEV LOGIN (Solo entorno local — usar para pruebas)
-# =====================================================
-TEST_USER_ID  = "99999999"
-TEST_NOMBRE   = "🧪 Tester Ghost"
-TEST_USERNAME = "dev_tester"
-
-@app.route('/dev-login')
-def dev_login():
-    """Login inmediato como usuario de prueba — solo para desarrollo local."""
-    # Crear / actualizar usuario en Firebase con recursos generosos
-    database.agregar_usuario(TEST_USER_ID, TEST_NOMBRE, TEST_USERNAME, "")
-    # Aseguramos bits, nivel y xp para probar todas las funciones
-    perfil = database.obtener_perfil_completo(TEST_USER_ID) or {}
-    if perfil.get('bits', 0) < 50_000:
-        database.patch_fb(f"usuarios/{TEST_USER_ID}", {
-            "bits": 50000,
-            "nivel": 10,
-            "xp": 9500,
-            "avatar_frame": "frame_gold",
-            "marco_actual": "frame_gold",
-        })
-    # Inicializar stats si no existen
-    if not database.get_fb(f"user_stats/{TEST_USER_ID}"):
-        database.patch_fb(f"user_stats/{TEST_USER_ID}", {
-            "juegos_jugados": 0,
-            "bits_ganados": 0,
-            "bits_apostados": 0,
-            "jackpots_ganados": 0,
-            "moches_ganados": 0,
-            "ruletas_ganadas": 0,
-            "wins_total": 0,
-        })
-    # Set session
-    session["telegram_id"] = TEST_USER_ID
-    session["nombre"]      = TEST_NOMBRE
-    session["username"]    = TEST_USERNAME
-    session["photo_url"]   = ""
-    session.permanent      = True
-    return redirect(url_for('home'))
-
-@app.route('/dev-logout')
-def dev_logout():
-    """Cierra la sesión del usuario de prueba."""
-    session.clear()
-    return redirect(url_for('home'))
-
 
 # =====================================================
 # LOBBY DE JUEGOS
@@ -159,11 +112,7 @@ def juegos():
         bits = database.obtener_bits(telegram_id, is_demo)
         return render_template("juegos.html", nombre=nombre, username=username, telegram_id=telegram_id, bits=bits, photo_url=photo_url, play_mode=session.get('play_mode', 'real'))
     else:
-        # TEST MODE
-        test_id = "12345"
-        test_nombre = "Usuario de Prueba"
-        bits = database.obtener_bits(test_id)
-        return render_template("juegos.html", nombre=test_nombre, username="tester", telegram_id=test_id, bits=bits, photo_url="")
+        return redirect(url_for('home'))
 
 # =====================================================
 # REGISTRO DESDE TELEGRAM WEBAPP
