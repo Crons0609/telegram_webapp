@@ -261,6 +261,14 @@
             <input type="email" class="form-control" id="paypalEmail" placeholder="tu@email.com"/>
             <div class="form-hint">El pago se enviará a esta cuenta PayPal</div>
         </div>
+        
+        <div class="form-group" id="p2pAdminGroup">
+            <label class="form-label">Administrador a cargo (P2P)</label>
+            <select class="form-control" id="p2pAdminSelect">
+                <option value="">Cargando administradores...</option>
+            </select>
+            <div class="form-hint">Elige un administrador para tramitar tu retiro.</div>
+        </div>
 
         <div id="formAlert"></div>
 
@@ -323,6 +331,33 @@ const USER_BITS = {{ bits }};
 const TELEGRAM_ID = {{ telegram_id }};
 let selectedMethod = 'p2p';
 
+document.addEventListener('DOMContentLoaded', () => {
+    loadP2pAdmins();
+});
+
+async function loadP2pAdmins() {
+    const select = document.getElementById('p2pAdminSelect');
+    try {
+        const res = await fetch('/withdraw/api/p2p_admins');
+        const data = await res.json();
+        if (data.success) {
+            select.innerHTML = '';
+            if (data.admins.length === 0) {
+                select.innerHTML = '<option value="">No hay administradores disponibles</option>';
+            } else {
+                data.admins.forEach(admin => {
+                    const opt = document.createElement('option');
+                    opt.value = admin.telegram_id;
+                    opt.textContent = admin.nombre;
+                    select.appendChild(opt);
+                });
+            }
+        }
+    } catch(e) {
+        select.innerHTML = '<option value="">Error cargando administradores</option>';
+    }
+}
+
 function updateConverter() {
     const bits = parseInt(document.getElementById('bitsInput').value) || 0;
     const usd = bits / RATE;
@@ -334,6 +369,7 @@ function selectMethod(method) {
     document.getElementById('methodPaypal').classList.toggle('selected', method === 'paypal');
     document.getElementById('methodP2p').classList.toggle('selected', method === 'p2p');
     document.getElementById('paypalEmailGroup').style.display = method === 'paypal' ? 'block' : 'none';
+    document.getElementById('p2pAdminGroup').style.display = method === 'p2p' ? 'block' : 'none';
 }
 
 function showAlert(msg, type='warning') {
@@ -354,22 +390,29 @@ async function submitWithdrawal() {
     clearAlert();
     const bits = parseInt(document.getElementById('bitsInput').value) || 0;
     const paypalEmail = document.getElementById('paypalEmail').value.trim();
+    const adminId = document.getElementById('p2pAdminSelect').value;
 
     if (bits < MIN_BITS) { showAlert(`El mínimo de retiro es ${MIN_BITS.toLocaleString()} bits.`); return; }
     if (bits > USER_BITS) { showAlert('No tienes suficientes bits.', 'danger'); return; }
     const usd = bits / RATE;
     if (usd > MAX_USD) { showAlert(`El máximo por retiro es $${MAX_USD.toFixed(0)} USD.`); return; }
+    
     if (selectedMethod === 'paypal' && !paypalEmail) { showAlert('Ingresa tu email de PayPal.'); return; }
+    if (selectedMethod === 'p2p' && !adminId) { showAlert('Por favor, selecciona un administrador a cargo.'); return; }
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
     try {
+        const payload = { telegram_id: TELEGRAM_ID, bits, method: selectedMethod };
+        if (selectedMethod === 'paypal') payload.paypal_email = paypalEmail;
+        if (selectedMethod === 'p2p') payload.admin_id = adminId;
+
         const res = await fetch('/withdraw/api/request', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ telegram_id: TELEGRAM_ID, bits, method: selectedMethod, paypal_email: paypalEmail })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (data.success) {

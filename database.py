@@ -818,26 +818,67 @@ def aprobar_retiro(firebase_key: str) -> bool:
     return True
 
 def completar_retiro(firebase_key: str) -> bool:
-    """Marks a withdrawal as paid/completed by admin."""
+    """Marks a withdrawal as paid/completed by admin. (Bits were already deducted at request)"""
     retiro = get_fb(f'retiros/{firebase_key}')
-    if not retiro:
+    if not retiro or retiro.get('status') == 'completed':
         return False
     patch_fb(f'retiros/{firebase_key}', {
         'status': 'completed',
         'processed_at': datetime.utcnow().isoformat()
     })
+    
+    # Notify user it was paid
+    telegram_id = str(retiro.get('telegram_id'))
+    bits = int(retiro.get('bits', 0))
+    usd = float(retiro.get('usd', 0))
+    method = str(retiro.get('method', 'p2p'))
+    tx_id = str(retiro.get('tx_id', ''))
+    try:
+        notify_withdrawal_approved(telegram_id, bits, usd, method, tx_id)
+    except Exception:
+        pass
+        
     return True
 
 def rechazar_retiro(firebase_key: str, reason: str = '') -> bool:
-    """Rejects a withdrawal and leaves user bits untouched."""
+    """Rejects a withdrawal and REFUNDS the bits to the user."""
     retiro = get_fb(f'retiros/{firebase_key}')
-    if not retiro:
+    if not retiro or retiro.get('status') in ['rejected', 'completed']:
         return False
+        
+    telegram_id = str(retiro.get('telegram_id'))
+    bits = int(retiro.get('bits', 0))
+    
+    # Refund bits
+    usuario = obtener_usuario(int(telegram_id))
+    if usuario:
+        new_bits = int(usuario.get('bits', 0)) + bits
+        patch_fb(f'usuarios/{telegram_id}', {'bits': new_bits})
+        
+        registrar_transaccion(int(telegram_id), retiro.get('username',''), 'reintegro_retiro', bits, 0,
+                              f'Reintegro por retiro rechazado - {retiro.get("tx_id","")}')
+                              
     patch_fb(f'retiros/{firebase_key}', {
         'status': 'rejected',
         'processed_at': datetime.utcnow().isoformat(),
         'rejection_reason': reason
     })
+    
+    # Notify user
+    try:
+        method_label = 'PayPal' if retiro.get('method') == 'paypal' else 'P2P (Admin)'
+        usd = float(retiro.get('usd', 0))
+        msg = (
+            "❌ <b>Solicitud de Retiro Rechazada</b>\n\n"
+            f"Tu retiro por <b>{bits:,} bits</b> (${usd:.2f} USD) vía {method_label} ha sido cancelado.\n\n"
+        )
+        if reason:
+            msg += f"📝 Motivo: <i>{reason}</i>\n\n"
+        msg += "💰 <b>Tus bits han sido reembolsados a tu cuenta.</b>"
+        send_telegram_notification(telegram_id, "Retiro Rechazado", msg)
+    except Exception:
+        pass
+
     return True
 
 def notify_withdrawal_received(telegram_id: str, bits: int, usd: float, method: str, tx_id: str) -> None:

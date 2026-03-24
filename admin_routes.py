@@ -670,3 +670,31 @@ def api_list_withdrawals():
     if status_filter and status_filter != 'all':
         todos = [r for r in todos if r.get('status') == status_filter]
     return jsonify({'success': True, 'withdrawals': todos, 'total': len(todos)})
+
+@admin_bp.route('/api/withdrawals/<tx_id>/complete', methods=['POST'])
+@admin_required_api
+def api_withdrawals_complete(tx_id):
+    """Marks a withdrawal as completed in Firebase."""
+    k, _ = database._find_retiro_key(tx_id)
+    if not k:
+        return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
+        
+    if database.completar_retiro(k):
+        return jsonify({'success': True, 'message': 'Retiro marcado como completado.'})
+    else:
+        return jsonify({'success': False, 'message': 'No se pudo completar. Puede que ya estuviera procesado.'}), 400
+
+@admin_bp.route('/api/withdrawals/<tx_id>/reject', methods=['POST'])
+@admin_required_api
+def api_withdrawals_reject(tx_id):
+    """Rejects a withdrawal and refunds bits."""
+    data = request.json or {}
+    reason = data.get('reason', '')
+    k, _ = database._find_retiro_key(tx_id)
+    if not k:
+        return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
+        
+    if database.rechazar_retiro(k, reason):
+        return jsonify({'success': True, 'message': 'Retiro rechazado. Se han reembolsado los bits al jugador.'})
+    else:
+        return jsonify({'success': False, 'message': 'No se pudo rechazar el retiro.'}), 400

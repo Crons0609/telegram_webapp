@@ -155,7 +155,17 @@ def api_request_withdrawal():
             print(f"[Withdrawal] CRITICAL: payout succeeded but bits deduction failed: {e}")
             # Log but don't fail the request since money was already sent
 
+    elif method == 'p2p':
+        # For P2P, we deduct bits IMMEDIATELY
+        try:
+            database.descontar_bits(str(telegram_id), bits)
+        except Exception as e:
+            return jsonify({'success': False, 'message': '❌ No se pudieron descontar los bits. Intenta de nuevo.'}), 500
+
     # ── 7. Create the withdrawal record in Firebase ───────────────────────────
+    # If P2P, get selected admin
+    admin_id = data.get('admin_id') 
+    
     tx_id = database.crear_solicitud_retiro(
         telegram_id=str(telegram_id),
         username=username,
@@ -167,13 +177,32 @@ def api_request_withdrawal():
         status=tx_status,
         paypal_batch_id=paypal_batch_id,
     )
+    
+    # Store assigned admin if provided
+    if method == 'p2p' and admin_id:
+        k, _ = database._find_retiro_key(tx_id)
+        if k:
+            database.patch_fb(f'retiros/{k}', {'assigned_admin': str(admin_id)})
 
-    # ── 8. Notify user via Telegram ───────────────────────────────────────────
+    # ── 8. Notify user and assigned admin via Telegram ───────────────────────────
     try:
         if method == 'paypal' and tx_status == 'completed':
             database.notify_withdrawal_approved(str(telegram_id), bits, usd, 'paypal', tx_id)
-        else:
+        elif method == 'p2p':
             database.notify_withdrawal_received(str(telegram_id), bits, usd, method, tx_id)
+            # Notify the assigned admin personally
+            if admin_id:
+                try:
+                    admin_msg = (
+                        f"🚨 <b>Nuevo Retiro P2P Asignado a Ti</b>\n\n"
+                        f"👤 Jugador: {nombre} (@{username})\n"
+                        f"🪙 Bits: {bits:,}\n"
+                        f"💵 Equivalente a pagar: ${usd:.2f} USD\n\n"
+                        f"Por favor, revisa el panel de administrador para completarlo."
+                    )
+                    database.send_telegram_notification(admin_id, "Gestión de Retiros", admin_msg)
+                except Exception as e:
+                    print(f"Failed to notify P2P admin {admin_id}: {e}")
     except Exception:
         pass
 
@@ -186,6 +215,21 @@ def api_request_withdrawal():
         'auto_paid': (tx_status == 'completed'),
         'message': success_msg
     })
+
+@withdrawal_bp.route('/api/p2p_admins')
+def api_p2p_admins():
+    """Devuelve la lista de administradores disponibles para transacciones P2P."""
+    admins = database.get_fb("Administradores") or {}
+    
+    admin_list = []
+    for telegram_id, admin_data in admins.items():
+        if admin_data.get('activo', False) and admin_data.get('rol') in ['admin', 'superadmin']:
+            admin_list.append({
+                'telegram_id': telegram_id,
+                'nombre': admin_data.get('nombre', 'Administrador')
+            })
+            
+    return jsonify({'success': True, 'admins': admin_list})
 
 
 @withdrawal_bp.route('/api/history')
