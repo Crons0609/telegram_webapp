@@ -691,21 +691,87 @@ def api_withdrawals_complete(tx_id):
 @admin_bp.route('/api/withdrawals/<tx_id>/approve', methods=['POST'])
 @admin_required_api
 def api_withdrawals_approve(tx_id):
-    """Approves a P2P withdrawal: updates status to approved (bits were deducted at request)."""
+    """
+    Approves a withdrawal.
+    - PayPal: triggers instant payout via PayPal API and marks as 'completed'.
+    - P2P: marks as 'approved' for manual processing by admin.
+    Bits were already deducted when the player made the request.
+    """
+    import paypal_service
+    from datetime import datetime as _dt
+
     try:
-        k, _ = database._find_retiro_key(tx_id)
-        if not k:
+        k, retiro = database._find_retiro_key(tx_id)
+        if not k or not retiro:
             return jsonify({'success': False, 'message': 'Retiro no encontrado'}), 404
-            
+
+        method = retiro.get('method', 'p2p')
+
+        # ── PayPal: fire automatic payout ──────────────────────────────────
+        if method == 'paypal':
+            paypal_email = retiro.get('paypal_email', '')
+            usd          = float(retiro.get('usd', 0))
+            bits         = int(retiro.get('bits', 0))
+            telegram_id  = str(retiro.get('telegram_id', ''))
+            username     = str(retiro.get('username', ''))
+            tx_ref       = str(retiro.get('tx_id', tx_id))
+
+            if not paypal_email:
+                return jsonify({'success': False, 'message': 'Este retiro no tiene email de PayPal registrado.'}), 400
+
+            if usd <= 0:
+                return jsonify({'success': False, 'message': 'El monto es 0 USD — no se puede procesar.'}), 400
+
+            # Call PayPal Payouts API
+            result = paypal_service.execute_payout(
+                email        = paypal_email,
+                amount_usd   = usd,
+                reference_id = tx_ref,
+                note         = f'Retiro de {bits:,} bits — Zona Jackpot 777'
+            )
+
+            if result['success']:
+                # Mark as completed (not just approved) since money was sent
+                database.patch_fb(f'retiros/{k}', {
+                    'status': 'completed',
+                    'processed_at': _dt.utcnow().isoformat(),
+                    'paypal_batch_id': result.get('batch_id', ''),
+                    'paypal_status': result.get('status', ''),
+                })
+                # Notify player via Telegram
+                try:
+                    database.notify_withdrawal_approved(telegram_id, bits, usd, tx_ref)
+                except Exception:
+                    pass
+                return jsonify({
+                    'success': True,
+                    'message': f'✅ Pago enviado a {paypal_email} por ${usd:.2f} USD vía PayPal. (Batch: {result.get("batch_id")})'
+                })
+            else:
+                # Mark the withdrawal with an error state so admin knows it failed
+                database.patch_fb(f'retiros/{k}', {
+                    'status': 'error_paypal',
+                    'paypal_error': result.get('error_msg', 'Error desconocido'),
+                    'processed_at': _dt.utcnow().isoformat(),
+                })
+                return jsonify({
+                    'success': False,
+                    'message': f'❌ PayPal rechazó el pago: {result.get("error_msg", "Error desconocido")}. El retiro quedó como "error_paypal". Puedes intentar de nuevo o rechazarlo para reembolsar los bits al jugador.'
+                }), 400
+
+        # ── P2P: mark as approved, admin pays manually ──────────────────────
         if database.aprobar_retiro(k):
-            return jsonify({'success': True, 'message': 'Retiro aprobado exitosamente.'})
+            return jsonify({'success': True, 'message': 'Retiro P2P aprobado. Realiza el pago manualmente al jugador.'})
         else:
             return jsonify({'success': False, 'message': 'No se pudo aprobar el retiro.'}), 400
+
     except Exception as e:
         print(f"[Admin] Error approving withdrawal: {e}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
+
 @admin_bp.route('/api/withdrawals/<tx_id>/reject', methods=['POST'])
+
 @admin_required_api
 def api_withdrawals_reject(tx_id):
     """Rejects a withdrawal and refunds bits."""
