@@ -1212,107 +1212,119 @@ def _handle_unknown(chat_id):
         "💡 O simplemente escríbeme para chatear con soporte."
     ))
 
-def poll_telegram_updates():
-    """Background thread that polls Telegram getUpdates and routes commands."""
+# =====================================================
+# TELEGRAM WEBHOOK ROUTE
+# =====================================================
+@app.route(f"/webhook/{BOT_TOKEN}", methods=["POST"])
+def telegram_webhook():
     if not BOT_TOKEN:
-        return
+        return jsonify({"status": "error", "message": "BOT_TOKEN no configurado"}), 500
 
-    offset = 0
-    time.sleep(3)  # Small startup delay
+    update = request.get_json()
+    if not update:
+        return "OK", 200
 
-    while True:
-        try:
-            url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates"
-            res = requests.get(url, params={"offset": offset, "timeout": 30}, timeout=35)
-            data = res.json()
-            if data.get("ok"):
-                for update in data.get("result", []):
-                    offset = update["update_id"] + 1
-                    msg = update.get("message")
+    try:
+        # ── Handle inline button presses (callback queries) ──────
+        cq = update.get("callback_query")
+        if cq:
+            cq_id        = cq["id"]
+            cq_data      = cq.get("data", "")
+            cq_from      = cq.get("from", {})
+            cq_chat_id   = cq_from.get("id") or cq.get("message", {}).get("chat", {}).get("id")
+            cq_first_name = cq_from.get("first_name", f"Usuario{cq_chat_id}")
+            cq_username   = cq_from.get("username", "")
 
-                    # ── Handle inline button presses (callback queries) ──────
-                    cq = update.get("callback_query")
-                    if cq:
-                        cq_id        = cq["id"]
-                        cq_data      = cq.get("data", "")
-                        cq_from      = cq.get("from", {})
-                        cq_chat_id   = cq_from.get("id") or cq.get("message", {}).get("chat", {}).get("id")
-                        cq_first_name = cq_from.get("first_name", f"Usuario{cq_chat_id}")
-                        cq_username   = cq_from.get("username", "")
+            if cq_data.startswith("adm_"):
+                # Step 1 → 2: admin selected
+                try:
+                    adm_idx = int(cq_data.split("_", 1)[1])
+                except (ValueError, IndexError):
+                    adm_idx = -1
+                _handle_admin_pick(cq_id, cq_chat_id, adm_idx)
 
-                        if cq_data.startswith("adm_"):
-                            # Step 1 → 2: admin selected
-                            try:
-                                adm_idx = int(cq_data.split("_", 1)[1])
-                            except (ValueError, IndexError):
-                                adm_idx = -1
-                            _handle_admin_pick(cq_id, cq_chat_id, adm_idx)
+            elif cq_data.startswith("rc_"):
+                # Step 2 → 3: amount selected (format: rc_AMOUNT_ADMIDX)
+                parts_cq = cq_data.split("_")
+                try:
+                    pkg_key = parts_cq[1]
+                    adm_idx = int(parts_cq[2])
+                except (ValueError, IndexError):
+                    _answer_callback(cq_id, "Error en la selección.")
+                    return "OK", 200
+                _handle_recharge_callback(cq_id, cq_chat_id, cq_first_name, cq_username, pkg_key, adm_idx)
 
-                        elif cq_data.startswith("rc_"):
-                            # Step 2 → 3: amount selected (format: rc_AMOUNT_ADMIDX)
-                            parts_cq = cq_data.split("_")
-                            # parts_cq: ['rc', AMOUNT, ADMIDX]
-                            try:
-                                pkg_key = parts_cq[1]
-                                adm_idx = int(parts_cq[2])
-                            except (ValueError, IndexError):
-                                _answer_callback(cq_id, "Error en la selección.")
-                                continue
-                            _handle_recharge_callback(cq_id, cq_chat_id, cq_first_name, cq_username, pkg_key, adm_idx)
+            elif cq_data == "back_recharge":
+                _answer_callback(cq_id)
+                _handle_recharge(cq_chat_id)
 
-                        elif cq_data == "back_recharge":
-                            _answer_callback(cq_id)
-                            _handle_recharge(cq_chat_id)
+            else:
+                _answer_callback(cq_id)
+            return "OK", 200
+        # ── End callback handling ────────────────────────────────
 
-                        else:
-                            _answer_callback(cq_id)
-                        continue
-                    # ── End callback handling ────────────────────────────────
+        msg = update.get("message")
+        if not msg or not msg.get("text"):
+            return "OK", 200
 
-                    if not msg or not msg.get("text"):
-                        continue
+        text = msg["text"].strip()
+        chat_id = msg["chat"]["id"]
+        from_info = msg.get("from") or msg.get("chat") or {}
+        first_name = from_info.get("first_name", f"Usuario{chat_id}")
+        username = from_info.get("username", "")
+        photo_url = ""
 
-                    text = msg["text"].strip()
-                    chat_id = msg["chat"]["id"]
-                    from_info = msg.get("from") or msg.get("chat") or {}
-                    first_name = from_info.get("first_name", f"Usuario{chat_id}")
-                    username = from_info.get("username", "")
-                    photo_url = ""
+        # ── Auto-register admin chat_ids when they interact with the bot ──
+        if username and username.lower() in ADMIN_USERNAMES_LOWER:
+            _save_admin_chat_id(username, chat_id)
+            print(f"[Admin] Registered chat_id {chat_id} for @{username}")
+        # ──────────────────────────────────────────────────────
 
-                    # ── Auto-register admin chat_ids when they interact with the bot ──
-                    if username and username.lower() in ADMIN_USERNAMES_LOWER:
-                        _save_admin_chat_id(username, chat_id)
-                        print(f"[Admin] Registered chat_id {chat_id} for @{username}")
-                    # ──────────────────────────────────────────────────────
+        # Extract base command (strip @botname suffix if present)
+        parts = text.split()
+        cmd_raw = parts[0].split("@")[0].lower() if text.startswith("/") else ""
+        start_param = parts[1] if (cmd_raw == "/start" and len(parts) > 1) else None
 
-                    # Extract base command (strip @botname suffix if present)
-                    parts = text.split()
-                    cmd_raw = parts[0].split("@")[0].lower() if text.startswith("/") else ""
-                    start_param = parts[1] if (cmd_raw == "/start" and len(parts) > 1) else None
+        if cmd_raw == "/start":
+            _handle_start(chat_id, first_name, username, photo_url, start_param)
+        elif cmd_raw == "/info":
+            _handle_info(chat_id, first_name)
+        elif cmd_raw == "/invite":
+            _handle_invite(chat_id, first_name)
+        elif cmd_raw == "/recharge":
+            _handle_recharge(chat_id)
+        elif text.startswith("/"):
+            _handle_unknown(chat_id)
+        else:
+            # Regular support message — save to Firebase
+            database.save_user_telegram_msg(chat_id, first_name, username, text, "user")
+            
+    except Exception as e:
+        print(f"[webhook] error: {e}")
 
-                    if cmd_raw == "/start":
-                        _handle_start(chat_id, first_name, username, photo_url, start_param)
-                    elif cmd_raw == "/info":
-                        _handle_info(chat_id, first_name)
-                    elif cmd_raw == "/invite":
-                        _handle_invite(chat_id, first_name)
-                    elif cmd_raw == "/recharge":
-                        _handle_recharge(chat_id)
-                    elif text.startswith("/"):
-                        _handle_unknown(chat_id)
-                    else:
-                        # Regular support message — save to Firebase
-                        database.save_user_telegram_msg(chat_id, first_name, username, text, "user")
-        except Exception as e:
-            print(f"[poll_telegram_updates] error: {e}")
-            time.sleep(5)
-        time.sleep(1)
+    return "OK", 200
 
-# Start polling in background (avoid duplicating in Werkzeug reloader)
-if not os.environ.get("WERKZEUG_RUN_MAIN"):
-    import threading
-    print("[Bot] Starting Telegram bot polling background task via threading...")
-    threading.Thread(target=poll_telegram_updates, daemon=True).start()
+@app.route("/set_webhook", methods=["GET"])
+def set_webhook():
+    """Ruta manual para registrar el Webhook en Telegram."""
+    if not BOT_TOKEN:
+        return "El BOT_TOKEN no está configurado en config.py", 400
+        
+    # Usar la URL base de donde venga la petición. Si es ngrok o render, request.url_root devolverá el dominio
+    host_url = request.url_root.replace("http://", "https://") 
+    webhook_url = f"{host_url}webhook/{BOT_TOKEN}"
+    
+    # Llamar a Telegram API
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/setWebhook"
+    try:
+        res = requests.post(url, json={"url": webhook_url}, timeout=10)
+        data = res.json()
+        if data.get("ok"):
+            return f"Webhook configurado exitosamente a: {webhook_url}", 200
+        else:
+            return f"Error de Telegram: {data.get('description')}", 400
+    except Exception as e:
+        return f"Error interno configurando webhook: {e}", 500
 
 # =====================================================
 # MAIN
