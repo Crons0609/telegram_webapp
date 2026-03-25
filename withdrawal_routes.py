@@ -128,39 +128,12 @@ def api_request_withdrawal():
     tx_status = 'pending'
     success_msg = 'Solicitud enviada. Recibirás una notificación cuando sea procesada.'
 
-    if method == 'paypal':
-        payout_result = paypal_service.execute_payout(
-            email=paypal_email,
-            amount_usd=usd,
-            note=f'Retiro de {bits:,} bits — Zona Jackpot 777'
-        )
-
-        if not payout_result['success']:
-            # Payment failed — do NOT deduct bits, reject immediately
-            friendly_err = payout_result.get('error_msg', 'Error desconocido.')
-            return jsonify({
-                'success': False,
-                'message': f'❌ Error al procesar el pago con PayPal: {friendly_err}'
-            }), 402
-
-        # Payment succeeded — mark as completed and deduct bits
-        paypal_batch_id = payout_result.get('batch_id')
-        tx_status = 'completed'
-        success_msg = f'✅ ¡Pago de ${usd:.2f} USD enviado a {paypal_email}! Revisa tu cuenta de PayPal.'
-
-        # Deduct bits immediately after successful payout
-        try:
-            database.descontar_bits(str(telegram_id), bits)
-        except Exception as e:
-            print(f"[Withdrawal] CRITICAL: payout succeeded but bits deduction failed: {e}")
-            # Log but don't fail the request since money was already sent
-
-    elif method == 'p2p':
-        # For P2P, we deduct bits IMMEDIATELY
-        try:
-            database.descontar_bits(str(telegram_id), bits)
-        except Exception as e:
-            return jsonify({'success': False, 'message': '❌ No se pudieron descontar los bits. Intenta de nuevo.'}), 500
+    # For both P2P and PayPal methods, we deduct bits IMMEDIATELY 
+    # and set status to pending for admin manual review
+    try:
+        database.descontar_bits(str(telegram_id), bits)
+    except Exception as e:
+        return jsonify({'success': False, 'message': '❌ No se pudieron descontar los bits. Intenta de nuevo.'}), 500
 
     # ── 7. Create the withdrawal record in Firebase ───────────────────────────
     # If P2P, get selected admin
@@ -186,23 +159,21 @@ def api_request_withdrawal():
 
     # ── 8. Notify user and assigned admin via Telegram ───────────────────────────
     try:
-        if method == 'paypal' and tx_status == 'completed':
-            database.notify_withdrawal_approved(str(telegram_id), bits, usd, 'paypal', tx_id)
-        elif method == 'p2p':
-            database.notify_withdrawal_received(str(telegram_id), bits, usd, method, tx_id)
-            # Notify the assigned admin personally
-            if admin_id:
-                try:
-                    admin_msg = (
-                        f"🚨 <b>Nuevo Retiro P2P Asignado a Ti</b>\n\n"
-                        f"👤 Jugador: {nombre} (@{username})\n"
-                        f"🪙 Bits: {bits:,}\n"
-                        f"💵 Equivalente a pagar: ${usd:.2f} USD\n\n"
-                        f"Por favor, revisa el panel de administrador para completarlo."
-                    )
-                    database.send_telegram_notification(admin_id, "Gestión de Retiros", admin_msg)
-                except Exception as e:
-                    print(f"Failed to notify P2P admin {admin_id}: {e}")
+        database.notify_withdrawal_received(str(telegram_id), bits, usd, method, tx_id)
+        
+        # Notify the assigned admin personally
+        if method == 'p2p' and admin_id:
+            try:
+                admin_msg = (
+                    f"🚨 <b>Nuevo Retiro P2P Asignado a Ti</b>\n\n"
+                    f"👤 Jugador: {nombre} (@{username})\n"
+                    f"🪙 Bits: {bits:,}\n"
+                    f"💵 Equivalente a pagar: ${usd:.2f} USD\n\n"
+                    f"Por favor, revisa el panel de administrador para completarlo."
+                )
+                database.send_telegram_notification(admin_id, "Gestión de Retiros", admin_msg)
+            except Exception as e:
+                print(f"Failed to notify P2P admin {admin_id}: {e}")
     except Exception:
         pass
 
