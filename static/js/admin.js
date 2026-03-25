@@ -133,6 +133,21 @@ function initAdminPanel() {
     autoRefreshInterval = setInterval(() => {
         refreshCurrentView();
     }, 30000);
+
+    // 7. SocketIO: real-time withdrawal notifications
+    if (typeof io !== 'undefined') {
+        const socket = io();
+        socket.on('new_withdrawal', (data) => {
+            // If admin is on the Retiros view, reload it instantly
+            if (currentView === 'withdrawals') {
+                loadWithdrawals('pending');
+            }
+            // Always show a toast regardless of which view is open
+            const method = data.method === 'paypal' ? 'PayPal 💰' : 'P2P 🤝';
+            const bits = (data.bits || 0).toLocaleString();
+            showToast(`🚨 Nuevo retiro — ${data.nombre || 'Jugador'} quiere retirar ${bits} bits vía ${method}`, 'warning');
+        });
+    }
 }
 
 function refreshCurrentView() {
@@ -141,10 +156,10 @@ function refreshCurrentView() {
         case 'players': loadPlayers(); break;
         case 'missions': loadMissions(); break;
         case 'history': loadHistory(); break;
-        case 'history': loadHistory(); break;
         case 'admins': loadAdmins(); break;
         case 'mensajes': loadMessages(); break;
         case 'transactions': loadTransactions(); break;
+        case 'withdrawals': loadWithdrawals('all'); break;
         case 'marketing': loadMarketingStatus(); break;
     }
 }
@@ -179,7 +194,9 @@ function switchView(viewName) {
         'admins': 'Admins Management',
         'temas': 'Temas Globales',
         'mensajes': 'Mensajes a Jugadores',
-        'transactions': 'Historial de Transacciones'
+        'transactions': 'Historial de Transacciones',
+        'withdrawals': 'Gestión de Retiros 💸',
+        'marketing': 'Marketing Automatizado'
     };
     document.getElementById('currentPageTitle').textContent = titleMap[viewName] || 'Dashboard';
 
@@ -193,6 +210,7 @@ function switchView(viewName) {
         case 'temas': loadTemas(); break;
         case 'mensajes': loadMessages(); break;
         case 'transactions': loadTransactions(); break;
+        case 'withdrawals': loadWithdrawals('all'); break;
         case 'marketing': loadMarketingStatus(); break;
     }
 }

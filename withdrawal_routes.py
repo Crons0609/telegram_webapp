@@ -10,6 +10,20 @@ import config
 withdrawal_bp = Blueprint('withdrawal', __name__, url_prefix='/withdraw')
 
 
+def _emit_withdrawal_event(data: dict):
+    """Emite un evento SocketIO 'new_withdrawal' a todos los admins conectados."""
+    try:
+        from flask_socketio import emit as _emit
+        from flask import current_app
+        # Importamos socketio desde app.py (singleton)
+        import app as _app
+        _app.socketio.emit('new_withdrawal', data, namespace='/')
+    except Exception as e:
+        print(f"[WS] Could not emit new_withdrawal event: {e}")
+
+
+
+
 def _get_current_user():
     """Returns the current user dict from session (telegram_id required)."""
     telegram_id = session.get('telegram_id') or request.args.get('telegram_id')
@@ -174,6 +188,20 @@ def api_request_withdrawal():
                 database.send_telegram_notification(admin_id, "Gestión de Retiros", admin_msg)
             except Exception as e:
                 print(f"Failed to notify P2P admin {admin_id}: {e}")
+    except Exception:
+        pass
+
+    # ── 9. Emit real-time SocketIO event to admin panel ──────────────────────
+    try:
+        _emit_withdrawal_event({
+            'tx_id': tx_id,
+            'nombre': nombre,
+            'username': username,
+            'bits': bits,
+            'usd': round(usd, 2),
+            'method': method,
+            'status': tx_status,
+        })
     except Exception:
         pass
 
