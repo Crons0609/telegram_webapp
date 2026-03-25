@@ -223,10 +223,11 @@ def api_p2p_admins():
     
     admin_list = []
     for telegram_id, admin_data in admins.items():
-        if admin_data.get('rol') in ['admin', 'superadmin']:
+        role = admin_data.get('role') or admin_data.get('rol') or 'admin'
+        if role in ['admin', 'superadmin']:
             admin_list.append({
                 'telegram_id': telegram_id,
-                'nombre': admin_data.get('nombre', 'Administrador')
+                'nombre': admin_data.get('nombre') or admin_data.get('name') or 'Administrador'
             })
             
     return jsonify({'success': True, 'admins': admin_list})

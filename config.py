@@ -2,7 +2,7 @@ BOT_TOKEN = "8511146591:AAGZP46Bs0NaqzQvXeduDdwzvA3Tyd02JsU"
 WEBAPP_URL = "https://t.me/Zona_Jackpot_777bot/Zona_jackpot_777"  # luego lo cambias cuando lo subas a Render
 
 # PayPal API credentials
-PAYPAL_MODE = "live"  # "sandbox" para pruebas, "live" para producción
+PAYPAL_MODE = "sandbox"  # "sandbox" para pruebas, "live" para producción
 
 if PAYPAL_MODE == "sandbox":
     PAYPAL_CLIENT_ID = "ARIbqolPZ_S8yK_AIsRvL1MjdvXk0i1t_QEig7OpXNiZIGNV6a0R6ixssDFdXP4VYPOl1NCNqz6STUHt"
