@@ -813,8 +813,7 @@ def aprobar_retiro(firebase_key: str) -> bool:
         'status': 'approved',
         'processed_at': datetime.utcnow().isoformat()
     })
-    registrar_transaccion(int(telegram_id), retiro.get('username',''), 'retiro', bits, 0,
-                          f'Retiro aprobado (P2P) - {retiro.get("tx_id","")}')
+    registrar_transaccion(str(telegram_id), bits, float(retiro.get('usd', 0)), 'retiro')
     return True
 
 def completar_retiro(firebase_key: str) -> bool:
@@ -855,8 +854,7 @@ def rechazar_retiro(firebase_key: str, reason: str = '') -> bool:
         new_bits = int(usuario.get('bits', 0)) + bits
         patch_fb(f'usuarios/{telegram_id}', {'bits': new_bits})
         
-        registrar_transaccion(int(telegram_id), retiro.get('username',''), 'reintegro_retiro', bits, 0,
-                              f'Reintegro por retiro rechazado - {retiro.get("tx_id","")}')
+        registrar_transaccion(str(telegram_id), bits, 0.0, 'reintegro_retiro')
                               
     patch_fb(f'retiros/{firebase_key}', {
         'status': 'rejected',

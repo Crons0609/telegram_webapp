@@ -219,7 +219,7 @@ def paypal_capture():
         # Añadir los bits al usuario
         new_balance = database.recargar_bits(telegram_id, bits_amount)
         # Registrar la transacción
-        database.registrar_transaccion(telegram_id, bits_amount, amount_usd, 'deposito')
+        database.registrar_transaccion(telegram_id, bits_amount, amount_usd, 'deposito_paypal')
         
         if new_balance is not None:
             database.notify_bits_added_paypal(telegram_id, amount_usd, bits_amount, new_balance)
