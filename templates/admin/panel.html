@@ -81,6 +81,9 @@
                 <i class="fas fa-paper-plane"></i> <span>Mensajes</span>
                 <span id="msgBadge" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:0.65rem; padding:1px 5px; margin-left:auto; font-weight:700;"></span>
             </a>
+            <a href="#" class="nav-item" data-view="marketing">
+                <i class="fas fa-bullhorn"></i> <span>Marketing</span>
+            </a>
             <a href="#" class="nav-item" data-view="support">
                 <i class="fas fa-headset"></i> <span>Soporte (Telegram)</span>
                 <span id="supportBadge" style="display:none; background:#ef4444; color:#fff; border-radius:50%; font-size:0.65rem; padding:1px 5px; margin-left:auto; font-weight:700;"></span>
@@ -497,6 +500,50 @@
                         </button>
                     </div>
                     <div id="schedulesTable" style="overflow-x:auto;"></div>
+                </div>
+            </section>
+
+            <!-- ── VIEW: MARKETING AUTOMATIZADO ── -->
+            <section id="view-marketing" class="view-section">
+                <div style="max-width:700px; margin:0 auto;">
+                    <div class="content-card" style="margin-bottom:1.5rem;">
+                        <div class="card-header">
+                            <h2><i class="fas fa-bullhorn" style="color:#f59e0b;"></i> Marketing Automatizado</h2>
+                        </div>
+                        <div style="padding:1.5rem;">
+                            <p style="color:var(--text-muted); margin-bottom:1.5rem; font-size:0.9rem;">El sistema envía mensajes personalizados y no repetitivos a todos los jugadores una vez al día a una <b>hora aleatoria</b>. Aquí puedes ver el estado de hoy y dispararlo manualmente si lo deseas.</p>
+
+                            <div id="mktStatusBox" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem;">
+                                <div style="text-align:center; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Cargando estado...</div>
+                            </div>
+
+                            <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                                <button class="btn-secondary" onclick="loadMarketingStatus()" style="flex:1;">
+                                    <i class="fas fa-sync-alt"></i> Actualizar Estado
+                                </button>
+                                <button class="btn-primary" onclick="triggerMarketingNow()" style="flex:1; background:linear-gradient(135deg,#f59e0b,#d97706); border-color:#f59e0b;">
+                                    <i class="fas fa-paper-plane"></i> Enviar Ahora (Manual)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-info-circle" style="color:#6366f1;"></i> Instrucciones: Configurar Cron Job</h2>
+                        </div>
+                        <div style="padding:1.5rem; color:var(--text-muted); font-size:0.88rem; line-height:1.7;">
+                            <p>Para que el sistema funcione automáticamente sin que tengas que presionar el botón cada día, sigue estos pasos <b>una sola vez</b>:</p>
+                            <ol style="padding-left:1.2rem; margin-top:0.75rem;">
+                                <li>Entra a <a href="https://cron-job.org" target="_blank" style="color:#6366f1;">cron-job.org</a> y crea una cuenta gratis.</li>
+                                <li>Crea un nuevo Cron Job con la siguiente URL:</li>
+                            </ol>
+                            <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:0.85rem 1rem; font-family:monospace; font-size:0.82rem; color:#10b981; margin:0.75rem 0; word-break:break-all;">
+                                https://TU-CASINO.onrender.com/api/cron/marketing?key=zonajackpot777_cron_2026
+                            </div>
+                            <p>Reemplaza <b>TU-CASINO.onrender.com</b> con la URL de tu app en Render. Programa el job para cada <b>10 minutos</b>. Esto también mantendrá tu servidor despierto 24/7.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 

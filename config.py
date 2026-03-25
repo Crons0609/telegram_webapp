@@ -16,3 +16,8 @@ BITS_TO_USD_RATE = 1000       # 1000 bits = 1 USD
 WITHDRAWAL_MIN_BITS = 5000    # Mínimo 5,000 bits ($5 USD)
 WITHDRAWAL_MAX_USD_DAY = 50.0 # Máximo $50 USD por día
 WITHDRAWAL_MAX_PER_DAY = 3    # Máximo 3 retiros por día por usuario
+
+# ─── MARKETING AUTOMATIZADO ───────────────────────────────────────────────────
+# Clave secreta para el endpoint /api/cron/marketing
+# Cámbiala por algo que solo tú conozcas. Úsala en la URL: ?key=TU_CLAVE
+CRON_SECRET = "zonajackpot777_cron_2026"

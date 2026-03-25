@@ -145,6 +145,7 @@ function refreshCurrentView() {
         case 'admins': loadAdmins(); break;
         case 'mensajes': loadMessages(); break;
         case 'transactions': loadTransactions(); break;
+        case 'marketing': loadMarketingStatus(); break;
     }
 }
 
@@ -192,6 +193,7 @@ function switchView(viewName) {
         case 'temas': loadTemas(); break;
         case 'mensajes': loadMessages(); break;
         case 'transactions': loadTransactions(); break;
+        case 'marketing': loadMarketingStatus(); break;
     }
 }
 
@@ -1692,5 +1694,55 @@ async function completeWithdrawal(key) {
         const data = await res.json();
         showToast(data.message || (data.success ? 'Marcado como pagado.' : 'Error'), data.success ? 'success' : 'error');
         if(data.success) loadWithdrawals('approved');
+    } catch(e) { showToast('Error de conexión', 'error'); }
+}
+
+// ─── MARKETING AUTOMATIZADO ────────────────────────────────────────────────
+
+async function loadMarketingStatus() {
+    const box = document.getElementById('mktStatusBox');
+    if (!box) return;
+    box.innerHTML = '<div style="text-align:center;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+    try {
+        const res = await fetch('/admin/api/marketing/status');
+        const data = await res.json();
+        if (!data.success) { box.innerHTML = '<div style="color:var(--danger)">Error al cargar estado.</div>'; return; }
+        const s = data.status;
+        const completado = s.completado
+            ? `<span style="color:#10b981;"><i class="fas fa-check-circle"></i> Completado</span>`
+            : s.enviando
+                ? `<span style="color:#f59e0b;"><i class="fas fa-spinner fa-spin"></i> Enviando...</span>`
+                : `<span style="color:#94a3b8;"><i class="fas fa-clock"></i> Pendiente</span>`;
+
+        const horaObj = s.hora_objetivo_utc != null
+            ? `${parseFloat(s.hora_objetivo_utc).toFixed(2)} UTC`
+            : '—';
+
+        box.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div><small style="color:var(--text-muted);display:block;">Fecha</small><b>${s.fecha || '—'}</b></div>
+            <div><small style="color:var(--text-muted);display:block;">Estado</small>${completado}</div>
+            <div><small style="color:var(--text-muted);display:block;">Hora objetivo</small><b>${horaObj}</b></div>
+            <div><small style="color:var(--text-muted);display:block;">Enviados hoy</small><b style="color:#10b981;">${s.enviados || 0}</b> &nbsp;|&nbsp; <b style="color:#ef4444;">${s.errores || 0} errores</b></div>
+            ${s.inicio ? `<div style="grid-column:span 2;"><small style="color:var(--text-muted);">Inicio: ${s.inicio}</small>&nbsp;<small style="color:var(--text-muted);">${s.fin ? '| Fin: ' + s.fin : ''}</small></div>` : ''}
+        </div>`;
+    } catch(e) {
+        box.innerHTML = '<div style="color:var(--danger)">Error de red.</div>';
+    }
+}
+
+async function triggerMarketingNow() {
+    if (!confirm('¿Enviar la campaña de marketing AHORA a todos los jugadores?\n\nEsto tomará varios minutos dependiendo de cuántos jugadores haya.')) return;
+    showToast('Iniciando campaña... esto puede tardar unos minutos 🚀', 'success');
+    try {
+        const res = await fetch('/admin/api/marketing/send-now', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            const msg = data.result?.message || 'Campaña iniciada';
+            showToast(msg, 'success');
+            setTimeout(loadMarketingStatus, 3000);
+        } else {
+            showToast(data.message || 'Error al iniciar campaña', 'error');
+        }
     } catch(e) { showToast('Error de conexión', 'error'); }
 }

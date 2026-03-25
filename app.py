@@ -50,6 +50,14 @@ app.register_blueprint(sports_bp)
 from withdrawal_routes import withdrawal_bp
 app.register_blueprint(withdrawal_bp)
 
+# Importar servicio de marketing automatizado
+import marketing_service
+try:
+    CRON_SECRET = config.CRON_SECRET
+except Exception:
+    CRON_SECRET = "zonajackpot777_cron_2026"
+
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
@@ -1325,6 +1333,44 @@ def set_webhook():
             return f"Error de Telegram: {data.get('description')}", 400
     except Exception as e:
         return f"Error interno configurando webhook: {e}", 500
+
+# =====================================================
+# MARKETING AUTOMATIZADO - CRON ENDPOINT
+# =====================================================
+
+@app.route("/api/cron/marketing", methods=["GET", "POST"])
+def cron_marketing():
+    """
+    Endpoint llamado periódicamente por cron-job.org para disparar el
+    envío masivo de mensajes si corresponde a la hora objetivo de hoy.
+
+    URL ejemplo: https://tu-casino.onrender.com/api/cron/marketing?key=zonajackpot777_cron_2026
+    """
+    provided_key = request.args.get("key", "")
+    result = marketing_service.check_and_trigger(CRON_SECRET, provided_key)
+    return jsonify(result)
+
+
+@app.route("/admin/api/marketing/status", methods=["GET"])
+def admin_marketing_status():
+    """Devuelve el estado de la campaña de marketing de hoy para el panel admin."""
+    admin_id = session.get("admin_id")
+    if not admin_id:
+        return jsonify({"success": False, "message": "No autorizado"}), 403
+    status = marketing_service.get_status()
+    return jsonify({"success": True, "status": status})
+
+
+@app.route("/admin/api/marketing/send-now", methods=["POST"])
+def admin_marketing_send_now():
+    """Permite al admin disparar la campaña de marketing manualmente desde el panel."""
+    admin_id = session.get("admin_id")
+    if not admin_id:
+        return jsonify({"success": False, "message": "No autorizado"}), 403
+    # Forzar el envío inmediato pasando la clave internamente
+    result = marketing_service.check_and_trigger(CRON_SECRET, CRON_SECRET)
+    return jsonify({"success": True, "result": result})
+
 
 # =====================================================
 # MAIN
