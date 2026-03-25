@@ -2,6 +2,7 @@
      GLOBAL ELITE USER MENU (Direct Modal Trigger)
 =========================================== -->
 {% if global_profile %}
+<script>window.RENDERED_TELEGRAM_ID = "{{ global_profile.telegram_id }}";</script>
 <div class="elite-menu-container">
     <!-- Mode Toggle (Removed per cleanup request) -->    <!-- Notifications Bell (Removed per cleanup request) -->    <!-- Trigger Button - Opens Modal Directly -->
     <button class="elite-menu-btn" type="button" onclick="UserProfileManager.openModal('info')">

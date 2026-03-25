@@ -82,6 +82,13 @@
       // Si la página cargó sin sesión y ahora recibimos el perfil del server:
       if (data.status === 'ok' && data.profile) {
           
+        // Detectar si la página fue renderizada para otra cuenta distinta (caché de sesión en el móvil)
+        if (window.RENDERED_TELEGRAM_ID && window.RENDERED_TELEGRAM_ID !== String(user.id)) {
+            console.log("Cambio de cuenta detectado. Recargando...");
+            window.location.reload();
+            return;
+        }
+
         // Si no existe el contenedor del menú élite (ej: carga inicial sin sesión)
         if (!document.querySelector('.elite-menu-container')) {
             // Emulate the menu to avoid reloading
