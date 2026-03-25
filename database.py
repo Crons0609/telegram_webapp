@@ -833,7 +833,7 @@ def completar_retiro(firebase_key: str) -> bool:
     method = str(retiro.get('method', 'p2p'))
     tx_id = str(retiro.get('tx_id', ''))
     try:
-        notify_withdrawal_approved(telegram_id, bits, usd, method, tx_id)
+        notify_withdrawal_approved(telegram_id, bits, usd, tx_id, method)
     except Exception:
         pass
         
@@ -893,13 +893,15 @@ def notify_withdrawal_received(telegram_id: str, bits: int, usd: float, method: 
     )
     _send_tg(telegram_id, msg)
 
-def notify_withdrawal_approved(telegram_id: str, bits: int, usd: float, tx_id: str) -> None:
+def notify_withdrawal_approved(telegram_id: str, bits: int, usd: float, tx_id: str, method: str = '') -> None:
     """Notifies user that withdrawal was approved and paid."""
+    method_line = f"💳 Método: {'PayPal' if method == 'paypal' else 'P2P'}\n" if method else ''
     msg = (
         "✅ <b>Retiro Aprobado</b>\n\n"
         f"Tu retiro ha sido procesado exitosamente.\n\n"
         f"🪙 Bits retirados: <b>{int(bits):,}</b>\n"
         f"💵 Importe pagado: <b>${float(usd):.2f} USD</b>\n"
+        f"{method_line}"
         f"🔖 ID: <code>{tx_id}</code>\n\n"
         "¡Gracias por jugar en <b>Ghost Plague Casino</b>!"
     )
