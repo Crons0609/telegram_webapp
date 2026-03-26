@@ -548,17 +548,38 @@ function prepararMesa() {
     repartirCartas();
 }
 
+let isRepartiendo = false;
+
 function repartirCartas() {
+    if (isRepartiendo) return; // VALIDACIÓN 3: Evitar múltiples ejecuciones simultáneas
+    isRepartiendo = true;
+    
     let dealInterval = setInterval(() => {
         let allDealt = true;
         let cardDealtThisFrame = false;
 
         for (let key of STATE.turnOrder) {
+            // VALIDACIÓN 2: Max 9 cartas
             if (STATE.players[key].cards.length < 9) {
-                STATE.players[key].cards.push(STATE.deck.pop());
-                allDealt = false;
-                cardDealtThisFrame = true;
+                // VALIDACIÓN 1: Verificar que el mazo no esté vacío
+                if (STATE.deck.length > 0) {
+                    let card = STATE.deck.pop();
+                    
+                    // VALIDACIÓN 2 EXTRA: Evitar duplicados exactos en la mano
+                    let duplicate = STATE.players[key].cards.some(c => c.suit === card.suit && c.rank === card.rank);
+                    if (!duplicate) {
+                        STATE.players[key].cards.push(card);
+                        allDealt = false;
+                        cardDealtThisFrame = true;
+                    }
+                }
             }
+        }
+
+        // Si el mazo se vacía en medio del reparto o todos ya tienen 9
+        let someoneNeedsCard = STATE.turnOrder.some(key => STATE.players[key].cards.length < 9);
+        if (!someoneNeedsCard || STATE.deck.length === 0) {
+            allDealt = true;
         }
 
         if (cardDealtThisFrame && window.CasinoAudio) window.CasinoAudio.playSfx('card_slide');
@@ -567,6 +588,7 @@ function repartirCartas() {
 
         if (allDealt) {
             clearInterval(dealInterval);
+            isRepartiendo = false;
 
             // Check for instant win conditions in order
             if (!verificarMocheDeMano()) {
@@ -1589,6 +1611,28 @@ function procesarTurno() {
 function robarDelMazo() {
     if (STATE.phase !== 'JUEGO' || STATE.turnOrder[STATE.currentTurnIndex] !== getMyId() || STATE.hasDrawn) return;
 
+    // VALIDACIÓN 1: Controlar que haya cartas en el mazo
+    if (STATE.deck.length === 0) {
+        manejarMazoAgotado();
+        return;
+    }
+
+    // VALIDACIÓN 2: Límite estricto de máximo 9 cartas
+    if (STATE.players[getMyId()].cards.length >= 9) {
+        window.Telegram.WebApp.showAlert("Límite máximo alcanzado: No puedes tener más de 9 cartas en la mano.");
+        return;
+    }
+
+    let nextCard = STATE.deck[STATE.deck.length - 1]; // Peak top card
+
+    // VALIDACIÓN 3: Evitar duplicados (cartas que ya existan en la mano)
+    let isDuplicate = STATE.players[getMyId()].cards.some(c => c.suit === nextCard.suit && c.rank === nextCard.rank);
+    if (isDuplicate) {
+        STATE.deck.pop(); // Remover carta duplicada corrupta del mazo silenciosamente
+        robarDelMazo(); // Re-intentar con la siguiente
+        return;
+    }
+
     STATE.drawnCardRef = STATE.deck.pop();
     STATE.hasDrawn = true;
     STATE.latestDiscardEnlarged = false;
@@ -1603,6 +1647,21 @@ function robarDelMazo() {
 
 function robarDelDescarte() {
     if (STATE.phase !== 'JUEGO' || STATE.turnOrder[STATE.currentTurnIndex] !== getMyId() || STATE.hasDrawn || STATE.discardPile.length === 0) return;
+
+    // VALIDACIÓN: Límite estricto de máximo 9 cartas
+    if (STATE.players[getMyId()].cards.length >= 9) {
+        window.Telegram.WebApp.showAlert("Límite máximo alcanzado: No puedes tener más de 9 cartas en la mano.");
+        return;
+    }
+
+    let nextCard = STATE.discardPile[STATE.discardPile.length - 1];
+    
+    // VALIDACIÓN: Evitar duplicados exactos
+    let isDuplicate = STATE.players[getMyId()].cards.some(c => c.suit === nextCard.suit && c.rank === nextCard.rank);
+    if (isDuplicate) {
+        window.Telegram.WebApp.showAlert("No puedes robar esta carta porque ya tienes una igual en la mano.");
+        return;
+    }
 
     STATE.drawnCardRef = STATE.discardPile.pop();
     STATE.hasDrawn = true;
@@ -1698,6 +1757,21 @@ function pasarTurnoHumano() {
 // ==========================================
 function humanoTomaDescarteIntercept() {
     if (STATE.phase !== 'INTERCEPT' || !STATE.interceptState) return;
+
+    // VALIDACIÓN: Límite estricto 9 cartas
+    if (STATE.players[getMyId()].cards.length >= 9) {
+        window.Telegram.WebApp.showAlert("Límite de cartas: No puedes tener más de 9 cartas en la mano.");
+        return;
+    }
+
+    let nextCard = STATE.discardPile[STATE.discardPile.length - 1];
+    
+    // VALIDACIÓN: Evitar duplicados
+    let isDuplicate = STATE.players[getMyId()].cards.some(c => c.suit === nextCard.suit && c.rank === nextCard.rank);
+    if (isDuplicate) {
+        window.Telegram.WebApp.showAlert("No puedes tomar esta carta porque ya tienes una idéntica.");
+        return;
+    }
 
     const card = STATE.discardPile.pop();
 
