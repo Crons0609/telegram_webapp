@@ -13,6 +13,11 @@
         <header>
             <h1 class="glitch" data-text="ZONA JACKPOT 777">ZONA JACKPOT 777</h1>
             <p class="subtitle">Compra bits y juega con más oportunidades</p>
+            {% if paypal_mode == 'sandbox' %}
+            <div style="display:inline-block; background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid #f59e0b; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-top: 8px;">
+                🧪 MODO SANDBOX — Pagos de Prueba
+            </div>
+            {% endif %}
             <a href="{{ url_for('home') }}" style="display:inline-block; margin-top:15px; background:rgba(255,255,255,0.1); padding:8px 15px; border-radius:8px; color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,0.2);">
                 <i class="fas fa-arrow-left"></i> Volver al Casino
             </a>
@@ -48,8 +53,8 @@
         </footer>
     </div>
 
-    <script src="https://www.paypal.com/sdk/js?client-id=ARIbqolPZ_S8yK_AIsRvL1MjdvXk0i1t_QEig7OpXNiZIGNV6a0R6ixssDFdXP4VYPOl1NCNqz6STUHt&currency=USD"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD"></script>
     <script src="{{ url_for('static', filename='js/paypal.js') }}" defer></script>
 <script src="/static/js/theme-manager.js"></script>
 </body>
-</html>
+</html>

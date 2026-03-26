@@ -169,7 +169,13 @@ def paypal_bits():
     telegram_id = session.get("telegram_id")
     if not telegram_id:
         return redirect(url_for('home'))
-    return render_template("paypal.html")
+    import config as _cfg
+    return render_template(
+        "paypal.html",
+        paypal_client_id=_cfg.PAYPAL_CLIENT_ID,
+        paypal_mode=getattr(_cfg, 'PAYPAL_MODE', 'sandbox'),
+    )
+
 
 # =====================================================
 # P2P BITS
@@ -214,28 +220,57 @@ def paypal_capture():
     telegram_id = session.get("telegram_id")
     if not telegram_id:
         return jsonify({"success": False, "message": "No autenticado"}), 401
-        
-    data = request.json
-    order_id = data.get('order_id')
-    amount_usd = float(data.get('amount_usd', 0))
-    bits_amount = int(data.get('bits_amount', 0))
-    
-    if amount_usd <= 0 or bits_amount <= 0:
-        return jsonify({"success": False, "message": "Cantidades inválidas"}), 400
 
+    data = request.json or {}
+    order_id = (data.get('order_id') or '').strip()
+    expected_usd = float(data.get('amount_usd', 0))
+    bits_amount = int(data.get('bits_amount', 0))
+
+    if not order_id or expected_usd <= 0 or bits_amount <= 0:
+        return jsonify({"success": False, "message": "Datos de pago inválidos"}), 400
+
+    # ── 1. Deduplicación: evitar procesar el mismo order_id dos veces ──────────
+    already = database.get_fb(f"paypal_orders/{order_id}")
+    if already:
+        return jsonify({"success": False, "message": "Este pago ya fue procesado."}), 409
+
+    # ── 2. Verificar el pago con PayPal (server-side) ─────────────────────────
+    import paypal_service
+    capture = paypal_service.capture_order(order_id)
+
+    if not capture["success"]:
+        print(f"[PayPal Capture] Fallo en verificación: {capture['error_msg']}")
+        return jsonify({"success": False, "message": f"PayPal rechazó el pago: {capture['error_msg']}"}), 402
+
+    confirmed_usd = capture["amount_usd"]
+
+    # ── 3. Validación cruzada de monto (tolerancia de $0.02 por redondeo) ─────
+    if abs(confirmed_usd - expected_usd) > 0.02:
+        print(f"[PayPal Capture] Monto no coincide: esperado ${expected_usd}, recibido ${confirmed_usd}")
+        return jsonify({"success": False, "message": "Monto del pago no coincide. Contacta soporte."}), 400
+
+    # ── 4. Marcar la orden como procesada (deduplicación) ─────────────────────
+    from datetime import datetime
+    database.patch_fb(f"paypal_orders/{order_id}", {
+        "telegram_id": str(telegram_id),
+        "bits": bits_amount,
+        "usd": confirmed_usd,
+        "payer_email": capture.get("payer_email", ""),
+        "processed_at": datetime.utcnow().isoformat(),
+    })
+
+    # ── 5. Acreditar bits y registrar transacción ─────────────────────────────
     try:
-        # Añadir los bits al usuario
         new_balance = database.recargar_bits(telegram_id, bits_amount)
-        # Registrar la transacción
-        database.registrar_transaccion(telegram_id, bits_amount, amount_usd, 'deposito_paypal')
-        
+        database.registrar_transaccion(telegram_id, bits_amount, confirmed_usd, 'deposito_paypal')
+
         if new_balance is not None:
-            database.notify_bits_added_paypal(telegram_id, amount_usd, bits_amount, new_balance)
-            
-        return jsonify({"success": True, "new_bits": new_balance or 0})
+            database.notify_bits_added_paypal(telegram_id, confirmed_usd, bits_amount, new_balance)
+
+        return jsonify({"success": True, "new_bits": new_balance or 0, "payer_email": capture.get("payer_email", "")})
     except Exception as e:
-        print(f"Error procesando PayPal: {e}")
-        return jsonify({"success": False, "message": "Error interno"}), 500
+        print(f"[PayPal Capture] Error acreditando bits: {e}")
+        return jsonify({"success": False, "message": "Error interno al acreditar bits"}), 500
 
 # =====================================================
 # SLOT MACHINE

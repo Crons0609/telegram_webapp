@@ -635,10 +635,10 @@ function renderMissions(missions) {
         <div class="mission-card">
             <div class="mission-header">
                 <div style="display:flex; align-items:center;">
-                    <div class="mission-icon"><i class="fas fa-bullseye"></i></div>
+                    <div class="mission-icon">${m.icon || '<i class="fas fa-bullseye"></i>'}</div>
                     <div class="mission-info">
-                        <h3>${m.id || 'Mission'}</h3>
-                        <p>Mission Configuration</p>
+                        <h3>${m.name || m.id || 'Mission'}</h3>
+                        <p style="color:#94a3b8;font-size:0.8rem;">${m.desc ? m.desc.replace('{target}', '…') : m.type || m.id}</p>
                     </div>
                 </div>
                 <div>

@@ -101,3 +101,67 @@ def execute_payout(email: str, amount_usd: float, reference_id: str = None, note
         return {"success": False, "batch_id": None, "status": "TIMEOUT", "error_msg": "Tiempo de espera agotado al conectar con PayPal."}
     except Exception as e:
         return {"success": False, "batch_id": None, "status": "EXCEPTION", "error_msg": str(e)}
+
+
+def capture_order(order_id: str) -> dict:
+    """
+    Captura y verifica un pago de PayPal usando la Orders v2 API.
+    Debe llamarse server-side ANTES de acreditar bits al jugador.
+
+    Returns un dict con:
+        success       (bool)
+        status        (str)   — "COMPLETED", "FAILED", etc.
+        amount_usd    (float) — monto confirmado por PayPal
+        payer_email   (str)   — email del comprador
+        error_msg     (str | None)
+    """
+    if not order_id:
+        return {"success": False, "status": "INVALID", "amount_usd": 0, "payer_email": "", "error_msg": "Order ID vacío."}
+
+    try:
+        token = _get_access_token()
+    except Exception as e:
+        return {"success": False, "status": "AUTH_ERROR", "amount_usd": 0, "payer_email": "", "error_msg": f"Error de autenticación: {e}"}
+
+    try:
+        url = f"{_base_url()}/v2/checkout/orders/{order_id}/capture"
+        resp = requests.post(
+            url,
+            headers={
+                "Content-Type":  "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            timeout=20,
+        )
+
+        data = resp.json()
+        order_status = data.get("status", "")
+
+        if resp.status_code in (200, 201) and order_status == "COMPLETED":
+            # Extract confirmed amount from response
+            try:
+                purchase = data["purchase_units"][0]["payments"]["captures"][0]
+                amount_usd = float(purchase["amount"]["value"])
+                payer_email = data.get("payer", {}).get("email_address", "")
+            except (KeyError, IndexError, ValueError):
+                amount_usd = 0.0
+                payer_email = ""
+            return {
+                "success": True,
+                "status": "COMPLETED",
+                "amount_usd": amount_usd,
+                "payer_email": payer_email,
+                "error_msg": None,
+            }
+        else:
+            msg = data.get("message") or data.get("error_description") or f"Estado: {order_status}"
+            details = data.get("details", [])
+            if details:
+                msg = f"{msg}: {details[0].get('issue', '')} — {details[0].get('description', '')}"
+            print(f"[PayPal] capture_order error {resp.status_code}: {msg}")
+            return {"success": False, "status": order_status or "FAILED", "amount_usd": 0, "payer_email": "", "error_msg": msg}
+
+    except requests.exceptions.Timeout:
+        return {"success": False, "status": "TIMEOUT", "amount_usd": 0, "payer_email": "", "error_msg": "Timeout al capturar el pago con PayPal."}
+    except Exception as e:
+        return {"success": False, "status": "EXCEPTION", "amount_usd": 0, "payer_email": "", "error_msg": str(e)}
