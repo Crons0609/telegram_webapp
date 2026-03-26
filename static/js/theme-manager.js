@@ -24,9 +24,12 @@
     link.href = '/static/css/loading-screen.css';
     document.head.appendChild(link);
 
+    // IMPORTANT: load async (NOT defer) so the script executes as soon as
+    // it downloads — not after DOMContentLoaded. This ensures click interception
+    // is active before the user can press any navigation button.
     const script = document.createElement('script');
     script.src   = '/static/js/loading-screen.js';
-    script.defer = true;
+    script.async = true;
     document.head.appendChild(script);
   })();
 

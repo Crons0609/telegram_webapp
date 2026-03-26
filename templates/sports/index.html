@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0a0f">
   <meta name="color-scheme" content="dark">
+  <meta name="description" content="Zona Jackpot 777 — Apuestas deportivas en Fútbol, NBA, NFL, MLB, Tenis, NHL, NASCAR, Rugby y Golf.">
   <title>Zona Jackpot 777 | Deportes</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="/static/css/style.css">
@@ -19,64 +20,221 @@
   <script src="/static/js/theme-manager.js"></script>
   <script defer src="/static/js/soundManager.js"></script>
   <script defer src="/static/js/perfil.js"></script>
-  
-  <!-- Firebase SDK para registro directo -->
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="/static/js/firebase.js"></script>
   <script defer src="/static/js/script.js"></script>
 
   <style>
-    .sports-card {
-      background: linear-gradient(135deg, rgba(20,40,20,0.85), rgba(10,50,20,0.6)) !important;
-      border: 1px solid rgba(40,150,40,0.3) !important;
+    /* ── Page Base ───────────────────────────────────────────── */
+    body {
+      min-height: 100vh;
+      background: #07080d;
+      font-family: 'Montserrat', sans-serif;
+      color: #fff;
+      overflow-x: hidden;
     }
-    .sports-card-btn {
-      background: linear-gradient(135deg, #10b981, #059669) !important;
-      color: #fff !important;
+
+    /* ── Animated background ─────────────────────────────────── */
+    .sp-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99,102,241,.18) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(16,185,129,.12) 0%, transparent 60%),
+        #07080d;
+    }
+    .sp-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* ── Navbar ──────────────────────────────────────────────── */
+    .sp-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(7, 8, 13, 0.85);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sp-nav-back {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #fff; font-size: 16px;
+      transition: background .2s;
+    }
+    .sp-nav-back:hover { background: rgba(255,255,255,0.14); }
+    .sp-nav-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900; font-size: 1rem;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #6366f1, #10b981);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    /* ── Hero ────────────────────────────────────────────────── */
+    .sp-hero {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 40px 20px 20px;
+    }
+    .sp-hero-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(99,102,241,.2), rgba(16,185,129,.15));
+      border: 1px solid rgba(99,102,241,.4);
+      border-radius: 30px;
+      padding: 5px 16px;
+      font-size: .7rem; font-weight: 700; letter-spacing: 2px;
+      color: #a5b4fc;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .sp-hero h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.6rem, 5vw, 2.4rem);
+      font-weight: 900; margin: 0 0 10px;
+      background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1.15;
+    }
+    .sp-hero p {
+      color: rgba(255,255,255,0.45);
+      font-size: .88rem; margin: 0;
+    }
+
+    /* ── Grid ────────────────────────────────────────────────── */
+    .sp-grid {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 14px;
+      padding: 30px 18px 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ── Sport Card ──────────────────────────────────────────── */
+    .sp-card {
+      position: relative;
+      border-radius: 18px;
+      padding: 24px 16px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      overflow: hidden;
+      transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s;
+      text-decoration: none; color: inherit;
+    }
+    .sp-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--sport-color, #6366f1);
+      opacity: 0;
+      transition: opacity .22s;
+    }
+    .sp-card:hover { transform: translateY(-6px) scale(1.03); }
+    .sp-card:hover::before { opacity: .08; }
+    .sp-card:hover { box-shadow: 0 16px 40px rgba(0,0,0,.5), 0 0 0 1px var(--sport-color,.6366f1); }
+    .sp-card:active { transform: scale(.97); }
+
+    .sp-card-glow {
+      position: absolute;
+      top: -20px; left: 50%; transform: translateX(-50%);
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--sport-color, #6366f1);
+      filter: blur(28px);
+      opacity: .15;
+      pointer-events: none;
+      transition: opacity .22s;
+    }
+    .sp-card:hover .sp-card-glow { opacity: .32; }
+
+    .sp-card-emoji {
+      font-size: 2.6rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,.5));
+      position: relative; z-index: 1;
+    }
+    .sp-card-name {
+      font-weight: 700; font-size: .82rem;
+      letter-spacing: .5px; text-align: center;
+      color: rgba(255,255,255,.85);
+      position: relative; z-index: 1;
+    }
+    .sp-card-cta {
+      font-size: .65rem; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--sport-color, #6366f1);
+      position: relative; z-index: 1;
+      opacity: .8;
+    }
+
+    /* ── Live Pulse chip ─────────────────────────────────────── */
+    .sp-card-live {
+      position: absolute; top: 10px; right: 10px;
+      background: #ef4444;
+      border-radius: 20px; padding: 2px 8px;
+      font-size: .55rem; font-weight: 800; letter-spacing: 1px;
+      color: #fff; text-transform: uppercase;
+      animation: sp-blink 1.4s ease-in-out infinite;
+    }
+    @keyframes sp-blink { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    /* ── Footer note ─────────────────────────────────────────── */
+    .sp-footer {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 10px 20px 30px;
+      font-size: .72rem;
+      color: rgba(255,255,255,.2);
     }
   </style>
 </head>
 
 <body>
-  <nav class="navbar" aria-label="Navegación principal">
-    <div class="container nav-container">
-      <button class="brand brand-btn" onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close(); else window.history.back();" style="padding: 8px; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);">
-        <span class="brand-icon" aria-hidden="true" style="margin:0; font-size:16px;">✕</span>
-      </button>
-      <div class="nav-actions">
-        {% include 'user_menu.html' %}
-      </div>
-    </div>
+  <div class="sp-bg"></div>
+
+  <!-- NAVBAR -->
+  <nav class="sp-nav" aria-label="Navegación sports">
+    <button class="sp-nav-back" onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close(); else window.history.back();" aria-label="Volver">✕</button>
+    <span class="sp-nav-title">DEPORTES</span>
+    <div>{% include 'user_menu.html' %}</div>
   </nav>
 
-  <div style="height: 100px;"></div>
+  <!-- HERO -->
+  <header class="sp-hero">
+    <div class="sp-hero-badge">🏆 Sportsbook VIP</div>
+    <h1>Apuestas Deportivas</h1>
+    <p>Selecciona tu deporte favorito y apuesta en los mejores eventos</p>
+  </header>
 
-  <main id="main-content">
-    <section class="games-section">
-      <div class="section-header reveal">
-        <h2 id="games-title">⚽ Apuestas Deportivas</h2>
-        <p class="section-subtitle">Selecciona tu Deporte</p>
-      </div>
-      <div class="games-grid">
-        <article class="game-card sports-card reveal">
-          <div class="game-card-inner sports-card" role="button" tabindex="0" onclick="window.location.href='/sports/futbol'">
-            <span class="game-card-emoji" aria-hidden="true">⚽</span>
-            <div class="game-card-info">
-              <p class="game-card-label">Fútbol · Mundial Edition</p>
-              <h3 class="game-card-name">Fútbol</h3>
-              <p class="game-card-desc">Apuesta en los mejores partidos, ligas y campeonatos mundiales.</p>
-              <button class="game-card-btn sports-card-btn" type="button" onclick="window.location.href='/sports/futbol'">
-                VER PARTIDOS →
-              </button>
-            </div>
-          </div>
-        </article>
-      </div>
-    </section>
+  <!-- SPORT GRID -->
+  <main>
+    <div class="sp-grid" id="sports-grid">
+      {% for source, meta in sports.items() %}
+      <a class="sp-card"
+         href="/sports/{{ source }}"
+         style="--sport-color: {{ meta.color }};"
+         id="sp-card-{{ source }}"
+         aria-label="{{ meta.name }}">
+        <div class="sp-card-glow"></div>
+        <span class="sp-card-emoji">{{ meta.emoji }}</span>
+        <span class="sp-card-name">{{ meta.name }}</span>
+        <span class="sp-card-cta">Ver partidos →</span>
+      </a>
+      {% endfor %}
+    </div>
   </main>
-  
+
+  <div class="sp-footer">Zona Jackpot 777 · Solo para uso recreativo · +18</div>
+
   {% include 'user_profile_modal.html' ignore missing %}
-  
 </body>
 </html>
