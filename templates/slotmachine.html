@@ -167,6 +167,9 @@
     </div>
   </div>
 
+  <!-- Seed bits immediately from Flask so JS doesn't need to wait for perfil.js -->
+  <script>window.INITIAL_BITS = {{ bits | int }};</script>
+
   <!-- Scripts -->
   <script src="/static/js/theme-manager.js"></script>
   <script defer src="/static/js/soundManager.js"></script>

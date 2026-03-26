@@ -60,7 +60,8 @@
       spinning:   false,
       collecting: false,
       currentBet: CONFIG.betMin,
-      userBits:   0,
+      // Seed immediately from Flask-injected global (set in slotmachine.html)
+      userBits:   (window.INITIAL_BITS || 0),
       pendingWin: 0,
     };
 
@@ -200,9 +201,12 @@
     ────────────────────────────────────────────────── */
     function getBitsFromDisplay() {
       const el = document.getElementById("global-bits-display");
-      if (!el) return state.userBits;
-      const v = parseInt(el.textContent.replace(/\D/g, ""), 10);
-      return isNaN(v) ? state.userBits : v;
+      if (el) {
+        const v = parseInt(el.textContent.replace(/\D/g, ""), 10);
+        if (!isNaN(v) && v > 0) return v;
+      }
+      // Fall back to Flask-seeded value or last known state
+      return state.userBits || (window.INITIAL_BITS || 0);
     }
 
     function syncBits() {
@@ -220,7 +224,7 @@
       state.userBits = e.detail?.bits || state.userBits;
       updateBetUI();
     });
-    setTimeout(syncBits, 800);
+    setTimeout(syncBits, 200);
 
     /* ──────────────────────────────────────────────────
        BET UI
