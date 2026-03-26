@@ -6,6 +6,17 @@
 (function () {
   'use strict';
 
+  window.addEventListener('error', function(e) {
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.showAlert('JS Error: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
+    }
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.showAlert('Unhandled Promise: ' + e.reason);
+    }
+  });
+
   function $(id) { return document.getElementById(id); }
 
   const CACHE_TTL = 300000; // 5 mins frontend cache
@@ -186,7 +197,10 @@
 
       } catch(err) {
         console.warn('[SoccerAPI] loadNewsAndOdds error:', err);
-        this.showEmpty('events-container', 'No se pudieron cargar los datos.');
+        if (window.Telegram && window.Telegram.WebApp) {
+           window.Telegram.WebApp.showAlert('Error en Noticias: ' + err.message);
+        }
+        this.showEmpty('events-container', 'No se pudieron cargar los datos. ' + err.message);
       }
     },
 
