@@ -1,597 +1,177 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0f14">
-  <meta name="description" content="Slot Machine premium del Zona Jackpot 777. Animaciones fluidas y experiencia de casino digital.">
-  <title>Slot Machine | Zona Jackpot 777</title>
 
+<head>
+  <!-- ======================================================
+       META & SEO
+  ======================================================= -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description"
+    content="Slot Machine premium del Casino Ghost Plague 777. Rodillos 3D fluidos y experiencia de casino de alto nivel.">
+  <title>Slot Machine | Ghost Plague Casino</title>
+
+  <!-- Preconnect & Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script>try{var t=localStorage.getItem("casino_theme");if(t)document.documentElement.setAttribute("data-casino-theme",t);}catch(e){}</script>
-
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="/static/js/firebase.js"></script>
 
-  <style>
-    /* =========================================================
-       RESET & BASE
-    ========================================================= */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>try{var t=localStorage.getItem("casino_theme");if(t)document.documentElement.setAttribute("data-casino-theme",t);}catch(e){}</script>
 
-    :root {
-      --gold:    #f8e594;
-      --gold2:   #c9a227;
-      --red:     #ff3c5a;
-      --green:   #00c97a;
-      --bg:      #080b10;
-      --card:    rgba(255,255,255,.04);
-      --border:  rgba(255,255,255,.1);
-      --text:    #fff;
-      --muted:   rgba(255,255,255,.5);
-      --reel-h:  80px;  /* height of ONE symbol cell */
-      --reel-w:  72px;
-    }
-
-    html, body {
-      height: 100%;
-      overflow: hidden; /* NO SCROLL — entire game fits viewport */
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    /* Ambient glow background */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background:
-        radial-gradient(ellipse 70% 40% at 50% 0%, rgba(201,162,39,.12) 0%, transparent 65%),
-        radial-gradient(ellipse 40% 50% at 20% 100%, rgba(255,60,90,.07) 0%, transparent 60%);
-    }
-
-    /* =========================================================
-       FULL-SCREEN WRAPPER  (column flexbox — no scroll)
-    ========================================================= */
-    #slot-app {
-      position: relative; z-index: 1;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      height: 100dvh; /* dynamic viewport for mobile browsers */
-      max-width: 480px;
-      margin: 0 auto;
-      padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
-    }
-
-    /* =========================================================
-       TOP BAR  (compact, never wraps)
-    ========================================================= */
-    #top-bar {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 14px;
-      gap: 10px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(8,11,16,.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    /* Lobby button */
-    #btn-lobby {
-      display: flex; align-items: center; gap: 6px;
-      background: rgba(255,255,255,.07);
-      border: 1px solid var(--border);
-      color: var(--gold);
-      font-size: .75rem; font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 20px;
-      text-decoration: none;
-      white-space: nowrap;
-      transition: background .2s;
-      flex-shrink: 0;
-    }
-    #btn-lobby:hover, #btn-lobby:active { background: rgba(255,255,255,.13); }
-
-    /* Title (center) */
-    #game-title {
-      font-family: 'Orbitron', monospace;
-      font-size: clamp(.65rem, 3.5vw, .85rem);
-      font-weight: 900;
-      letter-spacing: 2px;
-      background: linear-gradient(90deg, var(--gold), var(--gold2));
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-      flex: 1;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Profile chip */
-    #profile-chip {
-      display: flex; align-items: center; gap: 7px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 10px 5px 5px;
-      flex-shrink: 0;
-      cursor: pointer;
-      transition: background .2s;
-    }
-    #profile-chip:hover { background: rgba(255,255,255,.12); }
-    #profile-avatar {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--gold2), var(--red));
-      display: flex; align-items: center; justify-content: center;
-      font-size: .9rem;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    #profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    #profile-info { display: flex; flex-direction: column; }
-    #profile-name { font-size: .65rem; font-weight: 700; color: #fff; line-height: 1.1; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #profile-bits {
-      font-size: .62rem; font-weight: 700;
-      color: var(--gold);
-      line-height: 1.1;
-    }
-
-    /* =========================================================
-       MACHINE FRAME  (takes remaining height)
-    ========================================================= */
-    #machine-frame {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-evenly;
-      padding: 8px 14px;
-      overflow: hidden;
-    }
-
-    /* =========================================================
-       SLOT CABINET
-    ========================================================= */
-    #slot-cabinet {
-      width: 100%;
-      max-width: 380px;
-      background: linear-gradient(160deg, #141922 0%, #0d1018 100%);
-      border: 2px solid rgba(201,162,39,.25);
-      border-radius: 20px;
-      padding: 14px 14px 10px;
-      box-shadow:
-        0 0 30px rgba(201,162,39,.08),
-        inset 0 1px 0 rgba(255,255,255,.06);
-    }
-
-    /* LED strip */
-    .led-strip {
-      height: 4px;
-      border-radius: 4px;
-      background: linear-gradient(90deg, transparent, var(--gold2), var(--gold), var(--gold2), transparent);
-      margin-bottom: 10px;
-      animation: ledPulse 2s ease-in-out infinite;
-      opacity: .7;
-    }
-    @keyframes ledPulse { 0%,100%{ opacity:.4 } 50%{ opacity:1 } }
-
-    /* =========================================================
-       REELS SCREEN
-    ========================================================= */
-    #reels-screen {
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-      gap: 6px;
-      background: #04060a;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.08);
-      overflow: hidden;
-      padding: 6px;
-      position: relative;
-    }
-
-    /* Payline overlay */
-    #reels-screen::after {
-      content: '';
-      position: absolute;
-      left: 0; right: 0;
-      top: 50%; transform: translateY(-50%);
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(248,229,148,.5), transparent);
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    /* Individual reel */
-    .reel {
-      flex: 1;
-      height: var(--reel-h);
-      max-width: var(--reel-w);
-      overflow: hidden;
-      border-radius: 8px;
-      background: #07090d;
-      position: relative;
-      border: 1px solid rgba(255,255,255,.06);
-      transition: border-color .3s;
-    }
-    .reel.is-win {
-      border-color: var(--gold);
-      box-shadow: 0 0 14px rgba(248,229,148,.4);
-      animation: winBlink .4s ease-in-out 4;
-    }
-    .reel.is-spinning { border-color: rgba(255,255,255,.15); }
-    @keyframes winBlink {
-      0%,100% { box-shadow: 0 0 8px rgba(248,229,148,.2); }
-      50%      { box-shadow: 0 0 22px rgba(248,229,148,.7); }
-    }
-
-    /* Reel track (scrollable column of symbols) */
-    .reel-track {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      will-change: transform;
-    }
-
-    /* Symbol cells */
-    .symbol, .symbol-final {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(1.8rem, 7vw, 2.2rem);
-      line-height: 1;
-      flex-shrink: 0;
-      width: 100%;
-    }
-    .symbol-final {
-      height: 100%;
-    }
-
-    /* Symbol classes (emoji) */
-    .symbol-diamond::after  { content: '💎'; }
-    .symbol-red7::after     { content: '7️⃣'; }
-    .symbol-bar::after      { content: '🎰'; }
-    .symbol-crown::after    { content: '👑'; }
-    .symbol-chip::after     { content: '🎲'; }
-    .symbol-bell::after     { content: '🔔'; }
-
-    /* =========================================================
-       BET ROW
-    ========================================================= */
-    #bet-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .bet-btn {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: rgba(255,255,255,.08);
-      border: 1px solid var(--border);
-      color: #fff; font-size: 1rem;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background .2s, transform .1s;
-      flex-shrink: 0;
-    }
-    .bet-btn:active { transform: scale(.9); }
-    .bet-btn:disabled { opacity: .35; pointer-events: none; }
-
-    #bet-display {
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 6px 18px;
-      text-align: center;
-      min-width: 100px;
-    }
-    #bet-label { font-size: .6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-    #bet-amount-display {
-      font-family: 'Orbitron', monospace;
-      font-size: 1rem; font-weight: 700;
-      color: var(--gold);
-    }
-
-    /* =========================================================
-       SPIN BUTTON
-    ========================================================= */
-    #spin-btn {
-      width: 100%;
-      max-width: 320px;
-      height: 54px;
-      border-radius: 27px;
-      background: linear-gradient(135deg, #c9a227 0%, #f8e594 50%, #c9a227 100%);
-      background-size: 200% 200%;
-      border: none;
-      color: #0b0f14;
-      font-family: 'Orbitron', monospace;
-      font-size: 1rem;
-      font-weight: 900;
-      letter-spacing: 2px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      box-shadow: 0 4px 24px rgba(201,162,39,.35);
-      transition: transform .12s, filter .15s, box-shadow .15s;
-      position: relative;
-      overflow: hidden;
-      animation: btnShine 3s ease-in-out infinite;
-    }
-    @keyframes btnShine {
-      0%,100% { background-position: 0% 50%; }
-      50%      { background-position: 100% 50%; }
-    }
-    #spin-btn:active:not(:disabled) { transform: scale(.96); }
-    #spin-btn:disabled {
-      background: rgba(255,255,255,.12);
-      color: rgba(255,255,255,.4);
-      box-shadow: none;
-      cursor: not-allowed;
-      animation: none;
-    }
-    #spin-btn.is-spinning {
-      background: rgba(255,255,255,.1);
-      color: rgba(255,255,255,.6);
-      animation: spinnerPulse 1s ease-in-out infinite;
-    }
-    @keyframes spinnerPulse { 0%,100%{ opacity:.7 } 50%{ opacity:1 } }
-
-    #spin-btn .spin-icon { font-size: 1.2rem; }
-
-    /* Ripple on press */
-    #spin-btn::after {
-      content: '';
-      position: absolute; inset: 0; border-radius: inherit;
-      background: rgba(255,255,255,.15);
-      opacity: 0;
-      transition: opacity .3s;
-    }
-    #spin-btn:active::after { opacity: 1; }
-
-    /* =========================================================
-       RESULT MESSAGE
-    ========================================================= */
-    #result-msg {
-      height: 30px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: .88rem;
-      border-radius: 10px;
-      transition: all .3s;
-      opacity: 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    #result-msg.visible { opacity: 1; }
-    #result-msg[data-state="win"] { color: var(--green); text-shadow: 0 0 14px rgba(0,201,122,.5); }
-    #result-msg[data-state="jackpot"] {
-      color: var(--gold);
-      text-shadow: 0 0 20px rgba(248,229,148,.8);
-      animation: jackpotPulse .5s ease-in-out infinite;
-    }
-    @keyframes jackpotPulse { 0%,100%{ transform: scale(1) } 50%{ transform: scale(1.08) } }
-    #result-msg[data-state="lose"] { color: var(--red); }
-
-    /* =========================================================
-       COIN TRAY  (compact)
-    ========================================================= */
-    #coin-tray {
-      width: 100%;
-      max-width: 380px;
-      height: 36px;
-      background: #04060a;
-      border: 1px solid rgba(255,255,255,.07);
-      border-radius: 10px;
-      position: relative;
-      overflow: hidden;
-      display: none; /* hidden until coins appear */
-    }
-    #coin-tray.active { display: block; }
-
-    .physical-coin {
-      position: absolute;
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #f8e594, #c9a227);
-      box-shadow: 0 1px 4px rgba(0,0,0,.6);
-    }
-
-    /* =========================================================
-       SPARKLE PARTICLES
-    ========================================================= */
-    .win-sparkle {
-      position: absolute;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--gold);
-      pointer-events: none;
-      animation: sparkle 1.2s ease-out forwards;
-    }
-    @keyframes sparkle {
-      0%   { transform: translate(0,0) scale(1); opacity: 1; }
-      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
-    }
-
-    /* =========================================================
-       JACKPOT SHAKE
-    ========================================================= */
-    .jackpot-shake {
-      animation: jShake .5s cubic-bezier(.36,.07,.19,.97) both;
-    }
-    @keyframes jShake {
-      10%,90%  { transform: translateX(-3px); }
-      20%,80%  { transform: translateX(4px); }
-      30%,50%,70% { transform: translateX(-5px); }
-      40%,60%  { transform: translateX(5px); }
-    }
-
-    /* =========================================================
-       WIN OVERLAY FLASH
-    ========================================================= */
-    .machine-state-win::before {
-      content: '';
-      position: absolute; inset: 0;
-      border-radius: inherit;
-      background: rgba(248,229,148,.04);
-      pointer-events: none;
-      animation: winFlash .6s ease-in-out 3;
-    }
-    @keyframes winFlash { 0%,100%{ opacity:0 } 50%{ opacity:1 } }
-
-    /* =========================================================
-       RESPONSIVE TWEAKS
-    ========================================================= */
-    @media (max-height: 620px) {
-      :root { --reel-h: 64px; --reel-w: 60px; }
-      #slot-cabinet { padding: 10px 10px 8px; border-radius: 16px; }
-      #spin-btn { height: 46px; font-size: .88rem; }
-      #machine-frame { padding: 6px 12px; justify-content: space-between; }
-    }
-    @media (max-height: 500px) {
-      :root { --reel-h: 52px; --reel-w: 50px; }
-      #top-bar { padding: 5px 12px; }
-      #spin-btn { height: 40px; font-size: .8rem; }
-    }
-    @media (min-width: 480px) {
-      :root { --reel-h: 88px; --reel-w: 80px; }
-      #spin-btn { font-size: 1.1rem; }
-    }
-  </style>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="/static/css/slot.css">
+  <link rel="stylesheet" href="/static/css/perfil.css">
 </head>
 
-<body>
-<div id="slot-app">
+<body class="slot-page">
+  <div class="slot-dynamic-bg"></div>
 
-  <!-- ═══════════════════════════════════════════
-       TOP BAR
-  ═══════════════════════════════════════════ -->
-  <div id="top-bar">
-    <a id="btn-lobby" href="{{ url_for('home') }}">← Lobby</a>
+  <!-- ======================================================
+       HEADER
+  ======================================================= -->
+  <header class="slot-header" role="banner">
+    <div class="slot-header-container">
+      <a href="{{ url_for('home') }}" class="btn-back-slot">
+        <span>🏠</span> Lobby
+      </a>
 
-    <div id="game-title">🎰 SLOT 777</div>
+      <div class="slot-header-info">
+        <h1 class="slot-title">
+          <span class="gradient-text">SLOT 777</span>
+        </h1>
+        <p class="slot-subtitle">Rueda los cilindros · Vive el jackpot</p>
+        <div style="margin-top: 12px; display: flex; align-items: center; justify-content: center;">
+          {% include 'user_menu.html' %}
+        </div>
+      </div>
+    </div>
+  </header>
 
-    <div id="profile-chip" onclick="typeof UserProfileManager !== 'undefined' && UserProfileManager.openModal && UserProfileManager.openModal()" title="Ver perfil">
-      <div id="profile-avatar">👤</div>
-      <div id="profile-info">
-        <span id="profile-name">—</span>
-        <span id="profile-bits" id="global-bits-display">— bits</span>
+  <!-- ======================================================
+       MAIN GAME AREA
+  ======================================================= -->
+  <main id="main-content" class="slot-main" role="main">
+
+    <section class="slot-machine" aria-labelledby="slot-heading">
+      <h2 id="slot-heading" class="visually-hidden">Máquina tragamonedas interactiva</h2>
+
+      <div class="slot-cabine">
+
+        <!-- REELS CONTAINER -->
+        <div class="slot-screen-glass">
+          <div class="led-lights" aria-hidden="true"></div>
+          <div class="reels" role="group" aria-label="Rodillos de la máquina">
+            <div class="payline" aria-hidden="true"></div>
+
+            <div class="reel" data-reel="1">
+              <div class="reel-shadow-top"></div>
+              <div class="reel-track"></div>
+              <div class="reel-shadow-bottom"></div>
+            </div>
+            <div class="reel" data-reel="2">
+              <div class="reel-shadow-top"></div>
+              <div class="reel-track"></div>
+              <div class="reel-shadow-bottom"></div>
+            </div>
+            <div class="reel" data-reel="3">
+              <div class="reel-shadow-top"></div>
+              <div class="reel-track"></div>
+              <div class="reel-shadow-bottom"></div>
+            </div>
+            <div class="reel" data-reel="4">
+              <div class="reel-shadow-top"></div>
+              <div class="reel-track"></div>
+              <div class="reel-shadow-bottom"></div>
+            </div>
+            <div class="reel" data-reel="5">
+              <div class="reel-shadow-top"></div>
+              <div class="reel-track"></div>
+              <div class="reel-shadow-bottom"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COIN DISPENSER TRAY -->
+        <div class="coin-dispenser" id="coin-dispenser" aria-hidden="true">
+          <div class="dispenser-outlet">
+            <div class="dispenser-slot"></div>
+          </div>
+          <div class="coin-tray" id="coin-tray">
+            <span class="tray-label">PRIZE TRAY</span>
+          </div>
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="controls" role="group" aria-label="Controles de la tragamonedas">
+          <div class="bet-controls">
+            <button class="btn bet-btn-circle" id="btn-decrease" data-action="decrease-bet"
+              aria-label="Reducir apuesta">−</button>
+
+            <div class="bet-display">
+              <span class="bet-label-text">APUESTA</span>
+              <input type="number" id="bet-amount" class="bet-input-clean" value="10" min="10" step="10"
+                aria-label="Cantidad a apostar" readonly>
+              <span class="bet-unit-text">bits</span>
+            </div>
+
+            <button class="btn bet-btn-circle" id="btn-increase" data-action="increase-bet"
+              aria-label="Aumentar apuesta">+</button>
+          </div>
+
+          <div class="action-controls">
+            <button class="btn btn-primary spin-button" type="button" data-action="spin" id="spin-btn">
+              <span class="spin-icon">🎰</span>
+              <span id="spin-label">GIRAR</span>
+            </button>
+          </div>
+        </div>
+      </div><!-- /slot-cabine -->
+
+      <!-- RESULT AREA -->
+      <div class="result-container" role="status" aria-live="polite" aria-atomic="true">
+        <p class="result-message"></p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ======================================================
+       FOOTER
+  ======================================================= -->
+  <footer class="slot-footer" role="contentinfo">
+    <div class="container">
+      <p>© 2026 Ghost Plague Casino — Plataforma Premium Internacional</p>
+    </div>
+  </footer>
+
+  <!-- ================= PROFILE MODAL ================= -->
+  <div id="profile-modal" class="modal-overlay hidden">
+    <div class="modal-content profile-content">
+      <header class="modal-header">
+        <h2 style="color: #c9a227;">Perfil del Jugador</h2>
+        <button class="btn-close" onclick="UserProfileManager.closeModal()">×</button>
+      </header>
+      <div class="modal-body" id="profile-content-area">
+        <!-- Inyectado dinámicamente -->
       </div>
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
-       MACHINE FRAME
-  ═══════════════════════════════════════════ -->
-  <div id="machine-frame">
-
-    <!-- Result message -->
-    <div id="result-msg" role="status" aria-live="polite"></div>
-
-    <!-- Slot cabinet -->
-    <div id="slot-cabinet" class="slot-machine">
-      <div class="led-strip"></div>
-
-      <!-- Reels -->
-      <div id="reels-screen">
-        <div class="reel" data-reel="1"><div class="reel-track"></div></div>
-        <div class="reel" data-reel="2"><div class="reel-track"></div></div>
-        <div class="reel" data-reel="3"><div class="reel-track"></div></div>
-        <div class="reel" data-reel="4"><div class="reel-track"></div></div>
-        <div class="reel" data-reel="5"><div class="reel-track"></div></div>
-      </div>
-
-      <!-- Coin tray -->
-      <div id="coin-tray"></div>
-    </div>
-
-    <!-- Bet controls -->
-    <div id="bet-row">
-      <button class="bet-btn" id="btn-decrease" data-action="decrease-bet" aria-label="Reducir apuesta">−</button>
-      <div id="bet-display">
-        <div id="bet-label">Apuesta</div>
-        <div id="bet-amount-display">10 bits</div>
-      </div>
-      <button class="bet-btn" id="btn-increase" data-action="increase-bet" aria-label="Aumentar apuesta">+</button>
-    </div>
-
-    <!-- SPIN BUTTON -->
-    <button id="spin-btn" type="button" data-action="spin" aria-label="Girar los rodillos">
-      <span class="spin-icon">🎰</span>
-      <span id="spin-label">GIRAR</span>
-    </button>
-
-  </div><!-- /machine-frame -->
-
-</div><!-- /slot-app -->
-
-<!-- Profile Modal (legacy support) -->
-<div id="profile-modal" class="modal-overlay hidden" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);align-items:center;justify-content:center;">
-  <div style="background:#141922;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:24px;max-width:340px;width:90%;position:relative;">
-    <button onclick="document.getElementById('profile-modal').style.display='none'" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,.1);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:1rem;">×</button>
-    <div id="profile-content-area"><p style="color:rgba(255,255,255,.5);text-align:center;padding:20px;">Cargando perfil...</p></div>
-  </div>
-</div>
-
-<!-- Scripts -->
-<script src="/static/js/theme-manager.js"></script>
-<script defer src="/static/js/soundManager.js"></script>
-<script defer src="/static/js/perfil.js"></script>
-<script defer src="/static/js/slotmachine.js"></script>
-
-<!-- Profile chip updater — runs after perfil.js loads user data -->
-<script>
-  function _updateProfileChip() {
-    const tg = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    const nameEl = document.getElementById('profile-name');
-    const bitsEl = document.getElementById('profile-bits');
-    const avatarEl = document.getElementById('profile-avatar');
-
-    if (tg) {
-      if (nameEl) nameEl.textContent = tg.first_name || 'Jugador';
-      if (tg.photo_url && avatarEl) {
-        avatarEl.innerHTML = `<img src="${tg.photo_url}" alt="avatar">`;
-      }
-    }
-
-    // Try to read bits from the global display injected by perfil.js
-    const globalBits = document.getElementById('global-bits-display');
-    if (globalBits && bitsEl) {
-      const raw = globalBits.textContent || '';
-      const num = raw.replace(/\D/g,'');
-      if (num) bitsEl.textContent = Number(num).toLocaleString('es-MX') + ' bits';
-    }
-
-    // Also observe mutations on the global display
-    if (globalBits) {
-      new MutationObserver(() => {
-        const n = (globalBits.textContent || '').replace(/\D/g,'');
-        if (n && bitsEl) bitsEl.textContent = Number(n).toLocaleString('es-MX') + ' bits';
-      }).observe(globalBits, { childList: true, subtree: true, characterData: true });
-    }
-  }
-
-  // Run after DOM + deferred scripts settle
-  if (document.readyState === 'complete') {
-    setTimeout(_updateProfileChip, 600);
-  } else {
-    window.addEventListener('load', () => setTimeout(_updateProfileChip, 600));
-  }
-</script>
-
+  <!-- Scripts -->
+  <script src="/static/js/theme-manager.js"></script>
+  <script defer src="/static/js/soundManager.js"></script>
+  <script defer src="/static/js/perfil.js"></script>
+  <script defer src="/static/js/slotmachine.js"></script>
 </body>
+
 </html>

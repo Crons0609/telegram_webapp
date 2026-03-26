@@ -1,0 +1,593 @@
+/* =====================================================
+   🎰 SLOT MACHINE — PREMIUM CSS  (3D Cylinder Reels)
+   Ghost Plague Casino · International Ultra-Premium
+===================================================== */
+
+/* ── Page Shell ──────────────────────────────────── */
+.slot-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.slot-dynamic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 35% at 50%   0%,   rgba(201,162,39,.14) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 50% at 15% 100%,   rgba(138,43,226,.10) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85%  90%,   rgba(11,132,87,.08)  0%, transparent 60%);
+  animation: bgPulse 14s ease-in-out infinite alternate;
+}
+@keyframes bgPulse {
+  0%   { opacity: .7; }
+  100% { opacity: 1;  }
+}
+
+/* ── Header ──────────────────────────────────────── */
+.slot-header {
+  position: relative;
+  z-index: 10;
+  padding: 0;
+  border-bottom: 1px solid rgba(201,162,39,.18);
+  background: rgba(8,8,14,.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  flex-shrink: 0;
+}
+
+.slot-header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 20px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.btn-back-slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,.5);
+  padding: 8px 16px;
+  border-radius: 24px;
+  text-decoration: none;
+  color: #f8e594;
+  border: 1px solid rgba(201,162,39,.4);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .05em;
+  transition: background .2s, box-shadow .2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-back-slot:hover { background: rgba(201,162,39,.15); box-shadow: 0 0 18px rgba(201,162,39,.25); }
+
+.slot-header-info {
+  text-align: center;
+  flex: 1;
+}
+
+.slot-title {
+  font-family: 'Orbitron', 'Playfair Display', serif;
+  font-size: clamp(1.2rem, 5vw, 1.8rem);
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: 4px;
+  line-height: 1;
+}
+
+.slot-subtitle {
+  font-family: 'Montserrat', sans-serif;
+  font-size: .72rem;
+  color: rgba(255,255,255,.45);
+  margin: 4px 0 0;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+/* ── Main ────────────────────────────────────────── */
+.slot-main {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px;
+}
+
+.slot-machine {
+  width: 100%;
+  max-width: 520px;
+  position: relative;
+}
+
+/* ── Cabinet ─────────────────────────────────────── */
+.slot-cabine {
+  background: linear-gradient(160deg, #1a1625 0%, #0d0b14 55%, #131020 100%);
+  border: 2px solid rgba(201,162,39,.38);
+  border-radius: 28px;
+  padding: 20px 18px 18px;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.8),
+    0 0  60px rgba(201,162,39,.12),
+    inset 0 2px 3px rgba(255,255,255,.08),
+    inset 0 -6px 14px rgba(0,0,0,.7);
+  position: relative;
+}
+
+/* LED strip */
+.led-lights {
+  height: 5px;
+  border-radius: 5px;
+  margin-bottom: 14px;
+  background: linear-gradient(90deg,
+    transparent, #c9a227 15%, #f8e594 30%, #c9a227 50%,
+    #f8e594 70%, #c9a227 85%, transparent);
+  animation: ledPulse 2.2s ease-in-out infinite;
+  opacity: .75;
+}
+@keyframes ledPulse { 0%,100%{ opacity:.35; } 50%{ opacity:1; } }
+
+/* ── Reel Screen ─────────────────────────────────── */
+.slot-screen-glass {
+  background: #03050a;
+  border-radius: 16px;
+  border: 2px solid rgba(255,255,255,.06);
+  box-shadow: inset 0 14px 28px rgba(0,0,0,.9), inset 0 -14px 28px rgba(0,0,0,.9);
+  padding: 12px 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Payline */
+.payline {
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent, rgba(255,60,90,.85), rgba(248,229,148,1), rgba(255,60,90,.85), transparent);
+  box-shadow: 0 0 12px rgba(248,229,148,.55);
+  pointer-events: none;
+  z-index: 20;
+  opacity: .75;
+}
+
+.reels {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* ─── 3D Reel Cylinder ───────────────────────────── */
+/*
+  Each .reel is a viewport window — overflow:hidden clips the cylinder.
+  .reel-track is the rotating drum. Using CSS 3D:
+    - perspective applied on .reel
+    - transform-style: preserve-3d on .reel-track
+    - Each .symbol-face is a face of a prism rotated on X axis and pushed along Z
+*/
+.reel {
+  flex: 1;
+  height: 90px;
+  max-width: 80px;
+  overflow: hidden;
+  border-radius: 10px;
+  position: relative;
+  background: linear-gradient(to bottom, #060810 0%, #12182a 50%, #060810 100%);
+  border: 1px solid rgba(255,255,255,.04);
+  /* 3D context */
+  perspective: 600px;
+  perspective-origin: center center;
+}
+
+/* Curved shadow overlays — simulate cylinder curvature */
+.reel-shadow-top,
+.reel-shadow-bottom {
+  position: absolute;
+  left: 0; right: 0;
+  height: 38%;
+  z-index: 10;
+  pointer-events: none;
+}
+.reel-shadow-top {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,.92) 0%, transparent 100%);
+  border-radius: 10px 10px 0 0;
+}
+.reel-shadow-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.92) 0%, transparent 100%);
+  border-radius: 0 0 10px 10px;
+}
+
+/* Win highlight */
+.reel.is-win {
+  border-color: #f8e594;
+  box-shadow: 0 0 20px rgba(248,229,148,.5);
+  animation: winBlink .45s ease-in-out 4;
+}
+@keyframes winBlink {
+  0%,100% { box-shadow: 0 0 8px rgba(248,229,148,.2); }
+  50%      { box-shadow: 0 0 28px rgba(248,229,148,.8); }
+}
+
+/* ── Reel Track (the rotating drum) ──────────────── */
+.reel-track {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  /* height set dynamically by JS */
+  transform-style: preserve-3d;
+  will-change: transform;
+  /* Default: flat strip until JS kicks in */
+}
+
+/* ── Symbol Face ──────────────────────────────────── */
+.symbol-face {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  /* height & top set by JS */
+  background-size: 76%;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  /* Per-face depth shading (set inline by JS) */
+}
+/* Symbol images */
+.sym-diamond { background-image: url('/static/img/slot/diamond.png'); }
+.sym-red7    { background-image: url('/static/img/slot/red7.png'); }
+.sym-bar     { background-image: url('/static/img/slot/bar.png'); }
+.sym-crown   { background-image: url('/static/img/slot/crown.png'); }
+.sym-chip    { background-image: url('/static/img/slot/gold_chip.png'); }
+.sym-bell    { background-image: url('/static/img/slot/gold_bell.png'); }
+
+/* "Flat strip" mode — used by the translateY fallback */
+.symbol,
+.symbol-final {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 100%;
+  background-size: 76%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.symbol-diamond { background-image: url('/static/img/slot/diamond.png'); }
+.symbol-red7    { background-image: url('/static/img/slot/red7.png'); }
+.symbol-bar     { background-image: url('/static/img/slot/bar.png'); }
+.symbol-crown   { background-image: url('/static/img/slot/crown.png'); }
+.symbol-chip    { background-image: url('/static/img/slot/gold_chip.png'); }
+.symbol-bell    { background-image: url('/static/img/slot/gold_bell.png'); }
+
+/* ── Coin Dispenser ───────────────────────────────── */
+.coin-dispenser {
+  margin-top: 10px;
+  position: relative;
+}
+
+.dispenser-outlet {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 2px;
+}
+
+.dispenser-slot {
+  width: 60px;
+  height: 8px;
+  background: linear-gradient(to bottom, #000 0%, #1a1a1a 100%);
+  border-radius: 0 0 6px 6px;
+  border: 1px solid rgba(201,162,39,.2);
+  border-top: none;
+}
+
+.coin-tray {
+  height: 42px;
+  background: linear-gradient(to bottom, #050708, #0a0c10);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  display: none; /* shown by JS */
+}
+.coin-tray.active { display: block; }
+
+.tray-label {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Montserrat', sans-serif;
+  font-size: .5rem;
+  font-weight: 700;
+  letter-spacing: .15em;
+  color: rgba(201,162,39,.3);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Physical coin pieces */
+.physical-coin {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f8e594, #c9a227 55%, #7d600a);
+  box-shadow: 0 1px 4px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.25);
+}
+
+/* Flying coins (collection phase) */
+.physical-coin.flying-coin {
+  transition: left .7s cubic-bezier(.55,.06,.68,.19), top .7s cubic-bezier(.55,.06,.68,.19), opacity .3s;
+  z-index: 9999;
+}
+.physical-coin.collected { opacity: 0; }
+
+/* ── Controls ─────────────────────────────────────── */
+.controls {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.bet-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bet-btn-circle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, transform .1s;
+  flex-shrink: 0;
+  line-height: 1;
+  font-family: sans-serif;
+}
+.bet-btn-circle:active { transform: scale(.88); }
+.bet-btn-circle:disabled { opacity: .3; pointer-events: none; }
+
+.bet-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(201,162,39,.25);
+  border-radius: 14px;
+  padding: 6px 22px;
+  min-width: 110px;
+}
+
+.bet-label-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: .55rem;
+  font-weight: 700;
+  letter-spacing: .15em;
+  color: rgba(255,255,255,.4);
+  text-transform: uppercase;
+}
+
+.bet-input-clean {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8e594;
+  font-family: 'Orbitron', monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  width: 80px;
+  -moz-appearance: textfield;
+  cursor: default;
+}
+.bet-input-clean::-webkit-outer-spin-button,
+.bet-input-clean::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.bet-unit-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: .55rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  color: rgba(201,162,39,.5);
+  text-transform: uppercase;
+  margin-top: -2px;
+}
+
+/* ── Spin Button ──────────────────────────────────── */
+.spin-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  max-width: 300px;
+  height: 56px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #c9a227 0%, #f8e594 50%, #c9a227 100%);
+  background-size: 200% 200%;
+  border: none;
+  color: #08090d;
+  font-family: 'Orbitron', monospace;
+  font-size: .95rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  cursor: pointer;
+  box-shadow: 0 4px 28px rgba(201,162,39,.4), 0 1px  2px rgba(255,255,255,.2) inset;
+  animation: btnShine 3s ease-in-out infinite;
+  transition: transform .12s, box-shadow .15s, background .2s;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes btnShine {
+  0%,100% { background-position: 0%   50%; }
+  50%      { background-position: 100% 50%; }
+}
+.spin-button::after {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit;
+  background: rgba(255,255,255,.18);
+  opacity: 0;
+  transition: opacity .25s;
+}
+.spin-button:active:not(:disabled)::after { opacity: 1; }
+.spin-button:active:not(:disabled) { transform: scale(.95); }
+
+.spin-button:disabled {
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.35);
+  box-shadow: none;
+  cursor: not-allowed;
+  animation: none;
+}
+.spin-button.is-loading {
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.6);
+  animation: spinnerPulse .9s ease-in-out infinite;
+}
+@keyframes spinnerPulse { 0%,100%{ opacity:.6; } 50%{ opacity:1; } }
+
+.spin-icon { font-size: 1.25rem; }
+
+/* ── Result Message ───────────────────────────────── */
+.result-container {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.result-message {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: .9rem;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .3s, transform .3s;
+  transform: translateY(4px);
+}
+
+.result-message.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.result-message[data-state="win"] {
+  color: #00c97a;
+  text-shadow: 0 0 14px rgba(0,201,122,.5);
+}
+.result-message[data-state="jackpot"] {
+  color: #f8e594;
+  text-shadow: 0 0 22px rgba(248,229,148,.8);
+  animation: jackpotPulse .5s ease-in-out infinite;
+}
+@keyframes jackpotPulse { 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.07); } }
+.result-message[data-state="lose"] { color: #ff3c5a; }
+
+/* ── Win Particles (sparkles) ─────────────────────── */
+.win-sparkle {
+  position: absolute;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #f8e594;
+  pointer-events: none;
+  animation: sparkle 1.3s ease-out forwards;
+}
+@keyframes sparkle {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx),var(--ty)) scale(0); opacity: 0; }
+}
+
+/* ── Jackpot Shake ────────────────────────────────── */
+.jackpot-shake {
+  animation: jShake .5s cubic-bezier(.36,.07,.19,.97) both;
+}
+@keyframes jShake {
+  10%,90%     { transform: translateX(-4px); }
+  20%,80%     { transform: translateX( 5px); }
+  30%,50%,70% { transform: translateX(-6px); }
+  40%,60%     { transform: translateX( 6px); }
+}
+
+/* Win cabinet flash */
+.machine-state-win::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: rgba(248,229,148,.04);
+  pointer-events: none;
+  animation: winFlash .6s ease-in-out 3;
+  z-index: 50;
+}
+@keyframes winFlash { 0%,100%{ opacity:0; } 50%{ opacity:1; } }
+
+/* ── Dispenser glow ───────────────────────────────── */
+.dispenser-glow {
+  box-shadow: 0 0 18px rgba(201,162,39,.55);
+}
+
+/* ── Footer ───────────────────────────────────────── */
+.slot-footer {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 12px 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: .65rem;
+  color: rgba(255,255,255,.18);
+  letter-spacing: .08em;
+  border-top: 1px solid rgba(255,255,255,.05);
+  flex-shrink: 0;
+}
+
+/* ── Accessibility ────────────────────────────────── */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-height: 640px) {
+  .reel              { height: 68px; }
+  .slot-main         { padding: 10px 10px; }
+  .slot-cabine       { padding: 12px 12px 12px; border-radius: 20px; }
+  .spin-button       { height: 46px; font-size: .8rem; }
+  .slot-header-container { padding: 8px 14px; }
+}
+@media (max-height: 500px) {
+  .reel              { height: 54px; max-width: 60px; }
+  .spin-button       { height: 40px; font-size: .75rem; }
+  .slot-subtitle     { display: none; }
+}
+@media (min-width: 480px) {
+  .reel              { height: 100px; max-width: 88px; }
+}
