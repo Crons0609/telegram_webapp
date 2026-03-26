@@ -889,3 +889,33 @@ font-size: 1.1rem;
 .notification.success { background: #00cc6a; color: #000; }
 .notification.error   { background: #ff003c; color: #fff; }
 .notification.info    { background: var(--accent); color: #000; }
+
+/* =========================
+   LIVE EVENT CARD (sm-cards)
+========================= */
+.sm-event-live {
+  border-color: rgba(255, 0, 60, 0.4) !important;
+  box-shadow: 0 0 18px rgba(255, 0, 60, 0.14);
+  animation: liveCardPulse 2.5s ease-in-out infinite;
+}
+@keyframes liveCardPulse {
+  0%,100% { box-shadow: 0 0 12px rgba(255,0,60,0.1); }
+  50%     { box-shadow: 0 0 24px rgba(255,0,60,0.25); }
+}
+
+/* Inline LIVE chip used by espn_sports.js */
+.sp-card-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 0, 60, 0.18);
+  color: #ff3c5a;
+  border: 1px solid rgba(255,0,60,0.35);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  animation: livePulse 1.5s ease-in-out infinite;
+}

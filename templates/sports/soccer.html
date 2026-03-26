@@ -321,6 +321,16 @@
       const tabs = document.querySelectorAll('.sm-tab');
       const contents = document.querySelectorAll('.sm-tab-content');
 
+      // Allow Enter key to trigger player search
+      const searchInput = document.getElementById('fb-search-input');
+      if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && window.FootballAPI) {
+            window.FootballAPI.searchPlayers();
+          }
+        });
+      }
+
       tabs.forEach(tab => {
         tab.addEventListener('click', () => {
           // Remove active from all
@@ -332,12 +342,19 @@
           const target = document.getElementById(tab.dataset.target);
           if (target) target.classList.add('active');
 
-          // Trigger internal loaders
-          if (tab.dataset.target === 'tab-matches' && window.FootballAPI) {
-            window.FootballAPI.loadFixtures();
-          } else if (tab.dataset.target === 'tab-standings' && window.FootballAPI) {
-            window.FootballAPI.loadStandings();
-          }
+          // Trigger internal loaders — defer slightly so deferred scripts are ready
+          const tgt = tab.dataset.target;
+          setTimeout(() => {
+            if (!window.FootballAPI) {
+              console.warn('[Soccer] FootballAPI not ready yet');
+              return;
+            }
+            if (tgt === 'tab-matches') {
+              window.FootballAPI.loadFixtures();
+            } else if (tgt === 'tab-standings') {
+              window.FootballAPI.loadStandings();
+            }
+          }, 50);
         });
       });
     });

@@ -58,8 +58,17 @@
     const cached = _readCache();
     if (cached) {
       _allEvents = cached.events || [];
+      console.log(`[ESPN] ${SOURCE}: loaded ${_allEvents.length} events from cache`);
       renderEvents(_allEvents);
       return;
+    }
+
+    const container = $('events-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="sm-skeleton"><div class="sm-skel-line short"></div><div class="sm-skel-line wide"></div><div class="sm-skel-line medium"></div></div>
+        <div class="sm-skeleton"><div class="sm-skel-line short"></div><div class="sm-skel-line wide"></div><div class="sm-skel-line medium"></div></div>
+        <div class="sm-skeleton"><div class="sm-skel-line short"></div><div class="sm-skel-line wide"></div></div>`;
     }
 
     const proxyUrl = `/sports/api/espn/${SOURCE}`;
@@ -69,6 +78,12 @@
       const res  = await fetch(proxyUrl);
       console.log(`[ESPN] HTTP response: ${res.status}`);
       const data = await res.json();
+
+      console.log(`[ESPN] Response for ${SOURCE}:`, data);
+      console.log(`[ESPN] Events count:`, (data.events || []).length);
+      if ((data.events || []).length > 0) {
+        console.log(`[ESPN] First event sample:`, data.events[0]);
+      }
 
       // Backend surfaced a real API error
       if (data.error) {
@@ -106,7 +121,7 @@
     const container = $('events-container');
     if (!container) return;
 
-    const filtered = _activeFilter === 'all'    ? events
+    const filtered = _activeFilter === 'all'      ? events
                    : _activeFilter === 'live'     ? events.filter(e => e.status === 'live')
                    : /* upcoming */                 events.filter(e => e.status === 'upcoming');
 
@@ -121,55 +136,82 @@
     container.innerHTML = filtered.map(ev => _eventCardHTML(ev)).join('');
   }
 
+  function _shortTeamName(fullName) {
+    if (!fullName) return '—';
+    // Take last word for short display (e.g. "Los Angeles Lakers" → "Lakers")
+    const parts = fullName.trim().split(' ');
+    return parts.length > 1 ? parts[parts.length - 1] : fullName;
+  }
+
   function _eventCardHTML(ev) {
-    const liveChip = ev.status === 'live'
-      ? `<span class="sp-card-live">LIVE</span>` : '';
-    const dateStr = formatDate(ev.published);
-    const safeHeadline = ev.headline.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // ── Live badge / time display ────────────────────────────────
+    let timeLine = '';
+    if (ev.status === 'live') {
+      const clock = ev.live_clock ? ` · ${ev.live_clock}` : '';
+      const detail = ev.live_detail ? ` ${ev.live_detail}` : '';
+      timeLine = `<span class="sp-card-live">🔴 EN VIVO${clock}${detail}</span>`;
+    } else {
+      timeLine = `<span style="font-size:.7rem;color:rgba(255,255,255,.35);">${formatDate(ev.published)}</span>`;
+    }
+
+    // ── Score display (only for live/finished) ───────────────────
+    let scoreDisplay = 'VS';
+    if (ev.score && ev.score.home !== undefined && ev.score.away !== undefined) {
+      scoreDisplay = `<strong style="font-size:1rem;color:#fff;">${ev.score.home} : ${ev.score.away}</strong>`;
+    }
+
+    const safeHeadline = ev.headline ? ev.headline.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+    const showHeadline = safeHeadline && safeHeadline !== `${ev.team1} vs ${ev.team2}` && safeHeadline !== `${ev.team1} at ${ev.team2}`;
 
     return `
-      <div class="sm-event" id="ev-${ev.id}">
+      <div class="sm-event ${ev.status === 'live' ? 'sm-event-live' : ''}" id="ev-${ev.id}">
         <div class="sm-event-meta">
           <span class="sm-event-league">${ev.league || NAME}</span>
-          <span class="sm-event-time">${dateStr}${liveChip}</span>
+          ${timeLine}
         </div>
         <div class="sm-event-matchup">
           <div class="sm-event-team">${ev.team1}</div>
-          <div class="sm-event-vs">VS</div>
+          <div class="sm-event-vs">${scoreDisplay}</div>
           <div class="sm-event-team">${ev.team2}</div>
         </div>
-        ${safeHeadline && safeHeadline !== ev.team1 + ' at ' + ev.team2
-          ? `<p class="sm-event-headline">${safeHeadline}</p>` : ''}
+        ${showHeadline ? `<p class="sm-event-headline">${safeHeadline}</p>` : ''}
         <div class="sm-odds">
-          ${_oddBtn(ev, '1', `${ev.team1.split(' ').slice(-1)[0]}`, ev.odds['1'])}
+          ${_oddBtn(ev, '1', _shortTeamName(ev.team1), ev.odds['1'])}
           ${_oddBtn(ev, 'X', 'Empate', ev.odds['X'])}
-          ${_oddBtn(ev, '2', `${ev.team2.split(' ').slice(-1)[0]}`, ev.odds['2'])}
+          ${_oddBtn(ev, '2', _shortTeamName(ev.team2), ev.odds['2'])}
         </div>
       </div>`;
   }
 
   function _oddBtn(ev, choice, label, odd) {
-    const safeLabel = label.replace(/</g, '&lt;');
+    const safeLabel = (label || '—').replace(/</g, '&lt;');
+    const oddVal = parseFloat(odd) || 2.00;
     return `
       <button class="sm-odd-btn"
               data-event-id="${ev.id}"
               data-choice="${choice}"
-              data-odd="${odd}"
-              data-headline="${ev.headline.replace(/"/g, '&quot;')}"
-              data-team1="${ev.team1.replace(/"/g, '&quot;')}"
-              data-team2="${ev.team2.replace(/"/g, '&quot;')}"
+              data-odd="${oddVal}"
+              data-headline="${(ev.headline || '').replace(/"/g, '&quot;')}"
+              data-team1="${(ev.team1 || '').replace(/"/g, '&quot;')}"
+              data-team2="${(ev.team2 || '').replace(/"/g, '&quot;')}"
               onclick="window._selectOdd(this)">
         <span class="sm-odd-label">${safeLabel}</span>
-        <span class="sm-odd-value">${parseFloat(odd).toFixed(2)}</span>
+        <span class="sm-odd-value">${oddVal.toFixed(2)}</span>
       </button>`;
   }
 
   function _emptyHTML() {
+    const filterMsg = _activeFilter === 'live'
+      ? 'No hay partidos en vivo en este momento.'
+      : _activeFilter === 'upcoming'
+        ? 'No hay próximos eventos disponibles.'
+        : `El feed de ${NAME} no tiene eventos en este momento.<br>Intenta más tarde o revisa otro deporte.`;
     return `
       <div class="sm-empty">
         <div class="sm-empty-icon">${EMOJI}</div>
         <h3>No hay eventos disponibles</h3>
-        <p>El feed de ${NAME} no tiene eventos en este momento.<br>Intenta más tarde o revisa otro deporte.</p>
+        <p>${filterMsg}</p>
+        <button class="sm-filter" style="margin-top:16px;" onclick="window._fetchEvents && window._fetchEvents()">🔄 Reintentar</button>
       </div>`;
   }
 
@@ -178,7 +220,7 @@
     if (c) c.innerHTML = `
       <div class="sm-empty">
         <div class="sm-empty-icon">⚠️</div>
-        <h3>Error al cargar eventos</h3>
+        <h3>No se pudieron cargar los datos</h3>
         <p>${msg}</p>
         <button class="sm-filter" style="margin-top:16px;" onclick="window._fetchEvents && window._fetchEvents()">🔄 Reintentar</button>
       </div>`;
@@ -232,7 +274,6 @@
     const amount = parseInt(amtEl?.value, 10);
     if (!amount || amount < 10) { showToast('Mínimo 10 bits', 'error'); return; }
 
-    // Get telegram_id from global session (injected by perfil.js or script.js)
     const telegramId = window.USER_DATA?.telegram_id || window.currentUser?.telegram_id;
     if (!telegramId) { showToast('Debes iniciar sesión primero', 'error'); return; }
 
