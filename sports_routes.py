@@ -10,14 +10,18 @@ logger = logging.getLogger(__name__)
 
 sports_bp = Blueprint('sports', __name__, url_prefix='/sports')
 
-# ── Load Football API credentials from config ──────────────────────────────────
+# ── Load API credentials from config ─────────────────────────────────────────
 try:
     import config as _cfg
     _FB_KEY    = getattr(_cfg, 'RAPIDAPI_FOOTBALL_KEY', '')
     _FB_HOST   = getattr(_cfg, 'RAPIDAPI_FOOTBALL_HOST', 'free-api-live-football-data.p.rapidapi.com')
+    _MLB_KEY   = getattr(_cfg, 'RAPIDAPI_MLB_KEY', '')
+    _MLB_HOST  = getattr(_cfg, 'RAPIDAPI_MLB_HOST', 'mlb-college-baseball-api.p.rapidapi.com')
 except Exception:
     _FB_KEY    = ''
     _FB_HOST   = 'free-api-live-football-data.p.rapidapi.com'
+    _MLB_KEY   = '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    _MLB_HOST  = 'mlb-college-baseball-api.p.rapidapi.com'
 
 # ── Sport definitions (whitelist + metadata) ───────────────────────────────────
 SPORTS = {
@@ -65,7 +69,12 @@ def sport_view(source):
     meta = SPORTS[source]
     
     # Render custom dashboard for soccer, universal matches.html for others
-    template_name = 'sports/soccer.html' if source == 'soccer' else 'sports/matches.html'
+    if source == 'soccer':
+        template_name = 'sports/soccer.html'
+    elif source == 'mlb':
+        template_name = 'sports/baseball.html'
+    else:
+        template_name = 'sports/matches.html'
     
     return render_template(
         template_name,
@@ -99,8 +108,9 @@ def football_proxy(endpoint):
         return jsonify(cached)
 
     url = f"https://{_FB_HOST}/{endpoint}"
+    active_key = _FB_KEY if _FB_KEY else '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
     headers = {
-        "x-rapidapi-key": _FB_KEY,
+        "x-rapidapi-key": active_key,
         "x-rapidapi-host": _FB_HOST,
         "Accept": "application/json"
     }
@@ -137,6 +147,46 @@ def football_proxy(endpoint):
             'status': 'error',
             'message': 'No se pudo conectar a la base de datos de fútbol.'
         }), 200
+
+# =====================================================
+# BASEBALL API PROXY
+# =====================================================
+
+@sports_bp.route('/api/baseball/<path:endpoint>')
+def baseball_proxy(endpoint):
+    cache_key = f"mlb_{endpoint}?{request.query_string.decode('utf-8')}"
+    cached = _fb_cached(cache_key) # Use same memory dictionary for simplicity
+    if cached:
+        return jsonify(cached)
+
+    url = f"https://{_MLB_HOST}/{endpoint}"
+    # The user provided key dynamically
+    active_key = _MLB_KEY if _MLB_KEY else '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    headers = {
+        "x-rapidapi-key": active_key,
+        "x-rapidapi-host": _MLB_HOST,
+        "Accept": "application/json"
+    }
+    
+    try:
+        resp = http_requests.get(url, headers=headers, params=request.args, timeout=12)
+        logger.info(f"[Baseball API] {endpoint} -> HTTP {resp.status_code}")
+
+        if resp.status_code == 403:
+            return jsonify({'status': 'error', 'message': 'Acceso denegado a Baseball API.'}), 200
+        if resp.status_code == 429:
+            return jsonify({'status': 'error', 'message': 'Límite alcanzado en Baseball API.'}), 200
+
+        resp.raise_for_status()
+        data = resp.json()
+        _fb_store(cache_key, data)
+        return jsonify(data)
+
+    except http_requests.exceptions.Timeout:
+        return jsonify({'status': 'error', 'message': 'Tiempo de espera agotado.'}), 200
+    except Exception as exc:
+        logger.warning(f"[Baseball API] {endpoint} error: {exc}")
+        return jsonify({'status': 'error', 'message': 'Falla de red en API Baseball.'}), 200
 
 # =====================================================
 # CLASSIC SPORTS DB API (unchanged)
