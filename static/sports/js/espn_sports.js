@@ -13,7 +13,7 @@
   const EMOJI    = cfg.emoji   || '🏅';
   const NAME     = cfg.name    || 'Deporte';
   const CACHE_KEY = `espn_events_${SOURCE}`;
-  const CACHE_TTL = 180_000; // 3 min
+  const CACHE_TTL = 180000; // 3 min
 
   let _allEvents = [];
   let _activeFilter = 'all';

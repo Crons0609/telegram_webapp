@@ -7,7 +7,7 @@
 
   function $(id) { return document.getElementById(id); }
 
-  const CACHE_TTL = 300_000; // 5 mins frontend cache
+  const CACHE_TTL = 300000; // 5 mins frontend cache
 
   const FootballAPI = {
     // Basic cache logic
@@ -79,13 +79,13 @@
            html += `
              <div class="sm-event">
                <div class="sm-event-meta">
-                 <span class="sm-event-league">${m.league?.name || 'Liga'}</span>
-                 <span class="sm-event-time">${m.fixture?.status?.short || m.time || 'Próximo'}</span>
+                 <span class="sm-event-league">${m.league && m.league.name ? m.league.name : 'Liga'}</span>
+                 <span class="sm-event-time">${(m.fixture && m.fixture.status && m.fixture.status.short) || m.time || 'Próximo'}</span>
                </div>
                <div class="sm-event-matchup">
-                 <div class="sm-event-team">${m.teams?.home?.name || 'Local'}</div>
-                 <div class="sm-event-vs">${m.goals?.home ?? '-'} : ${m.goals?.away ?? '-'}</div>
-                 <div class="sm-event-team">${m.teams?.away?.name || 'Visitante'}</div>
+                 <div class="sm-event-team">${m.teams && m.teams.home && m.teams.home.name ? m.teams.home.name : 'Local'}</div>
+                 <div class="sm-event-vs">${m.goals && m.goals.home !== null ? m.goals.home : '-'} : ${m.goals && m.goals.away !== null ? m.goals.away : '-'}</div>
+                 <div class="sm-event-team">${m.teams && m.teams.away && m.teams.away.name ? m.teams.away.name : 'Visitante'}</div>
                </div>
              </div>
            `;
@@ -163,7 +163,7 @@
          const players = Array.isArray(data.response) ? data.response.slice(0, 10) : [];
          players.forEach(pData => {
             const p = pData.player;
-            const s = pData.statistics?.[0] || {};
+            const s = (pData.statistics && pData.statistics.length > 0) ? pData.statistics[0] : {};
             html += `
               <div class="sm-event" style="display:flex; gap:16px; align-items:center;">
                 ${p.photo ? `<img src="${p.photo}" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">` : '<div style="width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,.1);"></div>'}
@@ -171,7 +171,7 @@
                   <div style="font-weight:700; font-size:.9rem; margin-bottom:4px;">${p.name}</div>
                   <div style="font-size:.75rem; color:rgba(255,255,255,.5);">
                     ${p.age ? p.age + ' años ' : ''}· ${p.nationality} <br>
-                    <strong>Equipo:</strong> ${s.team?.name || 'N/A'}
+                    <strong>Equipo:</strong> ${s.team && s.team.name ? s.team.name : 'N/A'}
                   </div>
                 </div>
               </div>
