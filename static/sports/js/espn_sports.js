@@ -62,22 +62,44 @@
       return;
     }
 
+    const proxyUrl = `/sports/api/espn/${SOURCE}`;
+    console.log(`[ESPN] Fetching from proxy: ${proxyUrl}`);
+
     try {
-      const res  = await fetch(`/sports/api/espn/${SOURCE}`);
+      const res  = await fetch(proxyUrl);
+      console.log(`[ESPN] HTTP response: ${res.status}`);
       const data = await res.json();
 
-      if (data.error && (!data.events || data.events.length === 0)) {
-        showError(data.error);
+      // Backend surfaced a real API error
+      if (data.error) {
+        const code = data.error_code || 0;
+        console.warn(`[ESPN] API error (code ${code}):`, data.error);
+
+        if (code === 403) {
+          showError(
+            '🔒 Acceso denegado por la API deportiva.<br>' +
+            '<small>La suscripción a ESPN en RapidAPI no está activa.</small>'
+          );
+        } else if (code === 429) {
+          showError('⏱️ Límite de peticiones alcanzado. Espera un momento y reintenta.');
+        } else {
+          showError(data.error);
+        }
         return;
       }
 
       _allEvents = data.events || [];
-      _writeCache(data);
+      if (_allEvents.length > 0) _writeCache(data);  // Only cache successful non-empty responses
       renderEvents(_allEvents);
     } catch(err) {
-      showError('No se pudo cargar el feed. Verifica tu conexión.');
+      console.error('[ESPN] Network error:', err);
+      showError('No se pudo conectar al servidor. Verifica tu conexión.');
     }
   }
+
+  /* Expose so retry button can call it */
+  window._fetchEvents = fetchEvents;
+
 
   /* ─── Render helpers ──────────────────────────────────────────── */
   function renderEvents(events) {
@@ -158,7 +180,7 @@
         <div class="sm-empty-icon">⚠️</div>
         <h3>Error al cargar eventos</h3>
         <p>${msg}</p>
-        <button class="sm-filter" style="margin-top:16px;" onclick="location.reload()">Reintentar</button>
+        <button class="sm-filter" style="margin-top:16px;" onclick="window._fetchEvents && window._fetchEvents()">🔄 Reintentar</button>
       </div>`;
   }
 

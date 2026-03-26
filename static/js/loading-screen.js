@@ -231,20 +231,27 @@
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', hide);
     } else {
-      // Page is already loaded (e.g., script runs late)
-      // Short timeout gives the browser a frame to paint first
       setTimeout(hide, 50);
     }
 
-    // Safety net: always hide after 8 seconds (handles stuck states)
+    // Safety net: always hide after 8 seconds + on load
     window.addEventListener('load', function () {
       setTimeout(hide, 200);
+      setTimeout(hide, 8000); // hard fallback limits
+    });
+
+    // 6. Catch Telegram WebApp / native browser unloads
+    window.addEventListener('beforeunload', function () {
+      show();
     });
   }
 
   _init();
 
-  /* ── Public API ──────────────────────────────────────────────── */
+  /* ── Public API (Spanish names explicitly requested) ─────────── */
+  window.mostrarPantallaCarga = show;
+  window.ocultarPantallaCarga = hide;
+
   window.LoadingScreen = {
     show,
     hide,

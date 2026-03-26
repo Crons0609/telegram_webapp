@@ -186,6 +186,7 @@
     if (!url) return;
     // Haptic feedback on Telegram
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
     window.location.assign(url);
   };
 
@@ -324,6 +325,7 @@
     if (el.dataset.url) {
       e.preventDefault();
       animatePress(el);
+      if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
       setTimeout(() => {
         window.location.assign(el.dataset.url);
       }, CONFIG.navigationDelay);
@@ -340,6 +342,7 @@
           alert("Por favor, abre el casino desde Telegram para poder comprar bits con PayPal.");
           return;
         }
+        if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
         window.location.href = '/paypal_bits';
         break;
 
@@ -360,6 +363,7 @@
           return;
         }
         // Redirect to P2P Bits page where user selects the amount
+        if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
         window.location.href = '/p2p_bits';
         break;
 
@@ -369,6 +373,7 @@
           return;
         }
         const tid = window.Telegram.WebApp.initDataUnsafe.user.id;
+        if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
         window.location.href = '/withdraw?telegram_id=' + tid;
         break;
 
@@ -513,6 +518,7 @@
       return;
     }
     window.closeModal('room-join-modal');
+    if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
     window.location.href = `/moche?room=${code}`;
   };
 
@@ -543,6 +549,7 @@
       if (data.status === 'ok') {
         window.closeModal('room-create-modal');
         // Redirect a Moche pasándole el Room ID
+        if (window.mostrarPantallaCarga) window.mostrarPantallaCarga();
         window.location.href = `/moche?room=${data.room_id}`;
       } else {
         window.Telegram?.WebApp?.showAlert("Error al crear la sala: " + (data.message || ""));

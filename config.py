@@ -23,9 +23,9 @@ WITHDRAWAL_MAX_PER_DAY = 5    # Máximo 3 retiros por día por usuario
 CRON_SECRET = "zonajackpot777_cron_2026"
 
 # ─── ESPN SPORTS API (RapidAPI) ───────────────────────────────────────────────
-RAPIDAPI_ESPN_KEY  = "8baf9fc81cmsh08fc82574sfb754p1d702djsn35393a209de6"
+RAPIDAPI_ESPN_KEY  = "6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6"
 RAPIDAPI_ESPN_HOST = "espn13.p.rapidapi.com"
 
 # ─── FREE API LIVE FOOTBALL DATA (RapidAPI) ───────────────────────────────────
-RAPIDAPI_FOOTBALL_KEY  = "8baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6"
+RAPIDAPI_FOOTBALL_KEY  = "6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6"
 RAPIDAPI_FOOTBALL_HOST = "free-api-live-football-data.p.rapidapi.com"

@@ -62,7 +62,10 @@ def _fb_store(key, data):
     _fb_cache[key] = {'data': data, 'ts': time.time()}
 
 def _fetch_espn(source, offset=0, limit=15):
-    """Call RapidAPI ESPN endpoint and return raw JSON or None."""
+    """
+    Call RapidAPI ESPN endpoint.
+    Returns raw JSON on success, or a dict with {'_error': True, 'status': int, 'message': str} on failure.
+    """
     url = f"https://{_ESPN_HOST}/v1/feed"
     headers = {
         "x-rapidapi-key":  _ESPN_KEY,
@@ -70,13 +73,30 @@ def _fetch_espn(source, offset=0, limit=15):
         "Content-Type": "application/json",
     }
     params = {"source": source, "offset": str(offset), "limit": str(limit)}
+    logger.info(f"[ESPN] Fetching {url} source={source}")
     try:
-        resp = http_requests.get(url, headers=headers, params=params, timeout=10)
+        resp = http_requests.get(url, headers=headers, params=params, timeout=12)
+        logger.info(f"[ESPN] {source} -> HTTP {resp.status_code}")
+
+        if resp.status_code == 403:
+            msg = resp.json().get('message', 'No tienes acceso a esta API')
+            logger.warning(f"[ESPN] 403 Forbidden: {msg}")
+            return {'_error': True, 'status': 403, 'message': f'Suscripción requerida en RapidAPI: {msg}'}
+
+        if resp.status_code == 429:
+            logger.warning(f"[ESPN] 429 Rate limit hit for {source}")
+            return {'_error': True, 'status': 429, 'message': 'Límite de peticiones alcanzado (429). Intenta en un momento.'}
+
         resp.raise_for_status()
         return resp.json()
+
+    except http_requests.exceptions.Timeout:
+        logger.error(f"[ESPN] Timeout for source={source}")
+        return {'_error': True, 'status': 504, 'message': 'La solicitud tardó demasiado (timeout). Intenta de nuevo.'}
     except Exception as exc:
-        logger.warning(f"[ESPN API] {source} error: {exc}")
-        return None
+        logger.error(f"[ESPN] {source} exception: {exc}")
+        return {'_error': True, 'status': 500, 'message': str(exc)}
+
 
 def _normalize_espn(raw, source):
     """
@@ -194,8 +214,23 @@ def espn_proxy(source):
         return jsonify(cached)
 
     raw = _fetch_espn(source)
+
+    # Handle structured error returned by _fetch_espn
+    if isinstance(raw, dict) and raw.get('_error'):
+        http_status = raw.get('status', 500)
+        err_msg = raw.get('message', 'Error desconocido con la API deportiva.')
+        logger.error(f"[ESPN Proxy] {source} -> {http_status}: {err_msg}")
+        return jsonify({
+            'source':      source,
+            'sport_name':  SPORTS[source]['name'],
+            'sport_emoji': SPORTS[source]['emoji'],
+            'color':       SPORTS[source]['color'],
+            'events':      [],
+            'error':       err_msg,
+            'error_code':  http_status,
+        }), 200  # Always 200 to frontend so error state renders in UI
+
     if raw is None:
-        # Return empty result rather than 500 so UI degrades gracefully
         return jsonify({
             'source':     source,
             'sport_name': SPORTS[source]['name'],
@@ -208,6 +243,7 @@ def espn_proxy(source):
     normalized = _normalize_espn(raw, source)
     _espn_store(source, normalized)
     return jsonify(normalized)
+
 
 # =====================================================
 # FOOTBALL API PROXY
