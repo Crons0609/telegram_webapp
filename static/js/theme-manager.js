@@ -2,6 +2,7 @@
  * THEME MANAGER — Zona Jackpot 777
  * Fetches the active global theme from the server and applies it to the body.
  * Polls every 60s for live updates from the admin panel.
+ * Also injects the global loading screen CSS + JS.
  */
 (function () {
   'use strict';
@@ -11,6 +12,23 @@
   const API_URL = '/api/themes/active';
 
   let _currentThemeStr = null;
+
+  /* ─── Inject loading screen assets (CSS + JS) ──────────── */
+  (function injectLoadingScreen() {
+    // Only inject once, skip on admin panel pages
+    if (document.getElementById('casino-ls-css') || window.location.pathname.startsWith('/admin')) return;
+
+    const link = document.createElement('link');
+    link.id   = 'casino-ls-css';
+    link.rel  = 'stylesheet';
+    link.href = '/static/css/loading-screen.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src   = '/static/js/loading-screen.js';
+    script.defer = true;
+    document.head.appendChild(script);
+  })();
 
   /* ─── Apply theme ─────────────────────────────────────────────── */
   function applyTheme(theme) {
@@ -98,11 +116,11 @@
   /* ─── Public API for admin preview ───────────────────────────── */
   window.ThemeManager = {
     /** Force-apply a theme slug immediately (for admin live preview) */
-    preview(theme) { _currentSlug = null; applyTheme(theme); },
+    preview(theme) { _currentThemeStr = null; applyTheme(theme); },
     /** Re-fetch from server */
     refresh: fetchTheme,
     /** Currently active slug */
-    get current() { return _currentSlug; }
+    get current() { return _currentThemeStr; }
   };
 
 })();

@@ -162,6 +162,26 @@ def register():
     })
 
 # =====================================================
+# LOADING SCREEN CONFIG (public — no auth needed)
+# =====================================================
+@app.route('/api/loading-screen/config')
+def loading_screen_config():
+    """Returns the active loading screen configuration for the client-side JS."""
+    cfg = database.get_fb('loading_screen_config') or {}
+    # Defaults if not configured yet
+    defaults = {
+        'is_active': False,
+        'icon_id': 1,
+        'text': 'Cargando...',
+        'bg_color': '#0a0a1a',
+        'icon_color': '#f59e0b',
+        'text_color': 'rgba(255,255,255,0.7)',
+        'logo_url': '',
+    }
+    merged = {**defaults, **cfg}
+    return jsonify({'config': merged})
+
+# =====================================================
 # PAYPAL BITS
 # =====================================================
 @app.route('/paypal_bits')

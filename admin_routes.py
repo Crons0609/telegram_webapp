@@ -789,3 +789,44 @@ def api_withdrawals_reject(tx_id):
     except Exception as e:
         print(f"[Admin] Error rejecting withdrawal: {e}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+
+# ─── LOADING SCREEN CONFIG ─────────────────────────────────────────────────────
+
+@admin_bp.route('/api/loading-screen', methods=['GET'])
+@admin_required_api
+def api_get_loading_screen():
+    """Returns the current loading screen configuration."""
+    cfg = database.get_fb('loading_screen_config') or {}
+    defaults = {
+        'is_active': False,
+        'icon_id': 1,
+        'text': 'Cargando...',
+        'bg_color': '#0a0a1a',
+        'icon_color': '#f59e0b',
+        'text_color': 'rgba(255,255,255,0.7)',
+        'logo_url': '',
+    }
+    return jsonify({'success': True, 'config': {**defaults, **cfg}})
+
+
+@admin_bp.route('/api/loading-screen', methods=['POST'])
+@admin_required_api
+def api_save_loading_screen():
+    """Saves the loading screen configuration to Firebase."""
+    data = request.get_json() or {}
+    allowed_keys = {'is_active', 'icon_id', 'text', 'bg_color', 'icon_color', 'text_color', 'logo_url'}
+    cfg = {k: v for k, v in data.items() if k in allowed_keys}
+
+    # Type coercions
+    if 'is_active' in cfg:
+        cfg['is_active'] = bool(cfg['is_active'])
+    if 'icon_id' in cfg:
+        cfg['icon_id'] = max(1, min(10, int(cfg['icon_id'])))
+
+    try:
+        database.patch_fb('loading_screen_config', cfg)
+        return jsonify({'success': True, 'config': cfg})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+

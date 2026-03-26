@@ -161,6 +161,7 @@ function refreshCurrentView() {
         case 'transactions': loadTransactions(); break;
         case 'withdrawals': loadWithdrawals('all'); break;
         case 'marketing': loadMarketingStatus(); break;
+        case 'loading': loadLoadingConfig(); break;
     }
 }
 
@@ -196,7 +197,8 @@ function switchView(viewName) {
         'mensajes': 'Mensajes a Jugadores',
         'transactions': 'Historial de Transacciones',
         'withdrawals': 'Gestión de Retiros 💸',
-        'marketing': 'Marketing Automatizado'
+        'marketing': 'Marketing Automatizado',
+        'loading': 'Pantalla de Carga 🌀'
     };
     document.getElementById('currentPageTitle').textContent = titleMap[viewName] || 'Dashboard';
 
@@ -212,6 +214,7 @@ function switchView(viewName) {
         case 'transactions': loadTransactions(); break;
         case 'withdrawals': loadWithdrawals('all'); break;
         case 'marketing': loadMarketingStatus(); break;
+        case 'loading': loadLoadingConfig(); break;
     }
 }
 
@@ -1770,3 +1773,146 @@ async function triggerMarketingNow() {
         }
     } catch(e) { showToast('Error de conexión', 'error'); }
 }
+
+// ─── LOADING SCREEN CONFIG ─────────────────────────────────────────────────
+const LS_ICON_LABELS = [
+    null, // 1-indexed
+    { label: '1 — Spinner Circular',      preview: '<div style="width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.2);border-top-color:#f59e0b;animation:ls-spin .9s linear infinite;"></div>' },
+    { label: '2 — Puntos Animados',        preview: '●  ●  ●' },
+    { label: '3 — Barra de Progreso',      preview: '▬▬▬▬▬' },
+    { label: '4 — Rueda Doble',            preview: '◎' },
+    { label: '5 — Pulsación de Luz',       preview: '⬤' },
+    { label: '6 — Fichas 🎰',             preview: '🎰' },
+    { label: '7 — Cartas ♠♥♣',           preview: '♠ ♥ ♣' },
+    { label: '8 — Dados 🎲',              preview: '🎲' },
+    { label: '9 — Barras Casino',          preview: '⣿ ⣿ ⣿ ⣿ ⣿' },
+    { label: '10 — Minimalista Moderno',   preview: '■ ■ ■ ■ ■' },
+];
+
+async function loadLoadingConfig() {
+    const container = document.getElementById('loadingConfigArea');
+    if (!container) return;
+    container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Cargando configuración...</div>';
+
+    try {
+        const res  = await fetch('/admin/api/loading-screen');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        renderLoadingConfig(data.config);
+    } catch(e) {
+        container.innerHTML = `<div class="loading-state" style="color:#ef4444;">Error: ${e.message}</div>`;
+    }
+}
+
+function renderLoadingConfig(cfg) {
+    const container = document.getElementById('loadingConfigArea');
+    const iconOptions = LS_ICON_LABELS.slice(1).map((ic, i) => {
+        const id = i + 1;
+        const sel = cfg.icon_id == id ? 'ls-icon-sel-active' : '';
+        return `<div class="ls-icon-sel ${sel}" onclick="selectLSIcon(${id})" data-icon="${id}" title="${ic.label}" style="cursor:pointer;border:2px solid ${cfg.icon_id==id?'#f59e0b':'rgba(255,255,255,0.1)'};border-radius:10px;padding:10px 14px;text-align:center;background:rgba(255,255,255,0.05);transition:.2s;min-width:80px;">
+            <div style="font-size:1.2rem;margin-bottom:4px;">${ic.preview}</div>
+            <div style="font-size:0.65rem;color:#94a3b8;">${ic.label}</div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="display:grid;gap:20px;">
+            <!-- Toggle -->
+            <div class="card" style="padding:20px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <h4 style="margin:0;">Activar pantalla de carga</h4>
+                    <p style="color:#94a3b8;font-size:0.85rem;margin:4px 0 0;">Se mostrará en cada cambio de página</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="ls_is_active" ${cfg.is_active ? 'checked' : ''}>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- Icon picker -->
+            <div class="card" style="padding:20px;">
+                <h4 style="margin:0 0 12px;">Ícono de carga</h4>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;" id="ls_icon_picker">
+                    ${iconOptions}
+                </div>
+                <input type="hidden" id="ls_icon_id" value="${cfg.icon_id || 1}">
+            </div>
+
+            <!-- Text -->
+            <div class="card" style="padding:20px;">
+                <h4 style="margin:0 0 12px;">Texto de carga</h4>
+                <input type="text" id="ls_text" value="${cfg.text || 'Cargando...'}" maxlength="60"
+                    style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-size:1rem;">
+            </div>
+
+            <!-- Colors -->
+            <div class="card" style="padding:20px;">
+                <h4 style="margin:0 0 16px;">Colores</h4>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                    <div>
+                        <label style="font-size:0.8rem;color:#94a3b8;">Fondo</label>
+                        <input type="color" id="ls_bg_color" value="${cfg.bg_color || '#0a0a1a'}"
+                            style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;margin-top:6px;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;color:#94a3b8;">Ícono</label>
+                        <input type="color" id="ls_icon_color" value="${cfg.icon_color || '#f59e0b'}"
+                            style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;margin-top:6px;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;color:#94a3b8;">Texto</label>
+                        <input type="color" id="ls_text_color" value="${cfg.text_color ? (cfg.text_color.startsWith('#') ? cfg.text_color : '#aaaaaa') : '#aaaaaa'}"
+                            style="width:100%;height:40px;border:none;border-radius:8px;cursor:pointer;margin-top:6px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logo URL -->
+            <div class="card" style="padding:20px;">
+                <h4 style="margin:0 0 8px;">URL de Logo (opcional)</h4>
+                <p style="color:#94a3b8;font-size:0.8rem;margin:0 0 10px;">Si se deja vacío, se mostrará el texto "🎰 ZONA JACKPOT 777"</p>
+                <input type="url" id="ls_logo_url" value="${cfg.logo_url || ''}" placeholder="https://..."
+                    style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-size:0.9rem;">
+            </div>
+
+            <!-- Save -->
+            <button onclick="saveLoadingConfig()" class="btn-primary" style="padding:14px;font-size:1rem;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;">
+                💾 Guardar Configuración
+            </button>
+        </div>
+    `;
+}
+
+function selectLSIcon(id) {
+    document.getElementById('ls_icon_id').value = id;
+    document.querySelectorAll('#ls_icon_picker .ls-icon-sel').forEach(el => {
+        const active = el.dataset.icon == id;
+        el.style.borderColor = active ? '#f59e0b' : 'rgba(255,255,255,0.1)';
+    });
+}
+
+async function saveLoadingConfig() {
+    const payload = {
+        is_active:   document.getElementById('ls_is_active').checked,
+        icon_id:     parseInt(document.getElementById('ls_icon_id').value, 10),
+        text:        document.getElementById('ls_text').value.trim() || 'Cargando...',
+        bg_color:    document.getElementById('ls_bg_color').value,
+        icon_color:  document.getElementById('ls_icon_color').value,
+        text_color:  document.getElementById('ls_text_color').value,
+        logo_url:    document.getElementById('ls_logo_url').value.trim(),
+    };
+    try {
+        const res  = await fetch('/admin/api/loading-screen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ Configuración guardada', 'success');
+        } else {
+            showToast(data.message || 'Error al guardar', 'error');
+        }
+    } catch(e) { showToast('Error de conexión', 'error'); }
+}
+
