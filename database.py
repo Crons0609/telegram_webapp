@@ -499,9 +499,11 @@ def incrementar_tiempo_jugado(telegram_id: str, minutos: int) -> bool:
 
 def registrar_transaccion(telegram_id: str, bits: int, usd: float, tipo: str) -> bool:
     """Registra una transacción en el historial global usando push IDs de Firebase"""
+    direction = "debit" if tipo in ("retiro", "apuesta") else "credit"
     tx = {
         "telegram_id": str(telegram_id),
         "bits": bits,
+        "direction": direction,
         "usd": usd,
         "usd_amount": usd,  # Legacy field
         "tipo": tipo,
@@ -680,7 +682,7 @@ def save_user_telegram_msg(chat_id, first_name: str, username: str, text: str, s
 # TELEGRAM NOTIFICATIONS FOR PLAYERS
 # =====================================================
 
-def _send_tg(chat_id, text, parse_mode="HTML") -> None:
+def _send_tg(chat_id, text, parse_mode="HTML", reply_markup=None) -> None:
     """Internal helper to send a message via Telegram Bot API."""
     token = getattr(config, 'BOT_TOKEN', None)
     if not token:
@@ -691,10 +693,18 @@ def _send_tg(chat_id, text, parse_mode="HTML") -> None:
         "text": text,
         "parse_mode": parse_mode
     }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+        
     try:
         requests.post(url, json=payload, timeout=10)
     except Exception as e:
         print(f"[TG Notification Error] {e}")
+
+def send_telegram_notification(chat_id: str, title: str, msg: str, reply_markup=None) -> None:
+    """Sends a general notification to a user or admin"""
+    full_msg = f"<b>{title}</b>\n\n{msg}" if title else msg
+    _send_tg(chat_id, full_msg, reply_markup=reply_markup)
 
 def notify_bits_added_admin(telegram_id, amount_received, new_balance) -> None:
     """Sends a notification to the player when an admin adds bits manually."""

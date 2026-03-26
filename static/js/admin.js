@@ -234,13 +234,19 @@ async function loadTransactions() {
             tbody.innerHTML = data.transactions.map(tx => {
                 const date = new Date(tx.fecha).toLocaleString();
                 const typeFormat = tx.tipo === 'recarga_admin' ? '<span class="badge" style="background:#10b98120;color:#10b981;">Recarga Admin</span>' : `<span class="badge" style="background:#3b82f620;color:#3b82f6;">${tx.tipo}</span>`;
+                
+                // Determine transaction direction for display logic 
+                const isDebit = tx.direction === 'debit' || tx.tipo === 'retiro' || tx.tipo === 'apuesta';
+                const sign = isDebit ? '-' : '+';
+                const color = isDebit ? '#ef4444' : '#10b981'; // Red for debit (-), Green for credit (+)
+                
                 return `
                 <tr>
                     <td>${date}</td>
                     <td>${typeFormat}</td>
                     <td>${tx.user_name || 'Desconocido'}</td>
                     <td style="font-family:monospace; color:#94a3b8;">${tx.telegram_id || '-'}</td>
-                    <td style="color:#f59e0b; font-weight:bold;">+${(tx.bits || 0).toLocaleString()}</td>
+                    <td style="color:${color}; font-weight:bold;">${sign}${(tx.bits || 0).toLocaleString()}</td>
                     <td>$${(tx.usd || tx.usd_amount || 0).toFixed(2)}</td>
                 </tr>`;
             }).join('');

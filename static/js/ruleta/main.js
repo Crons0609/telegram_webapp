@@ -92,8 +92,34 @@ async function iniciarGiro() {
     animFrame = null;
 
     const slice = getDimensions().slice;
-    const sectorIdx = sectorBajoBola(slice);
-    const ganador = State.numeros[sectorIdx];
+    let sectorIdx = sectorBajoBola(slice);
+    let ganador = State.numeros[sectorIdx];
+
+    // ====== LÓGICA MODO DEMO ======
+    // Aumentar artificialmente la probabilidad de ganar al 75%
+    const isDemo = window.USER_DATA && window.USER_DATA.play_mode === 'demo';
+    if (isDemo && State.apuestas.length > 0 && Math.random() < 0.75) {
+      const ap = State.apuestas[Math.floor(Math.random() * State.apuestas.length)];
+      const candidatos = State.numeros.filter(n => {
+         if (ap.tipo === 'rojo') return n.color === 'red';
+         if (ap.tipo === 'negro') return n.color === 'black';
+         if (ap.tipo === 'par') return n.num !== 0 && n.num % 2 === 0;
+         if (ap.tipo === 'impar') return n.num !== 0 && n.num % 2 !== 0;
+         if (ap.tipo === 'pasa') return n.num >= 19 && n.num <= 36;
+         if (ap.tipo === 'falta') return n.num >= 1 && n.num <= 18;
+         return n.num === ap.tipo; // Número directo pleno
+      });
+      if (candidatos.length > 0) {
+         const forzado = candidatos[Math.floor(Math.random() * candidatos.length)];
+         sectorIdx = State.numeros.findIndex(n => n.num === forzado.num);
+         ganador = State.numeros[sectorIdx];
+         // Forzar la bola visualmente en esa posición
+         State.ballAngle = Math.PI/2 - (sectorIdx * slice) - State.wheelAngle;
+         actualizarPosicionBola(bola, canvas);
+      }
+    }
+    // ===============================
+
     let ganancia = calcularGanancias(ganador.num, ganador.color);
 
     resultadoEl.textContent = `Resultado: ${ganador.num} (${ganador.color === 'red' ? 'Rojo' : ganador.color === 'black' ? 'Negro' : 'Verde'})`;

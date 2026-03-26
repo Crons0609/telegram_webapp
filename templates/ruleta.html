@@ -27,7 +27,7 @@
 
   <script>
     window.USER_BITS = parseInt("{{ bits }}") || 0;
-    window.USER_DATA = { telegram_id: "{{ telegram_id }}", bits: window.USER_BITS };
+    window.USER_DATA = { telegram_id: "{{ telegram_id }}", bits: window.USER_BITS, play_mode: "{{ play_mode }}" };
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
   </script>

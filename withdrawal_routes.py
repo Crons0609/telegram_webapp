@@ -185,7 +185,19 @@ def api_request_withdrawal():
                     f"💵 Equivalente a pagar: ${usd:.2f} USD\n\n"
                     f"Por favor, revisa el panel de administrador para completarlo."
                 )
-                database.send_telegram_notification(admin_id, "Gestión de Retiros", admin_msg)
+                
+                # Base URL is retrieved from request or assumed relative to the host
+                host_url = request.host_url.rstrip('/')
+                admin_panel_url = f"{host_url}/admin"
+                
+                reply_markup = {
+                    "inline_keyboard": [
+                        [{"text": "✅ Gestionar en Panel", "url": admin_panel_url}]
+                    ]
+                }
+                
+                database.send_telegram_notification(admin_id, "Gestión de Retiros", admin_msg, reply_markup=reply_markup)
+                print(f"[P2P Notify] Sent notification to admin {admin_id} for tx {tx_id}")
             except Exception as e:
                 print(f"Failed to notify P2P admin {admin_id}: {e}")
     except Exception:

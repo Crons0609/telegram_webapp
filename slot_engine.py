@@ -8,7 +8,9 @@ class SlotEngine:
         # RTP 94.0% in a 10,000 spins deck
         self.deck_size = 10000
         self.deck = []
+        self.demo_deck = []
         self._initialize_deck()
+        self._initialize_demo_deck()
 
     def _initialize_deck(self):
         """Creates the absolute mathematical deck of 10,000 possibilities."""
@@ -39,8 +41,45 @@ class SlotEngine:
         # Shuffle perfectly
         random.shuffle(self.deck)
 
-    def draw_spin(self):
+    def _initialize_demo_deck(self):
+        """Creates a highly favorable mathematical deck for DEMO users."""
+        self.demo_deck = []
+        
+        # --- HIGH WINNING COMBINATIONS (Much higher Hit Frequency) ---
+        # Demo users should win big often to enjoy the game
+        
+        # 1x Mega Jackpot (1000x): 5 Diamonds
+        self.demo_deck.extend([{"type": "win", "multiplier": 1000, "pattern": "5_diamond"} for _ in range(5)])
+        # 2x Epic (250x): 5 Bars
+        self.demo_deck.extend([{"type": "win", "multiplier": 250, "pattern": "5_bar"} for _ in range(15)])
+        # 4x Super (150x): 5 Crowns
+        self.demo_deck.extend([{"type": "win", "multiplier": 150, "pattern": "5_crown"} for _ in range(30)])
+        # 10x Big Win (50x): 4 Red7s
+        self.demo_deck.extend([{"type": "win", "multiplier": 50, "pattern": "4_red7"} for _ in range(100)])
+        # 30x Win (25x): 3 Bars
+        self.demo_deck.extend([{"type": "win", "multiplier": 25, "pattern": "3_bar"} for _ in range(300)])
+        # 60x Small (15x): 4 Chips
+        self.demo_deck.extend([{"type": "win", "multiplier": 15, "pattern": "4_chip"} for _ in range(800)])
+        # 250x Mini (5x): 3 Chips
+        self.demo_deck.extend([{"type": "win", "multiplier": 5, "pattern": "3_chip"} for _ in range(2000)])
+        # 1950x Micro (2x): 3 Bells
+        self.demo_deck.extend([{"type": "win", "multiplier": 2, "pattern": "3_bell"}  for _ in range(3000)])
+
+        # --- LOSING COMBINATIONS ---
+        losses_count = self.deck_size - len(self.demo_deck)
+        if losses_count > 0:
+            self.demo_deck.extend([{"type": "lose", "multiplier": 0, "pattern": "random_loss"} for _ in range(losses_count)])
+        
+        # Shuffle perfectly
+        random.shuffle(self.demo_deck)
+
+    def draw_spin(self, is_demo=False):
         """Pulls a single outcome from the deck. Re-shuffles if empty."""
+        if is_demo:
+            if not self.demo_deck:
+                self._initialize_demo_deck()
+            return self.demo_deck.pop()
+            
         if not self.deck:
             self._initialize_deck()
             

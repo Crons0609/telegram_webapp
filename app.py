@@ -492,7 +492,7 @@ def api_spin():
         return jsonify({"status": "error", "message": "Fondos insuficientes", "bits": database.obtener_bits(telegram_id, is_demo)}), 400
 
     # Draw mathematical outcome from Deck Engine
-    outcome = slot_engine.draw_spin()
+    outcome = slot_engine.draw_spin(is_demo=is_demo)
     # Generate the 5-reel visual symbols from the outcome
     reel_symbols = slot_engine.generate_reels(outcome)
     
@@ -1074,10 +1074,10 @@ ADMIN_TELEGRAM_USERS = ["@Cortezalex17", "@antraxx_g59", "@Young_plague_FTP"]
 # Recharge packages: USD -> (bits label, bonus bits)
 RECHARGE_PACKAGES = {
     "1":  {"usd": 1,  "bits": 1000,  "bonus": 0,     "label": "💵 1 USD → 1,000 Bits"},
-    "5":  {"usd": 5,  "bits": 5500,  "bonus": 500,   "label": "💵 5 USD → 5,500 Bits (+500)"},
-    "10": {"usd": 10, "bits": 12000, "bonus": 2000,  "label": "💵 10 USD → 12,000 Bits (+2,000)"},
-    "20": {"usd": 20, "bits": 26000, "bonus": 6000,  "label": "💵 20 USD → 26,000 Bits (+6,000)"},
-    "50": {"usd": 50, "bits": 70000, "bonus": 20000, "label": "💵 50 USD → 70,000 Bits (+20,000)"},
+    "5":  {"usd": 5,  "bits": 5000,  "bonus": 500,   "label": "💵 5 USD → 5,500 Bits (+500)"},
+    "10": {"usd": 10, "bits": 10000, "bonus": 2000,  "label": "💵 10 USD → 12,000 Bits (+2,000)"},
+    "20": {"usd": 20, "bits": 20000, "bonus": 6000,  "label": "💵 20 USD → 26,000 Bits (+6,000)"},
+    "50": {"usd": 50, "bits": 50000, "bonus": 20000, "label": "💵 50 USD → 70,000 Bits (+20,000)"},
 }
 
 def _answer_callback(callback_query_id, text=""):
@@ -1100,10 +1100,10 @@ def _handle_recharge(chat_id):
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"👤 <b>Elige el administrador</b> al que deseas enviar tu solicitud de recarga:\n\n"
         f"💵 1 USD  →  <b>1,000 Bits</b>\n"
-        f"💵 5 USD  →  <b>5,500 Bits</b>  (+500)\n"
-        f"💵 10 USD →  <b>12,000 Bits</b> (+2,000)\n"
-        f"💵 20 USD →  <b>26,000 Bits</b> (+6,000)\n"
-        f"💵 50 USD →  <b>70,000 Bits</b> (+20,000)\n"
+        f"💵 5 USD  →  <b>5,000 Bits</b>  (+500)\n"
+        f"💵 10 USD →  <b>10,000 Bits</b> (+2,000)\n"
+        f"💵 20 USD →  <b>20,000 Bits</b> (+6,000)\n"
+        f"💵 50 USD →  <b>50,000 Bits</b> (+20,000)\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"⤵️ Selecciona un administrador para continuar:"
     )
@@ -1116,7 +1116,7 @@ def _handle_recharge(chat_id):
 
 def _handle_admin_pick(callback_query_id, chat_id, adm_idx):
     """Step 2 — Player picked an admin, now choose the amount."""
-    admin_names = ["Young_plague_FTP", "antraxx_g59", "Cortezalex17"]
+    admin_names = ["Young plague", "Antraxx", "Alex Cortez"]
     adm_display = ["@Young_plague_FTP", "@antraxx_g59", "@Cortezalex17"]
     if adm_idx < 0 or adm_idx >= len(admin_names):
         _answer_callback(callback_query_id, "Administrador no válido.")
@@ -1354,8 +1354,8 @@ def cron_marketing():
 @app.route("/admin/api/marketing/status", methods=["GET"])
 def admin_marketing_status():
     """Devuelve el estado de la campaña de marketing de hoy para el panel admin."""
-    admin_id = session.get("admin_id")
-    if not admin_id:
+    admin_logged_in = session.get("admin_logged_in")
+    if not admin_logged_in:
         return jsonify({"success": False, "message": "No autorizado"}), 403
     status = marketing_service.get_status()
     return jsonify({"success": True, "status": status})
@@ -1364,8 +1364,8 @@ def admin_marketing_status():
 @app.route("/admin/api/marketing/send-now", methods=["POST"])
 def admin_marketing_send_now():
     """Permite al admin disparar la campaña de marketing manualmente desde el panel."""
-    admin_id = session.get("admin_id")
-    if not admin_id:
+    admin_logged_in = session.get("admin_logged_in")
+    if not admin_logged_in:
         return jsonify({"success": False, "message": "No autorizado"}), 403
     # Forzar el envío inmediato pasando la clave internamente
     result = marketing_service.check_and_trigger(CRON_SECRET, CRON_SECRET)

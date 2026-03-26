@@ -1787,6 +1787,12 @@ function botEvaluarValorCarta(card, hand) {
  * umbral: cuántos puntos mínimos debe tener para que valga tomarla.
  */
 function botValeTomarDescarte(discardCard, hand, umbral = 2) {
+    // ======= LÓGICA MODO DEMO =======
+    // Los bots son extremadamente despistados y rara vez toman el descarte útil
+    const isDemo = window.USER_DATA && window.USER_DATA.play_mode === 'demo';
+    if (isDemo && Math.random() < 0.85) return false;
+    // ================================
+
     const testHand = [...hand, discardCard];
     const gruposConDescarte = botEncontrarGruposValidos(testHand);
     const gruposSinDescarte = botEncontrarGruposValidos(hand);
@@ -1971,6 +1977,14 @@ function jugarTurnoBot() {
  */
 function botElegirDescarte(cards) {
     if (cards.length === 0) return null;
+
+    // ======= LÓGICA MODO DEMO =======
+    // Los bots descartan al azar con mucha frecuencia, rompiendo sus propios juegos
+    const isDemo = window.USER_DATA && window.USER_DATA.play_mode === 'demo';
+    if (isDemo && Math.random() < 0.75) {
+        return cards[Math.floor(Math.random() * cards.length)];
+    }
+    // ================================
 
     const difficultyKey = STATE.difficulty || 'easy';
 
