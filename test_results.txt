@@ -1,0 +1,8 @@
+Iniciando pruebas de APIs Deportivas...
+--------------------------------------------------
+Fútbol (FootApi)                         | ✅ OK (Status 200)
+Béisbol MLB (Tank01)                     | ✅ OK (Status 200)
+Fórmula 1 (Hyprace)                      | ✅ OK (Status 200)
+Fútbol Americano NFL (NFL API Data)      | ✅ OK (Status 200)
+--------------------------------------------------
+Pruebas finalizadas.
