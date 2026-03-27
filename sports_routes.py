@@ -14,14 +14,18 @@ sports_bp = Blueprint('sports', __name__, url_prefix='/sports')
 try:
     import config as _cfg
     _FB_KEY    = getattr(_cfg, 'RAPIDAPI_FOOTBALL_KEY', '')
-    _FB_HOST   = getattr(_cfg, 'RAPIDAPI_FOOTBALL_HOST', 'free-api-live-football-data.p.rapidapi.com')
+    _FB_HOST   = getattr(_cfg, 'RAPIDAPI_FOOTBALL_HOST', 'footapi7.p.rapidapi.com')
     _MLB_KEY   = getattr(_cfg, 'RAPIDAPI_MLB_KEY', '')
-    _MLB_HOST  = getattr(_cfg, 'RAPIDAPI_MLB_HOST', 'mlb-college-baseball-api.p.rapidapi.com')
+    _MLB_HOST  = getattr(_cfg, 'RAPIDAPI_MLB_HOST', 'tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com')
+    _NFL_KEY   = getattr(_cfg, 'RAPIDAPI_NFL_KEY', '')
+    _NFL_HOST  = getattr(_cfg, 'RAPIDAPI_NFL_HOST', 'nfl-api-data.p.rapidapi.com')
 except Exception:
     _FB_KEY    = ''
-    _FB_HOST   = 'free-api-live-football-data.p.rapidapi.com'
+    _FB_HOST   = 'footapi7.p.rapidapi.com'
     _MLB_KEY   = '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
-    _MLB_HOST  = 'mlb-college-baseball-api.p.rapidapi.com'
+    _MLB_HOST  = 'tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com'
+    _NFL_KEY   = '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    _NFL_HOST  = 'nfl-api-data.p.rapidapi.com'
 
 # ── Sport definitions (whitelist + metadata) ───────────────────────────────────
 SPORTS = {
@@ -73,6 +77,8 @@ def sport_view(source):
         template_name = 'sports/soccer.html'
     elif source == 'mlb':
         template_name = 'sports/baseball.html'
+    elif source == 'nfl':
+        template_name = 'sports/nfl.html'
     else:
         template_name = 'sports/matches.html'
     
@@ -189,8 +195,48 @@ def baseball_proxy(endpoint):
         return jsonify({'status': 'error', 'message': 'Falla de red en API Baseball.'}), 200
 
 # =====================================================
+# NFL API PROXY
+# =====================================================
+
+@sports_bp.route('/api/nfl/<path:endpoint>')
+def nfl_proxy(endpoint):
+    cache_key = f"nfl_{endpoint}?{request.query_string.decode('utf-8')}"
+    cached = _fb_cached(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    url = f"https://{_NFL_HOST}/{endpoint}"
+    active_key = _NFL_KEY if _NFL_KEY else '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    headers = {
+        "x-rapidapi-key": active_key,
+        "x-rapidapi-host": _NFL_HOST,
+        "Accept": "application/json"
+    }
+
+    try:
+        resp = http_requests.get(url, headers=headers, params=request.args, timeout=12)
+        logger.info(f"[NFL API] {endpoint} -> HTTP {resp.status_code}")
+
+        if resp.status_code == 403:
+            return jsonify({'status': 'error', 'message': 'Acceso denegado a NFL API.'}), 200
+        if resp.status_code == 429:
+            return jsonify({'status': 'error', 'message': 'Límite alcanzado en NFL API.'}), 200
+
+        resp.raise_for_status()
+        data = resp.json()
+        _fb_store(cache_key, data)
+        return jsonify(data)
+
+    except http_requests.exceptions.Timeout:
+        return jsonify({'status': 'error', 'message': 'Tiempo de espera agotado.'}), 200
+    except Exception as exc:
+        logger.warning(f"[NFL API] {endpoint} error: {exc}")
+        return jsonify({'status': 'error', 'message': 'Falla de red en API NFL.'}), 200
+
+# =====================================================
 # CLASSIC SPORTS DB API (unchanged)
 # =====================================================
+
 
 @sports_bp.route('/api/matches')
 def get_matches():

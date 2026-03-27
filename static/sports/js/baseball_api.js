@@ -78,14 +78,19 @@
       this.showLoader('events-container');
       
       try {
-        // Fetch matches from RapidAPI MLB endpoint
-        const data = await this.fetchProxy('matches');
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const gameDate = `${yyyy}${mm}${dd}`;
+
+        const data = await this.fetchProxy('getMLBScoresOnly', { gameDate });
         
-        if (!data || data.status === 'error') throw new Error(data?.message || 'API error');
+        if (!data || data.statusCode !== 200 || data.status === 'error') throw new Error(data?.message || 'API error');
         
-        let matches = data.data || [];
-        if (!Array.isArray(matches)) {
-          matches = data.matches || data.events || [];
+        let matches = [];
+        if (data.body && typeof data.body === 'object') {
+          matches = Object.values(data.body);
         }
 
         if (matches.length === 0) {
@@ -95,33 +100,30 @@
 
         let html = '';
         matches.slice(0, 15).forEach(m => {
-          const home = m.homeTeam?.name || m.homeTeam?.displayName || 'Local';
-          const away = m.awayTeam?.name || m.awayTeam?.displayName || 'Visitante';
-          const homeLogo = m.homeTeam?.logo;
-          const awayLogo = m.awayTeam?.logo;
+          const home = m.home || 'Local';
+          const away = m.away || 'Visitante';
+          const homeLogo = `https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/${home.toLowerCase()}.png`;
+          const awayLogo = `https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/${away.toLowerCase()}.png`;
+          const matchId = m.gameID || `${away}_${home}`;
 
           // Score formatting
-          const scoreCurrent = m.state?.score?.current || '0 - 0';
-          const scoreSplit = scoreCurrent.split('-');
-          let gH = null, gA = null;
-          if (scoreSplit.length === 2) {
-            gA = scoreSplit[0].trim(); // Usually the format is away - home
-            gH = scoreSplit[1].trim();
-          }
+          let gH = m.lineScore?.home?.R;
+          let gA = m.lineScore?.away?.R;
 
           let scoreStr = 'VS';
-          if (m.state?.report !== 'Scheduled' && m.state?.report !== 'Pre-Game') {
-            scoreStr = `${gA !== null ? gA : '0'} - ${gH !== null ? gH : '0'}`;
+          if (m.gameStatus !== 'Scheduled' && m.gameStatus !== 'Pre-Game') {
+            scoreStr = `${gA !== undefined ? gA : '0'} - ${gH !== undefined ? gH : '0'}`;
           }
 
-          const description = m.state?.description || m.state?.report || 'Próximamente';
-          const isLive = description.toLowerCase().includes('inning') || description.toLowerCase().includes('progress');
-          const isFinished = description.toLowerCase().includes('final');
+          const description = m.currentInning || m.gameStatus || 'Próximamente';
+          const isLive = String(m.gameStatus).toLowerCase().includes('live') || String(m.gameStatus).toLowerCase().includes('in progress');
+          const isFinished = String(m.gameStatus).toLowerCase().includes('completed') || String(m.gameStatus).toLowerCase().includes('final');
 
-          const dateStr = m.date;
+          const dateStr = m.gameTime_epoch ? new Date(parseFloat(m.gameTime_epoch) * 1000).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : m.gameTime;
+
           const displayTime = isLive 
               ? `<span style="color:#ef4444;font-weight:bold;">🔴 EN VIVO ${description}</span>` 
-              : (isFinished ? `<span style="color:rgba(255,255,255,0.5);">FINALIZADO</span>` : (dateStr ? new Date(dateStr).toLocaleDateString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : description));
+              : (isFinished ? `<span style="color:rgba(255,255,255,0.5);">FINALIZADO</span>` : (dateStr ? dateStr : description));
           
           const odds = this.generateOdds();
           
@@ -141,11 +143,11 @@
               </div>
               ${!isFinished ? `
               <div class="sm-odds">
-                <button class="sm-odd-btn" onclick="openBetSlip('${m.id}', '${away}', '${away} vs ${home}', ${odds['2']})">
+                <button class="sm-odd-btn" onclick="openBetSlip('${matchId}', '${away}', '${away} vs ${home}', ${odds['2']})">
                   <span class="sm-odd-label">VISITA (${away})</span>
                   <span class="sm-odd-value">${odds['2']}</span>
                 </button>
-                <button class="sm-odd-btn" onclick="openBetSlip('${m.id}', '${home}', '${away} vs ${home}', ${odds['1']})">
+                <button class="sm-odd-btn" onclick="openBetSlip('${matchId}', '${home}', '${away} vs ${home}', ${odds['1']})">
                   <span class="sm-odd-label">LOCAL (${home})</span>
                   <span class="sm-odd-value">${odds['1']}</span>
                 </button>

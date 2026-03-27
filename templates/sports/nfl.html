@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07080d">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Zona Jackpot 777 — {{ sport_name }} en vivo, eventos y apuestas deportivas.">
+  <title>{{ sport_emoji }} {{ sport_name }} | Zona Jackpot 777</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/themes.css">
+  <link rel="stylesheet" href="/static/css/perfil.css">
+  <link rel="stylesheet" href="/static/sports/css/style.css">
+
+  <script>document.documentElement.classList.remove("no-js");</script>
+  <script src="/static/js/theme-manager.js"></script>
+  <script defer src="/static/js/soundManager.js"></script>
+  <script defer src="/static/js/perfil.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="/static/js/firebase.js"></script>
+  <script defer src="/static/js/script.js"></script>
+
+  <!-- Inject sport config for JS -->
+  <script>
+    window.SPORT_CONFIG = {
+      source: "{{ sport_source }}",
+      name:   "{{ sport_name }}",
+      emoji:  "{{ sport_emoji }}",
+      color:  "{{ sport_color }}"
+    };
+  </script>
+
+  <style>
+    :root { --sport-clr: {{ sport_color }}; }
+
+    body {
+      min-height: 100vh;
+      background: #07080d;
+      font-family: 'Inter', sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    .sm-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% -5%, color-mix(in srgb, var(--sport-clr) 20%, transparent) 0%, transparent 70%),
+        #07080d;
+    }
+
+    .sm-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px;
+      background: rgba(7, 8, 13, 0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .sm-nav-back {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #fff; font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .sm-nav-back:hover { background: rgba(255,255,255,.14); }
+    .sm-nav-sport {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'Orbitron', monospace;
+      font-weight: 700; font-size: .85rem;
+      color: #fff; letter-spacing: 1px;
+    }
+
+    .sm-hero {
+      position: relative; z-index: 1;
+      padding: 28px 20px 10px;
+      text-align: center;
+    }
+    .sm-hero-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.3rem, 4vw, 2rem);
+      font-weight: 900;
+      background: linear-gradient(135deg, #fff 30%, var(--sport-clr) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .sm-hero-sub { color: rgba(255,255,255,.4); font-size: .82rem; margin-top: 4px; }
+
+    .sm-filters {
+      position: relative; z-index: 1;
+      display: flex; gap: 8px; flex-wrap: wrap;
+      justify-content: center;
+      padding: 16px 18px 0;
+    }
+    .sm-filter {
+      padding: 6px 14px; border-radius: 20px;
+      font-size: .72rem; font-weight: 700; letter-spacing: .5px;
+      cursor: pointer; border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05); color: rgba(255,255,255,.6);
+      transition: all .2s;
+    }
+    .sm-filter.active, .sm-filter:hover {
+      background: var(--sport-clr);
+      border-color: var(--sport-clr);
+      color: #fff;
+    }
+
+    .sm-section {
+      position: relative; z-index: 1;
+      max-width: 780px; margin: 0 auto;
+      padding: 20px 16px 30px;
+    }
+    .sm-section-title {
+      font-family: 'Orbitron', monospace;
+      font-size: .75rem; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--sport-clr);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .sm-event {
+      background: linear-gradient(145deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      padding: 18px 16px;
+      margin-bottom: 12px;
+      transition: border-color .2s, transform .2s;
+    }
+    .sm-event:hover { border-color: rgba(255,255,255,.14); transform: translateY(-2px); }
+
+    .sm-event-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .sm-event-league {
+      font-size: .65rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--sport-clr);
+      background: color-mix(in srgb, var(--sport-clr) 12%, transparent);
+      border-radius: 20px; padding: 3px 10px;
+    }
+    .sm-event-time { font-size: .7rem; color: rgba(255,255,255,.35); }
+
+    .sm-event-matchup {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 14px;
+    }
+    .sm-event-team {
+      flex: 1; font-weight: 700; font-size: .88rem;
+      text-align: center; color: rgba(255,255,255,.9);
+      word-break: break-word;
+    }
+    .sm-event-vs {
+      font-family: 'Orbitron', monospace;
+      font-size: .7rem; font-weight: 900;
+      color: rgba(255,255,255,.25); flex-shrink: 0;
+    }
+
+    .sm-odds { display: flex; gap: 8px; }
+    .sm-odd-btn {
+      flex: 1; padding: 9px 6px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.8);
+      font-size: .72rem; font-weight: 700; cursor: pointer;
+      text-align: center; transition: all .2s;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .sm-odd-btn:hover { background: var(--sport-clr); border-color: var(--sport-clr); color: #fff; }
+    .sm-odd-btn.selected { background: var(--sport-clr); border-color: var(--sport-clr); color: #fff; }
+    .sm-odd-label { font-size: .58rem; color: inherit; opacity: .7; font-weight: 600; }
+    .sm-odd-value { font-size: .82rem; font-weight: 800; }
+
+    .sm-skeleton {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 16px; padding: 18px 16px; margin-bottom: 12px;
+    }
+    .sm-skel-line {
+      background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.05) 75%);
+      background-size: 200% 100%;
+      border-radius: 6px; height: 12px; margin-bottom: 10px;
+      animation: sm-shimmer 1.5s infinite;
+    }
+    .sm-skel-line.wide { width: 80%; }
+    .sm-skel-line.medium { width: 55%; }
+    .sm-skel-line.short { width: 35%; }
+    @keyframes sm-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    .sm-empty { text-align: center; padding: 50px 20px; color: rgba(255,255,255,.3); }
+    .sm-empty-icon { font-size: 3rem; margin-bottom: 16px; }
+    .sm-empty h3 { font-size: 1rem; margin-bottom: 8px; color: rgba(255,255,255,.5); }
+    .sm-empty p  { font-size: .8rem; line-height: 1.6; }
+
+    .sm-betslip {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(10, 12, 18, 0.97);
+      border-top: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(18px);
+      padding: 14px 18px 20px;
+      transform: translateY(100%);
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+    }
+    .sm-betslip.open { transform: translateY(0); }
+    .sm-betslip-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .sm-betslip-title { font-family: 'Orbitron', monospace; font-weight: 700; font-size: .78rem; letter-spacing: 1px; }
+    .sm-betslip-close { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.08); border: none; color: #fff; font-size: 14px; cursor: pointer; }
+    .sm-betslip-info { font-size: .75rem; color: rgba(255,255,255,.5); margin-bottom: 14px; }
+    .sm-betslip-info strong { color: var(--sport-clr); }
+    .sm-betslip-input { display: flex; gap: 10px; align-items: center; }
+    .sm-betslip-amount {
+      flex: 1; background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.15); border-radius: 10px;
+      color: #fff; font-size: .9rem; font-weight: 700; padding: 10px 14px; outline: none;
+    }
+    .sm-betslip-amount:focus { border-color: var(--sport-clr); }
+    .sm-betslip-submit {
+      padding: 10px 18px; border-radius: 10px;
+      background: var(--sport-clr); border: none;
+      color: #fff; font-weight: 700; font-size: .82rem; cursor: pointer; white-space: nowrap;
+      transition: filter .2s;
+    }
+    .sm-betslip-submit:hover { filter: brightness(1.15); }
+
+    .sm-toast {
+      position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: rgba(20,22,30,.97); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px; padding: 12px 20px;
+      font-size: .8rem; font-weight: 600;
+      opacity: 0; pointer-events: none;
+      transition: all .3s; z-index: 300; white-space: nowrap;
+    }
+    .sm-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .sm-toast.success { border-color: var(--sport-clr); color: var(--sport-clr); }
+    .sm-toast.error { border-color: #ef4444; color: #ef4444; }
+  </style>
+</head>
+
+<body>
+  <div class="sm-bg"></div>
+
+  <!-- NAVBAR -->
+  <nav class="sm-nav">
+    <button class="sm-nav-back" onclick="window.location.href='/sports'" aria-label="Volver a deportes">←</button>
+    <div class="sm-nav-sport">
+      <span>{{ sport_emoji }}</span>
+      <span>{{ sport_name }}</span>
+    </div>
+    <div>{% include 'user_menu.html' %}</div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="sm-hero">
+    <h1 class="sm-hero-title">{{ sport_emoji }} {{ sport_name }}</h1>
+    <p class="sm-hero-sub">Eventos en vivo y próximas apuestas</p>
+  </header>
+
+  <!-- FILTERS -->
+  <div class="sm-filters" id="filters">
+    <button class="sm-filter active" data-filter="all">Todos</button>
+    <button class="sm-filter" data-filter="live">🔴 En Vivo</button>
+    <button class="sm-filter" data-filter="upcoming">Próximos</button>
+    <button class="sm-filter" data-filter="finished">Finalizados</button>
+  </div>
+
+  <!-- EVENTS -->
+  <section class="sm-section">
+    <div class="sm-section-title">
+      <span>📡</span> Eventos Disponibles
+      <span id="event-count" style="margin-left:auto; font-size:.65rem; color: rgba(255,255,255,.3); font-family: Inter, sans-serif; font-weight:400; letter-spacing:0;"></span>
+    </div>
+    <div id="events-container">
+      <div class="sm-skeleton"><div class="sm-skel-line short"></div><div class="sm-skel-line wide"></div><div class="sm-skel-line medium"></div></div>
+      <div class="sm-skeleton"><div class="sm-skel-line short"></div><div class="sm-skel-line wide"></div><div class="sm-skel-line medium"></div></div>
+      <div class="sm-skeleton"><div class="sm-skel-line short"></div><div class="sm-skel-line wide"></div><div class="sm-skel-line medium"></div></div>
+    </div>
+  </section>
+
+  <!-- BET SLIP -->
+  <div class="sm-betslip" id="betslip">
+    <div class="sm-betslip-head">
+      <span class="sm-betslip-title">🎫 Boleto de Apuesta</span>
+      <button class="sm-betslip-close" onclick="closeBetSlip()">×</button>
+    </div>
+    <div class="sm-betslip-info" id="betslip-info">Selecciona un evento para apostar</div>
+    <div class="sm-betslip-input">
+      <input class="sm-betslip-amount" type="number" id="bet-amount" placeholder="Cantidad en bits" min="10" step="10">
+      <button class="sm-betslip-submit" onclick="submitBet()">Apostar</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="sm-toast" id="toast"></div>
+
+  {% include 'user_profile_modal.html' ignore missing %}
+
+  <script defer src="/static/sports/js/nfl_api.js"></script>
+</body>
+</html>

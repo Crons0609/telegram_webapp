@@ -1,0 +1,737 @@
+{
+  "statusCode": 200,
+  "body": {
+    "20240401_CIN@PHI": {
+      "away": "CIN",
+      "home": "PHI",
+      "teamIDAway": "7",
+      "teamIDHome": "21",
+      "gameTime": "6:40p",
+      "gameTime_epoch": "1712011200.0",
+      "lineScore": {
+        "away": {
+          "H": "8",
+          "R": "6",
+          "team": "CIN",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "2",
+            "7": "0",
+            "8": "0",
+            "9": "0",
+            "10": "4"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "7",
+          "R": "3",
+          "team": "PHI",
+          "scoresByInning": {
+            "1": "2",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0",
+            "10": "1"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final/10",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_CIN@PHI",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_NYY@ARI": {
+      "away": "NYY",
+      "home": "ARI",
+      "teamIDAway": "19",
+      "teamIDHome": "1",
+      "gameTime": "9:40p",
+      "gameTime_epoch": "1712022000.0",
+      "lineScore": {
+        "away": {
+          "H": "8",
+          "R": "5",
+          "team": "NYY",
+          "scoresByInning": {
+            "1": "0",
+            "2": "2",
+            "3": "3",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "1"
+        },
+        "home": {
+          "H": "4",
+          "R": "2",
+          "team": "ARI",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "1",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "1",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "2"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_NYY@ARI",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_PIT@WAS": {
+      "away": "PIT",
+      "home": "WAS",
+      "teamIDAway": "22",
+      "teamIDHome": "30",
+      "gameTime": "4:05p",
+      "gameTime_epoch": "1712001900.0",
+      "lineScore": {
+        "away": {
+          "H": "15",
+          "R": "8",
+          "team": "PIT",
+          "scoresByInning": {
+            "1": "0",
+            "2": "2",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "1",
+            "7": "0",
+            "8": "3",
+            "9": "2"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "8",
+          "R": "4",
+          "team": "WAS",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "1",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "2",
+            "8": "0",
+            "9": "1"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_PIT@WAS",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_ATL@CHW": {
+      "away": "ATL",
+      "home": "CHW",
+      "teamIDAway": "2",
+      "teamIDHome": "6",
+      "gameTime": "2:10p",
+      "gameTime_epoch": "1711995000.0",
+      "lineScore": {
+        "away": {
+          "H": "11",
+          "R": "9",
+          "team": "ATL",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "1",
+            "4": "2",
+            "5": "1",
+            "6": "2",
+            "7": "0",
+            "8": "3",
+            "9": "x"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "3",
+          "R": "0",
+          "team": "CHW",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "x"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final/8",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_ATL@CHW",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_CLE@SEA": {
+      "away": "CLE",
+      "home": "SEA",
+      "teamIDAway": "8",
+      "teamIDHome": "25",
+      "gameTime": "9:40p",
+      "gameTime_epoch": "1712022000.0",
+      "lineScore": {
+        "away": {
+          "H": "6",
+          "R": "4",
+          "team": "CLE",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "2",
+            "4": "0",
+            "5": "0",
+            "6": "1",
+            "7": "0",
+            "8": "1",
+            "9": "0"
+          },
+          "E": "1"
+        },
+        "home": {
+          "H": "7",
+          "R": "5",
+          "team": "SEA",
+          "scoresByInning": {
+            "1": "0",
+            "2": "4",
+            "3": "0",
+            "4": "1",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "x"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "L",
+      "homeResult": "W",
+      "gameID": "20240401_CLE@SEA",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_KC@BAL": {
+      "away": "KC",
+      "home": "BAL",
+      "teamIDAway": "12",
+      "teamIDHome": "3",
+      "gameTime": "6:35p",
+      "gameTime_epoch": "1712010900.0",
+      "lineScore": {
+        "away": {
+          "H": "7",
+          "R": "4",
+          "team": "KC",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "3",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "1"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "9",
+          "R": "6",
+          "team": "BAL",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "3",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "1",
+            "9": "2"
+          },
+          "E": "2"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "L",
+      "homeResult": "W",
+      "gameID": "20240401_KC@BAL",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_STL@SD": {
+      "away": "STL",
+      "home": "SD",
+      "teamIDAway": "26",
+      "teamIDHome": "23",
+      "gameTime": "9:40p",
+      "gameTime_epoch": "1712022000.0",
+      "lineScore": {
+        "away": {
+          "H": "14",
+          "R": "6",
+          "team": "STL",
+          "scoresByInning": {
+            "1": "3",
+            "2": "1",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "2",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "5",
+          "R": "2",
+          "team": "SD",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "1",
+            "4": "0",
+            "5": "0",
+            "6": "1",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_STL@SD",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_LAA@MIA": {
+      "away": "LAA",
+      "home": "MIA",
+      "teamIDAway": "13",
+      "teamIDHome": "15",
+      "gameTime": "6:40p",
+      "gameTime_epoch": "1712011200.0",
+      "lineScore": {
+        "away": {
+          "H": "7",
+          "R": "7",
+          "team": "LAA",
+          "scoresByInning": {
+            "1": "0",
+            "2": "1",
+            "3": "0",
+            "4": "1",
+            "5": "0",
+            "6": "2",
+            "7": "0",
+            "8": "1",
+            "9": "2"
+          },
+          "E": "1"
+        },
+        "home": {
+          "H": "9",
+          "R": "4",
+          "team": "MIA",
+          "scoresByInning": {
+            "1": "4",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_LAA@MIA",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_TEX@TB": {
+      "away": "TEX",
+      "home": "TB",
+      "teamIDAway": "28",
+      "teamIDHome": "27",
+      "gameTime": "6:50p",
+      "gameTime_epoch": "1712011800.0",
+      "lineScore": {
+        "away": {
+          "H": "8",
+          "R": "9",
+          "team": "TEX",
+          "scoresByInning": {
+            "1": "3",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "3",
+            "7": "0",
+            "8": "1",
+            "9": "2"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "5",
+          "R": "3",
+          "team": "TB",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "3",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "1"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_TEX@TB",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_TOR@HOU": {
+      "away": "TOR",
+      "home": "HOU",
+      "teamIDAway": "29",
+      "teamIDHome": "11",
+      "gameTime": "8:10p",
+      "gameTime_epoch": "1712016600.0",
+      "lineScore": {
+        "away": {
+          "H": "0",
+          "R": "0",
+          "team": "TOR",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "12",
+          "R": "10",
+          "team": "HOU",
+          "scoresByInning": {
+            "1": "3",
+            "2": "1",
+            "3": "0",
+            "4": "1",
+            "5": "0",
+            "6": "2",
+            "7": "3",
+            "8": "0",
+            "9": "x"
+          },
+          "E": "0"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "L",
+      "homeResult": "W",
+      "gameID": "20240401_TOR@HOU",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_COL@CHC": {
+      "away": "COL",
+      "home": "CHC",
+      "teamIDAway": "9",
+      "teamIDHome": "5",
+      "gameTime": "2:20p",
+      "gameTime_epoch": "1711995600.0",
+      "lineScore": {
+        "away": {
+          "H": "3",
+          "R": "0",
+          "team": "COL",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "2"
+        },
+        "home": {
+          "H": "9",
+          "R": "5",
+          "team": "CHC",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "3",
+            "7": "2",
+            "8": "0",
+            "9": "x"
+          },
+          "E": "1"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "L",
+      "homeResult": "W",
+      "gameID": "20240401_COL@CHC",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_BOS@OAK": {
+      "away": "BOS",
+      "home": "OAK",
+      "teamIDAway": "4",
+      "teamIDHome": "20",
+      "gameTime": "9:40p",
+      "gameTime_epoch": "1712022000.0",
+      "lineScore": {
+        "away": {
+          "H": "9",
+          "R": "9",
+          "team": "BOS",
+          "scoresByInning": {
+            "1": "1",
+            "2": "2",
+            "3": "5",
+            "4": "0",
+            "5": "0",
+            "6": "1",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "4",
+          "R": "0",
+          "team": "OAK",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0"
+          },
+          "E": "5"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_BOS@OAK",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_DET@NYM": {
+      "away": "DET",
+      "home": "NYM",
+      "teamIDAway": "10",
+      "teamIDHome": "18",
+      "gameTime": "7:10p",
+      "gameTime_epoch": "1712013000.0",
+      "lineScore": {
+        "away": {
+          "H": "4",
+          "R": "5",
+          "team": "DET",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0",
+            "10": "5"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "5",
+          "R": "0",
+          "team": "NYM",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "0",
+            "7": "0",
+            "8": "0",
+            "9": "0",
+            "10": "0"
+          },
+          "E": "1"
+        }
+      },
+      "currentInning": "Final/10",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "W",
+      "homeResult": "L",
+      "gameID": "20240401_DET@NYM",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    },
+    "20240401_SF@LAD": {
+      "away": "SF",
+      "home": "LAD",
+      "teamIDAway": "24",
+      "teamIDHome": "14",
+      "gameTime": "10:10p",
+      "gameTime_epoch": "1712023800.0",
+      "lineScore": {
+        "away": {
+          "H": "8",
+          "R": "3",
+          "team": "SF",
+          "scoresByInning": {
+            "1": "0",
+            "2": "0",
+            "3": "0",
+            "4": "0",
+            "5": "0",
+            "6": "1",
+            "7": "1",
+            "8": "0",
+            "9": "1"
+          },
+          "E": "0"
+        },
+        "home": {
+          "H": "9",
+          "R": "8",
+          "team": "LAD",
+          "scoresByInning": {
+            "1": "1",
+            "2": "0",
+            "3": "2",
+            "4": "0",
+            "5": "0",
+            "6": "3",
+            "7": "2",
+            "8": "0",
+            "9": "x"
+          },
+          "E": "1"
+        }
+      },
+      "currentInning": "Final",
+      "currentCount": "",
+      "currentOuts": "",
+      "awayResult": "L",
+      "homeResult": "W",
+      "gameID": "20240401_SF@LAD",
+      "gameStatus": "Completed",
+      "gameStatusCode": "2"
+    }
+  }
+}
