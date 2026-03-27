@@ -19,6 +19,8 @@ try:
     _MLB_HOST  = getattr(_cfg, 'RAPIDAPI_MLB_HOST', 'tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com')
     _NFL_KEY   = getattr(_cfg, 'RAPIDAPI_NFL_KEY', '')
     _NFL_HOST  = getattr(_cfg, 'RAPIDAPI_NFL_HOST', 'nfl-api-data.p.rapidapi.com')
+    _F1_KEY    = getattr(_cfg, 'RAPIDAPI_F1_KEY', '')
+    _F1_HOST   = getattr(_cfg, 'RAPIDAPI_F1_HOST', 'hyprace-api.p.rapidapi.com')
 except Exception:
     _FB_KEY    = ''
     _FB_HOST   = 'footapi7.p.rapidapi.com'
@@ -26,6 +28,8 @@ except Exception:
     _MLB_HOST  = 'tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com'
     _NFL_KEY   = '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
     _NFL_HOST  = 'nfl-api-data.p.rapidapi.com'
+    _F1_KEY    = '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    _F1_HOST   = 'hyprace-api.p.rapidapi.com'
 
 # ── Sport definitions (whitelist + metadata) ───────────────────────────────────
 SPORTS = {
@@ -35,7 +39,7 @@ SPORTS = {
     'mlb':     {'name': 'Béisbol MLB',    'emoji': '⚾', 'color': '#ef4444'},
     'tennis':  {'name': 'Tenis',          'emoji': '🎾', 'color': '#84cc16'},
     'nhl':     {'name': 'Hockey NHL',     'emoji': '🏒', 'color': '#06b6d4'},
-    'nascar':  {'name': 'NASCAR',         'emoji': '🏎️', 'color': '#f97316'},
+    'f1':      {'name': 'Formula 1',       'emoji': '🏎️', 'color': '#e10600'},
     'rugby':   {'name': 'Rugby',          'emoji': '🏉', 'color': '#8b5cf6'},
     'golf':    {'name': 'Golf',           'emoji': '⛳', 'color': '#22c55e'},
 }
@@ -79,6 +83,8 @@ def sport_view(source):
         template_name = 'sports/baseball.html'
     elif source == 'nfl':
         template_name = 'sports/nfl.html'
+    elif source == 'f1':
+        template_name = 'sports/f1.html'
     else:
         template_name = 'sports/matches.html'
     
@@ -232,6 +238,42 @@ def nfl_proxy(endpoint):
     except Exception as exc:
         logger.warning(f"[NFL API] {endpoint} error: {exc}")
         return jsonify({'status': 'error', 'message': 'Falla de red en API NFL.'}), 200
+
+
+# =====================================================
+# F1 / HYPRACE API PROXY  (hyprace-api.p.rapidapi.com)
+# =====================================================
+
+@sports_bp.route('/api/f1/<path:endpoint>')
+def f1_proxy(endpoint):
+    cache_key = "f1_{}?{}".format(endpoint, request.query_string.decode('utf-8'))
+    cached = _fb_cached(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    url = "https://{}/{}".format(_F1_HOST, endpoint)
+    active_key = _F1_KEY if _F1_KEY else '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    headers = {
+        "x-rapidapi-key": active_key,
+        "x-rapidapi-host": _F1_HOST,
+        "Accept": "application/json"
+    }
+    try:
+        resp = http_requests.get(url, headers=headers, params=request.args, timeout=12)
+        logger.info("[F1 API] {} -> HTTP {}".format(endpoint, resp.status_code))
+        if resp.status_code == 403:
+            return jsonify({'status': 'error', 'message': 'Acceso denegado a F1 API.'}), 200
+        if resp.status_code == 429:
+            return jsonify({'status': 'error', 'message': 'Limite alcanzado en F1 API.'}), 200
+        resp.raise_for_status()
+        data = resp.json()
+        _fb_store(cache_key, data)
+        return jsonify(data)
+    except http_requests.exceptions.Timeout:
+        return jsonify({'status': 'error', 'message': 'Tiempo de espera agotado.'}), 200
+    except Exception as exc:
+        logger.warning("[F1 API] {} error: {}".format(endpoint, exc))
+        return jsonify({'status': 'error', 'message': 'Falla de red en API F1.'}), 200
 
 # =====================================================
 # CLASSIC SPORTS DB API (unchanged)
