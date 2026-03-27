@@ -1,7 +1,8 @@
 /**
- * nfl_api.js — NFL API Data Client
+ * nfl_api.js — NFL API Data Client (nfl-api-data.p.rapidapi.com)
  * Uses the proxy /sports/api/nfl/<endpoint>
- * API: nfl-api-data.p.rapidapi.com
+ *
+ * Fetches from /nfl-events endpoint which returns the standard ESPN NFL JSON shape.
  */
 (function () {
   'use strict';
@@ -35,7 +36,8 @@
       try {
         const res = await fetch(`/sports/api/nfl/${path}`);
         const data = await res.json();
-        if (data && !data.error && data.status !== 'error') {
+        // Check for common error shapes returned by APIs
+        if (data && !data.error && data.status !== 'error' && !data.message?.toLowerCase().includes('failed')) {
           this._writeCache(path, data);
         }
         return data;
@@ -72,49 +74,54 @@
     },
 
     /**
-     * Map game object from NFL API Data.
-     * The API returns a list under `body` or `events`, each game having:
-     *   gameID, away, home, gameStatus, currentQuarter, lineScore, gameTime_epoch
-     * We handle multiple possible shapes gracefully.
+     * Map game object from NFL API Data (/nfl-events endpoint).
+     * The API returns ESPN-styled JSON: events[] -> competitions[0] -> competitors[] -> team, score, etc.
      */
-    _parseGame(m) {
-      const home = m.home || m.homeTeam?.abbrev || m.homeTeam?.name || 'Local';
-      const away = m.away || m.awayTeam?.abbrev || m.awayTeam?.name || 'Visitante';
-      const gameId = m.gameID || m.id || `${away}@${home}`;
+    _parseGame(event) {
+      const comp = event.competitions?.[0] || {};
+      const competitors = comp.competitors || [];
+      const homeTeamObj = competitors.find(c => c.homeAway === 'home') || {};
+      const awayTeamObj = competitors.find(c => c.homeAway === 'away') || {};
 
-      // Scores
-      const homeR = m.lineScore?.home?.score ?? m.homeScore ?? m.score?.home ?? null;
-      const awayR = m.lineScore?.away?.score ?? m.awayScore ?? m.score?.away ?? null;
+      const home = homeTeamObj.team?.displayName || homeTeamObj.team?.name || 'Local';
+      const away = awayTeamObj.team?.displayName || awayTeamObj.team?.name || 'Visitante';
+      const homeAbbrev = homeTeamObj.team?.abbreviation || '';
+      const awayAbbrev = awayTeamObj.team?.abbreviation || '';
+      
+      const homeLogo = homeTeamObj.team?.logo || `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${homeAbbrev.toLowerCase() || 'nfl'}.png`;
+      const awayLogo = awayTeamObj.team?.logo || `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${awayAbbrev.toLowerCase() || 'nfl'}.png`;
 
-      const status = String(m.gameStatus || m.status || '').toLowerCase();
-      const isLive = status.includes('live') || status.includes('progress') || status.includes('q1') ||
-                     status.includes('q2') || status.includes('q3') || status.includes('q4') || status.includes('ot');
-      const isFinished = status.includes('completed') || status.includes('final') || status.includes('finished');
+      const homeScore = homeTeamObj.score || '0';
+      const awayScore = awayTeamObj.score || '0';
+
+      const statusInfo = comp.status?.type || {};
+      const isFinished = statusInfo.completed || statusInfo.state === 'post';
+      const isLive = statusInfo.state === 'in';
+      const isUpcoming = statusInfo.state === 'pre' || !statusInfo.state;
 
       let scoreStr = 'VS';
-      if ((isLive || isFinished) && homeR !== null && awayR !== null) {
-        scoreStr = `${awayR} - ${homeR}`;
+      if (isLive || isFinished) {
+        scoreStr = `${awayScore} - ${homeScore}`;
       }
 
-      const quarter = m.currentQuarter || m.quarter || '';
-      const clock   = m.gameClock || m.clock || '';
-      const liveLabel = [quarter, clock].filter(Boolean).join(' ');
+      const liveLabel = statusInfo.shortDetail || comp.status?.displayClock || '';
 
       let displayTime;
       if (isLive) {
         displayTime = `<span style="color:#ef4444;font-weight:bold;">🔴 EN VIVO${liveLabel ? ' — ' + liveLabel : ''}</span>`;
       } else if (isFinished) {
-        displayTime = `<span style="color:rgba(255,255,255,0.5);">FINALIZADO</span>`;
+        displayTime = `<span style="color:rgba(255,255,255,0.5);">FINALIZADO${liveLabel ? ' (' + liveLabel + ')' : ''}</span>`;
       } else {
-        // Scheduled
-        const epoch = m.gameTime_epoch ? parseFloat(m.gameTime_epoch) * 1000 : null;
-        const gameTime = m.gameTime || '';
-        displayTime = epoch
-          ? new Date(epoch).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-          : (gameTime || 'Próximamente');
+        const gameDate = event.date ? new Date(event.date) : null;
+        displayTime = gameDate
+          ? gameDate.toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+          : (statusInfo.shortDetail || 'Próximamente');
       }
 
-      return { home, away, gameId, scoreStr, displayTime, isFinished };
+      const dataStatus = isLive ? 'live' : (isFinished ? 'finished' : 'upcoming');
+      const gameId = event.id || `${awayAbbrev}@${homeAbbrev}`;
+
+      return { home, away, gameId, scoreStr, displayTime, dataStatus, isFinished, homeLogo, awayLogo };
     },
 
     async loadEvents() {
@@ -124,57 +131,53 @@
       this.showLoader('events-container');
 
       try {
-        // Try scoreboard first; fall back to live-scores
-        let data = await this.fetchProxy('getNFLScoreboard');
+        const currentYear = new Date().getFullYear();
+        let data = await this.fetchProxy('nfl-events', { year: currentYear });
 
-        // If we get a not-subscribed or error, try alternate endpoint
-        if (!data || data.status === 'error' || data.statusCode === 401 || data.statusCode === 403) {
-          data = await this.fetchProxy('getLiveScores');
+        // If the current year's data fails, it might be the offseason before the schedule drops.
+        // Try the previous year's schedule as a fallback.
+        if (!data || data.error) {
+          data = await this.fetchProxy('nfl-events', { year: currentYear - 1 });
         }
 
-        if (!data || data.status === 'error') {
-          throw new Error(data?.message || 'No se recibió respuesta de la API de NFL.');
+        if (!data || data.error || !Array.isArray(data.events)) {
+          throw new Error(data?.message || data?.error || 'No se recibió respuesta válida de la API de NFL.');
         }
 
-        // Accept body as array OR object
-        let matches = [];
-        if (Array.isArray(data.body)) {
-          matches = data.body;
-        } else if (data.body && typeof data.body === 'object') {
-          matches = Object.values(data.body);
-        } else if (Array.isArray(data.events)) {
-          matches = data.events;
-        } else if (Array.isArray(data.games)) {
-          matches = data.games;
-        }
+        let matches = data.events;
 
         if (matches.length === 0) {
           this.showEmpty('events-container', 'No hay partidos de NFL disponibles en este momento. La temporada regular es de septiembre a enero.');
           return;
         }
 
+        // Sort: Live/Upcoming first, Finished later
+        matches.sort((a,b) => {
+           let stateA = a.competitions?.[0]?.status?.type?.state === 'post' ? 1 : 0;
+           let stateB = b.competitions?.[0]?.status?.type?.state === 'post' ? 1 : 0;
+           if (stateA !== stateB) return stateA - stateB;
+           return new Date(b.date || 0) - new Date(a.date || 0); // newest first among finished
+        });
+
         let html = '';
-        matches.slice(0, 15).forEach(m => {
-          const { home, away, gameId, scoreStr, displayTime, isFinished } = this._parseGame(m);
+        matches.slice(0, 30).forEach(m => {
+          const { home, away, gameId, scoreStr, displayTime, dataStatus, isFinished, homeLogo, awayLogo } = this._parseGame(m);
 
-          const homeLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${home.toLowerCase()}.png`;
-          const awayLogo = `https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/${away.toLowerCase()}.png`;
-
-          const homeImgHtml = `<img src="${homeLogo}" style="height:20px;width:20px;vertical-align:middle;margin-left:5px;" onerror="this.style.display='none'">`;
-          const awayImgHtml = `<img src="${awayLogo}" style="height:20px;width:20px;vertical-align:middle;margin-right:5px;" onerror="this.style.display='none'">`;
+          const homeImgHtml = `<img src="${homeLogo}" style="height:22px;width:22px;vertical-align:middle;margin-left:6px;object-fit:contain;" onerror="this.style.display='none'">`;
+          const awayImgHtml = `<img src="${awayLogo}" style="height:22px;width:22px;vertical-align:middle;margin-right:6px;object-fit:contain;" onerror="this.style.display='none'">`;
 
           const odds = this.generateOdds();
 
           html += `
-            <div class="sm-event" data-status="${isFinished ? 'finished' : (String(m.gameStatus || '').toLowerCase().includes('live') ? 'live' : 'upcoming')}">
+            <div class="sm-event" data-status="${dataStatus}">
               <div class="sm-event-meta">
                 <span class="sm-event-league">NFL</span>
                 <span class="sm-event-time">${displayTime}</span>
               </div>
               <div class="sm-event-matchup">
-                <div class="sm-event-team">${awayImgHtml}${away}</div>
+                <div class="sm-event-team" style="text-align:right;">${awayImgHtml}${away}</div>
                 <div class="sm-event-vs">${scoreStr}</div>
-                <div class="sm-event-team">${home}${homeImgHtml}</div>
+                <div class="sm-event-team" style="text-align:left;">${home}${homeImgHtml}</div>
               </div>
               ${!isFinished ? `
               <div class="sm-odds">
@@ -192,11 +195,11 @@
 
         c.innerHTML = html;
         const countEl = $('event-count');
-        if (countEl) countEl.innerText = `${matches.slice(0, 15).length} eventos`;
+        if (countEl) countEl.innerText = `${matches.length} eventos`;
 
       } catch (err) {
         console.warn('[NFLAPI] loadEvents error:', err);
-        this.showEmpty('events-container', 'No se pudieron cargar los datos de NFL. Verifica la suscripción a la API.');
+        this.showEmpty('events-container', 'No se pudieron cargar los datos de NFL. Verifica tu suscripción a la API. ' + err.message);
       }
     }
   };
