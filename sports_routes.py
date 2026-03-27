@@ -306,12 +306,14 @@ def get_matches():
 def place_bet():
     data = request.json
     telegram_id = data.get('telegram_id')
-    match_id = data.get('match_id')
-    team_choice = data.get('team_choice')
+    match_id = data.get('match_id')        # e.g., 'ARI@ATL', 'event_id'
+    match_name = data.get('match_name')    # e.g., 'Arizona vs Atlanta'
+    team_choice = data.get('team_choice')  # '1', '2', 'X' or specific team name
     amount = data.get('amount')
+    odd = data.get('odd')
 
-    if not all([telegram_id, match_id, team_choice, amount]):
-        return jsonify({"success": False, "error": "Datos incompletos"}), 400
+    if not all([telegram_id, match_id, match_name, team_choice, amount, odd]):
+        return jsonify({"success": False, "error": "Datos de apuesta incompletos"}), 400
 
     try:
         amount = int(amount)
@@ -327,27 +329,30 @@ def place_bet():
     if user.get('bits', 0) < amount:
         return jsonify({"success": False, "error": "Saldo insuficiente"}), 400
 
-    match = database.get_fb(f"sports_matches/{match_id}")
-    if not match or match.get('status') != 'upcoming':
-        return jsonify({"success": False, "error": "Partido no disponible"}), 400
+    try:
+        odd = float(odd)
+    except:
+        return jsonify({"success": False, "error": "Cuota (Odd) inválida"}), 400
 
-    odd = match.get('odd1') if team_choice == '1' else match.get('oddx') if team_choice == 'X' else match.get('odd2')
-    potential_win = int(amount * odd)
-    
+    # Descontamos bits del balance real
     database.descontar_bits(telegram_id, amount)
     
-    database.post_fb("sports_bets", {
+    # Registramos la apuesta con los datos enviados por la API deportiva
+    # (Ya no dependemos de sports_matches en Firebase)
+    bet_data = {
         "telegram_id": str(telegram_id),
         "match_id": match_id,
+        "match_name": match_name,
         "team_choice": team_choice,
         "amount": amount,
         "odd": odd,
         "status": "pending",
         "created_at": datetime.utcnow().isoformat()
-    })
+    }
+    database.post_fb("sports_bets", bet_data)
     
     new_balance = database.obtener_bits(telegram_id)
-    logger.info(f"Apuesta Deportiva: {telegram_id} -> {amount} bits en partido {match_id}")
+    logger.info(f"Apuesta Deportiva: {telegram_id} -> {amount} bits a {team_choice} (Cuota {odd}) en {match_name}")
     return jsonify({"success": True, "new_balance": new_balance})
 
 @sports_bp.route('/api/bets/<telegram_id>')

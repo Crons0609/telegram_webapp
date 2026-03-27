@@ -188,6 +188,15 @@
               </div>
               ${podiumHtml}
               ${scheduleHtml}
+              ${cls !== 'finished' ? `
+              <div class="sm-odds" style="margin-top:14px;">
+                <button class="sm-odd-btn" onclick="openBetSlip('${gp.id || gp.round}','Top 3 (Podio)','GP ${gp.name || gp.officialName}', 2.50)">
+                  <span class="sm-odd-label">MI PILOTO AL PODIO</span><span class="sm-odd-value">2.50</span>
+                </button>
+                <button class="sm-odd-btn" onclick="openBetSlip('${gp.id || gp.round}','Ganador (P1)','GP ${gp.name || gp.officialName}', 5.00)">
+                  <span class="sm-odd-label">MI PILOTO A GANADOR</span><span class="sm-odd-value">5.00</span>
+                </button>
+              </div>` : ''}
             </div>`;
         });
 
