@@ -167,13 +167,24 @@
       let el = e.target;
       for (let i = 0; i < 5 && el && el !== document.body; i++) {
         const onclick = el.getAttribute('onclick') || '';
+        const isDataNav = el.hasAttribute('data-url') || 
+                         (el.hasAttribute('data-action') && !['login', 'explorar', 'spin'].includes(el.getAttribute('data-action')));
+
         if (
+          isDataNav ||
           onclick.includes('window.location') ||
           onclick.includes('navigateTo') ||
           onclick.includes('location.href') ||
           onclick.includes('location.assign') ||
           onclick.includes('location.replace')
         ) {
+          if (isDataNav) {
+             const dest = el.getAttribute('data-url') || '/';
+             // Actions like 'recargar' have no URL but still navigate internally in the logic, so show loader
+             if (_isInternalUrl(dest) || el.hasAttribute('data-action')) show();
+             return;
+          }
+
           // Validate the destination is internal
           // Extract URL from common patterns
           const urlMatch = onclick.match(/['"`](\/?[^'"`]+)['"`]/);

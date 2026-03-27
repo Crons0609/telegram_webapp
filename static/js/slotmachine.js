@@ -37,6 +37,22 @@
   const prefersReducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+  /* ── Inject Optimistic Spin CSS ── */
+  if (!document.getElementById("slot-optimistic-css")) {
+    const style = document.createElement("style");
+    style.id = "slot-optimistic-css";
+    style.innerHTML = `
+      .is-optimistic-spin .reel-track {
+        animation: optimisticSpinSlot 0.35s linear infinite !important;
+      }
+      @keyframes optimisticSpinSlot {
+        0% { transform: rotateX(0deg); }
+        100% { transform: rotateX(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   /* =====================================================
      INIT — waits for DOM
   ===================================================== */
@@ -564,6 +580,12 @@
         slotMachineEl.classList.remove("machine-state-win");
       }
 
+      /* ── OPTIMISTIC SPIN START ── */
+      if (!prefersReducedMotion) {
+        reels.forEach(r => r.classList.add("is-optimistic-spin"));
+      }
+      if (window.CasinoAudio) window.CasinoAudio.playSfx("slot_reel");
+
       try {
         const resp     = await fetch("/api/spin", {
           method:  "POST",
@@ -576,6 +598,7 @@
           showResult("⚠️ " + (spinData.message || "Error al girar"), "lose");
           setSpinBtn("ready", "GIRAR");
           state.spinning = false;
+          reels.forEach(r => r.classList.remove("is-optimistic-spin"));
           if (slotMachineEl) slotMachineEl.classList.remove("machine-state-spin");
           updateBetUI();
           return;
@@ -596,6 +619,9 @@
           CONFIG.symbols.find(s => s.id === r.id) || CONFIG.symbols[5]
         );
 
+        /* Remove optimistic infinite loop right before real physics take over */
+        reels.forEach(r => r.classList.remove("is-optimistic-spin"));
+
         /* Spin all reels (parallel — later reels stop later) */
         await Promise.all(reels.map((reel, i) => spinReel(reel, finalSymbols[i], i)));
 
@@ -613,6 +639,7 @@
         showResult("⚠️ Error de conexión", "lose");
         setSpinBtn("ready", "GIRAR");
         state.spinning = false;
+        reels.forEach(r => r.classList.remove("is-optimistic-spin"));
         if (slotMachineEl) slotMachineEl.classList.remove("machine-state-spin");
         updateBetUI();
       }
