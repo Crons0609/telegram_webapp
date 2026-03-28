@@ -55,8 +55,8 @@ const BetSlipAPI = {
     if (!this.currentMatchId) return;
 
     const amountEl = document.getElementById('bet-amount');
-    if (!amountEl || !amountEl.value || parseFloat(amountEl.value) <= 0) {
-      this.showToast('Ingresa una cantidad válida.', 'error');
+    if (!amountEl || !amountEl.value || parseInt(amountEl.value, 10) < 1000) {
+      this.showToast('La apuesta mínima es de 1,000 bits.', 'error');
       return;
     }
 
@@ -73,7 +73,7 @@ const BetSlipAPI = {
     if (btn) btn.disabled = true;
 
     try {
-      const res = await fetch('/api/bet', {
+      const res = await fetch('/sports/api/bet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
