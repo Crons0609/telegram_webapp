@@ -143,14 +143,16 @@
 
         html += `
           <div class="sm-event" data-status="${dataStatus}">
-            <div class="sm-event-meta">
-              <span class="sm-event-league">${league}</span>
-              <span class="sm-event-time">${displayTime}</span>
-            </div>
-            <div class="sm-event-matchup">
-              <div class="sm-event-team">${logoTag(awayId, 'away')}${away}</div>
-              <div class="sm-event-vs">${scoreStr}</div>
-              <div class="sm-event-team">${home}${logoTag(homeId, 'home')}</div>
+            <div style="cursor:pointer;" onclick="SoccerMatchDetails.open('${m.id}','${home}','${away}')">
+              <div class="sm-event-meta">
+                <span class="sm-event-league">${league}</span>
+                <span class="sm-event-time">${displayTime}</span>
+              </div>
+              <div class="sm-event-matchup">
+                <div class="sm-event-team">${logoTag(awayId, 'away')}${away}</div>
+                <div class="sm-event-vs">${scoreStr}</div>
+                <div class="sm-event-team">${home}${logoTag(homeId, 'home')}</div>
+              </div>
             </div>
             ${showOdds && !isFinish ? `
             <div class="sm-odds">
@@ -277,8 +279,172 @@
     }
   };
 
+  // ── Match Details Logic ────────────────────────────────────────────────────
+  const SoccerMatchDetails = {
+    currentMatchId: null,
+    currentTab: 'h2h',
+
+    open(matchId, home, away) {
+      if (!matchId || matchId.includes('_')) {
+        SoccerAPI.showToast('Detalles no disponibles para este evento.', 'error');
+        return;
+      }
+      this.currentMatchId = matchId;
+      document.getElementById('md-title').textContent = `${home} vs ${away}`;
+      document.getElementById('match-details-overlay').classList.add('open');
+      document.getElementById('match-details-modal').classList.add('open');
+      
+      const fab = document.getElementById('my-bets-fab');
+      if (fab) fab.style.display = 'none';
+
+      this.switchTab('h2h');
+    },
+
+    close() {
+      document.getElementById('match-details-overlay').classList.remove('open');
+      document.getElementById('match-details-modal').classList.remove('open');
+      this.currentMatchId = null;
+      
+      const modal = document.getElementById('betslip');
+      if (!modal || !modal.classList.contains('open')) {
+        const fab = document.getElementById('my-bets-fab');
+        if (fab) fab.style.display = '';
+      }
+    },
+
+    switchTab(tab) {
+      this.currentTab = tab;
+      document.querySelectorAll('.sm-details-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      this.loadData();
+    },
+
+    async loadData() {
+      const body = document.getElementById('match-details-body');
+      body.innerHTML = `
+        <div style="padding:30px; text-align:center; color:rgba(255,255,255,.3);">
+          <div style="font-size:1.5rem;margin-bottom:10px;">⏳</div>Cargando datos...
+        </div>`;
+
+      try {
+        if (this.currentTab === 'h2h') {
+          const res = await SoccerAPI.fetchProxy(`api/match/${this.currentMatchId}/h2h`);
+          this.renderH2H(res);
+        } else if (this.currentTab === 'stats') {
+          const res = await SoccerAPI.fetchProxy(`api/match/${this.currentMatchId}/statistics`);
+          this.renderStats(res);
+        } else if (this.currentTab === 'lineups') {
+          const res = await SoccerAPI.fetchProxy(`api/match/${this.currentMatchId}/lineups`);
+          this.renderLineups(res);
+        }
+      } catch (err) {
+        body.innerHTML = `<div class="sm-empty"><div class="sm-empty-icon">⚠️</div><p>No se pudieron cargar los datos.</p></div>`;
+      }
+    },
+
+    renderH2H(data) {
+      const body = document.getElementById('match-details-body');
+      if (!data || !data.teamDuel || !data.managerDuel) {
+        body.innerHTML = `<div class="sm-empty"><div class="sm-empty-icon">📊</div><p>No hay datos H2H disponibles para este partido.</p></div>`;
+        return;
+      }
+      
+      const duel = data.teamDuel || {};
+      const homeWins = duel.homeWins || 0;
+      const awayWins = duel.awayWins || 0;
+      const draws = duel.draws || 0;
+      
+      body.innerHTML = `
+        <div class="h2h-summary">
+          <div class="h2h-box"><h4>${homeWins}</h4><p>Victorias Local</p></div>
+          <div class="h2h-box"><h4>${draws}</h4><p>Empates</p></div>
+          <div class="h2h-box"><h4>${awayWins}</h4><p>Victorias Visita</p></div>
+        </div>
+        <p style="text-align:center;font-size:0.75rem;color:rgba(255,255,255,0.4);">Basado en enfrentamientos directos previos.</p>
+      `;
+    },
+
+    renderStats(data) {
+      const body = document.getElementById('match-details-body');
+      if (!data || !data.statistics || data.statistics.length === 0) {
+        body.innerHTML = `<div class="sm-empty"><div class="sm-empty-icon">📈</div><p>Las estadísticas del partido aún no están disponibles.</p></div>`;
+        return;
+      }
+      
+      // Usually statistics[0] is for the whole match (period "ALL")
+      const period = data.statistics[0] || {};
+      const groups = period.groups || [];
+      
+      let html = '';
+      groups.forEach(g => {
+        html += `<h4 style="font-size:0.8rem; color:var(--sport-clr); margin: 16px 0 8px; font-family:'Orbitron',monospace;">${g.groupName}</h4>`;
+        g.statisticsItems.forEach(item => {
+          const homeVal = parseFloat(item.home) || 0;
+          const awayVal = parseFloat(item.away) || 0;
+          const total = homeVal + awayVal || 1; 
+          const homePct = (homeVal / total) * 100;
+          const awayPct = (awayVal / total) * 100;
+
+          html += `
+            <div class="stat-name">${item.name}</div>
+            <div class="stat-row">
+              <div class="stat-val">${item.home}</div>
+              <div class="stat-bar-container">
+                <div class="stat-bar-fill-home" style="width: ${homePct}%"></div>
+                <div class="stat-bar-fill-away" style="width: ${awayPct}%"></div>
+              </div>
+              <div class="stat-val">${item.away}</div>
+            </div>`;
+        });
+      });
+      
+      body.innerHTML = html;
+    },
+
+    renderLineups(data) {
+      const body = document.getElementById('match-details-body');
+      if (!data || !data.home || !data.away) {
+        body.innerHTML = `<div class="sm-empty"><div class="sm-empty-icon">👕</div><p>Las alineaciones aún no están confirmadas para este partido.</p></div>`;
+        return;
+      }
+
+      const homeFormation = data.home.formation || 'Formación Local';
+      const awayFormation = data.away.formation || 'Formación Visita';
+
+      const renderTeamList = (teamData) => {
+        let listHTML = '';
+        const players = teamData.players || [];
+        players.forEach(p => {
+          const jersey = p.shirtNumber ? `<strong style="color:var(--sport-clr);margin-right:8px;">${p.shirtNumber}</strong>` : '';
+          const name = p.player?.shortName || p.player?.name || 'Jugador';
+          const pos = p.position ? `<span style="float:right;font-size:0.6rem;color:rgba(255,255,255,.4);">${p.position}</span>` : '';
+          listHTML += `<div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size:0.75rem;">${jersey}${name}${pos}</div>`;
+        });
+        return listHTML;
+      };
+
+      body.innerHTML = `
+        <div style="display:flex; gap:16px;">
+          <div style="flex:1;">
+            <h4 style="font-size:0.7rem; color:var(--sport-clr); text-align:center; border-bottom:2px solid var(--sport-clr); padding-bottom:6px; margin-bottom:8px;">
+              Local<br><span style="font-size:0.6rem;color:rgba(255,255,255,.5);">${homeFormation}</span>
+            </h4>
+            ${renderTeamList(data.home)}
+          </div>
+          <div style="flex:1;">
+            <h4 style="font-size:0.7rem; color:#fff; text-align:center; border-bottom:2px solid #fff; padding-bottom:6px; margin-bottom:8px;">
+              Visita<br><span style="font-size:0.6rem;color:rgba(255,255,255,.5);">${awayFormation}</span>
+            </h4>
+            ${renderTeamList(data.away)}
+          </div>
+        </div>
+      `;
+    }
+  };
+
   window.FootballAPI = SoccerAPI;
   window.SoccerAPI   = SoccerAPI;
+  window.SoccerMatchDetails = SoccerMatchDetails;
 
   document.addEventListener('DOMContentLoaded', () => {
     SoccerAPI.initFilters();

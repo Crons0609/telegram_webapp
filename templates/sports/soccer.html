@@ -241,6 +241,47 @@
     .sm-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .sm-toast.success { border-color: var(--sport-clr); color: var(--sport-clr); }
     .sm-toast.error { border-color: #ef4444; color: #ef4444; }
+
+    /* Match Details Modal */
+    .sm-details-overlay {
+      position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.7); backdrop-filter: blur(5px);
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    .sm-details-overlay.open { opacity: 1; pointer-events: all; }
+
+    .sm-details-modal {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
+      background: #0e1018; border-top: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px 20px 0 0; padding: 0 0 24px;
+      transform: translateY(100%); transition: transform .35s; max-height: 85vh; display: flex; flex-direction: column;
+    }
+    .sm-details-modal.open { transform: translateY(0); }
+    
+    .sm-details-handle { width: 40px; height: 4px; background: rgba(255,255,255,.15); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
+    .sm-details-header { padding: 16px 20px 12px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .sm-details-title { font-family: 'Orbitron', monospace; font-size: .85rem; font-weight: 700; }
+    .sm-details-close { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.08); border: none; color: #fff; font-size: 16px; cursor: pointer; }
+    
+    .sm-details-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
+    .sm-details-tab { flex: 1; text-align: center; padding: 12px 0; font-size: .75rem; font-weight: 700; color: rgba(255,255,255,.5); cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; }
+    .sm-details-tab.active { color: var(--sport-clr); border-bottom-color: var(--sport-clr); }
+
+    .sm-details-body { overflow-y: auto; padding: 16px; flex: 1; }
+    .sm-details-body::-webkit-scrollbar { width: 4px; }
+    .sm-details-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+    /* Stats & H2H Styles */
+    .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: .75rem; }
+    .stat-val { font-weight: 700; width: 40px; text-align: center; }
+    .stat-bar-container { flex: 1; height: 6px; background: rgba(255,255,255,.05); border-radius: 3px; margin: 0 12px; position: relative; overflow: hidden; }
+    .stat-bar-fill-home { position: absolute; left: 0; top: 0; bottom: 0; background: var(--sport-clr); border-radius: 3px 0 0 3px; }
+    .stat-bar-fill-away { position: absolute; right: 0; top: 0; bottom: 0; background: #fff; border-radius: 0 3px 3px 0; }
+    .stat-name { text-align: center; font-size: .65rem; color: rgba(255,255,255,.5); text-transform: uppercase; margin-bottom: 4px; }
+
+    .h2h-summary { display: flex; justify-content: space-around; background: rgba(255,255,255,.03); border-radius: 12px; padding: 16px; margin-bottom: 16px; text-align: center; }
+    .h2h-box h4 { margin: 0; font-size: 1.2rem; font-family: 'Orbitron', monospace; color: #fff; }
+    .h2h-box p { margin: 4px 0 0; font-size: .65rem; color: rgba(255,255,255,.4); text-transform: uppercase; }
+
   </style>
 </head>
 
@@ -299,6 +340,24 @@
 
   <!-- TOAST -->
   <div class="sm-toast" id="toast"></div>
+
+  <!-- MATCH DETAILS MODAL -->
+  <div class="sm-details-overlay" id="match-details-overlay" onclick="SoccerMatchDetails.close()"></div>
+  <div class="sm-details-modal" id="match-details-modal">
+    <div class="sm-details-handle"></div>
+    <div class="sm-details-header">
+      <span class="sm-details-title" id="md-title">Detalles del Partido</span>
+      <button class="sm-details-close" onclick="SoccerMatchDetails.close()">×</button>
+    </div>
+    <div class="sm-details-tabs">
+      <div class="sm-details-tab active" onclick="SoccerMatchDetails.switchTab('h2h')" id="tab-h2h">Cara a Cara</div>
+      <div class="sm-details-tab" onclick="SoccerMatchDetails.switchTab('stats')" id="tab-stats">Estadísticas</div>
+      <div class="sm-details-tab" onclick="SoccerMatchDetails.switchTab('lineups')" id="tab-lineups">Alineaciones</div>
+    </div>
+    <div class="sm-details-body" id="match-details-body">
+      <!-- Content populated by JS -->
+    </div>
+  </div>
 
   {% include 'user_profile_modal.html' ignore missing %}
 
