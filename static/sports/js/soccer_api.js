@@ -139,7 +139,7 @@
       if (matches.length === 0) { this.showEmpty(containerId, 'No hay eventos disponibles en este momento.'); return; }
 
       let html = '';
-      matches.slice(0, 15).forEach(m => {
+      matches.slice(0, 30).forEach(m => {
         const { home, away, homeId, awayId, league, scoreStr, displayTime, isLive, isFinish, statusT } = this._parse(m);
         const odds = this.generateOdds();
         const matchId = m.id || `${home}_${away}`;
@@ -179,26 +179,37 @@
     async loadNewsAndOdds() {
       const c = $('events-container');
       if (!c) return;
-      if (c.dataset.loaded === 'true') return;
+      // Allow re-load by not checking dataset.loaded here
       this.showLoader('events-container');
 
       try {
-        // 1. Try live matches across all sports
-        let data = await this.fetchProxy('api/matches/live');
-        let matches = Array.isArray(data?.events) ? data.events : [];
+        let matches = [];
 
-        // 2. If no live matches, fetch today's scheduled matches for top leagues
-        if (matches.length === 0) {
-          const today = new Date();
-          const d = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
-          data = await this.fetchProxy(`api/matches/${d}`);
-          matches = Array.isArray(data?.events) ? data.events : [];
+        // 1. Try live matches
+        let data = await this.fetchProxy('api/matches/live');
+        if (Array.isArray(data?.events)) matches = data.events;
+
+        // 2. Today's scheduled matches
+        const today = new Date();
+        const d = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+        data = await this.fetchProxy(`api/matches/${d}`);
+        if (Array.isArray(data?.events)) {
+          // Merge, avoiding duplicates by id
+          const ids = new Set(matches.map(m => m.id));
+          data.events.forEach(m => { if (!ids.has(m.id)) { matches.push(m); ids.add(m.id); } });
         }
 
-        // 3. Fallback: last matches from Premier League
-        if (matches.length === 0) {
-          data = await this.fetchProxy(`api/tournament/${LEAGUES[0].id}/season/${LEAGUES[0].seasonId}/matches/last/0`);
-          matches = Array.isArray(data?.events) ? data.events : [];
+        // 3. Fallback: last matches from all top leagues
+        if (matches.length < 5) {
+          const fetchResults = await Promise.allSettled(
+            LEAGUES.map(lg => this.fetchProxy(`api/tournament/${lg.id}/season/${lg.seasonId}/matches/last/0`))
+          );
+          const ids = new Set(matches.map(m => m.id));
+          fetchResults.forEach(r => {
+            if (r.status === 'fulfilled' && Array.isArray(r.value?.events)) {
+              r.value.events.forEach(m => { if (!ids.has(m.id)) { matches.push(m); ids.add(m.id); } });
+            }
+          });
         }
 
         if (matches.length === 0) {
@@ -208,7 +219,8 @@
 
         this._renderEvents(matches, 'events-container', true);
         const countEl = $('event-count');
-        if (countEl) countEl.innerText = `${Math.min(matches.length, 15)} eventos`;
+        const shown = Math.min(matches.length, 30);
+        if (countEl) countEl.innerText = `${shown} EVENTOS`;
 
       } catch(err) {
         console.warn('[FootAPI] loadNewsAndOdds error:', err);
