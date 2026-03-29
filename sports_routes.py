@@ -365,11 +365,10 @@ def get_bets(telegram_id):
     
     data = []
     for b in user_bets:
-        m = matches_db.get(b.get('match_id', ''), {})
-        t1, t2 = m.get('team1', 'Unknown'), m.get('team2', 'Unknown')
+        match_title = b.get('match_name', 'Unknown Match')
         pot_win = int(b.get('amount', 0) * b.get('odd', 1))
         data.append({
-            "match": f"{t1} vs {t2}",
+            "match": match_title,
             "choice": b.get('team_choice'),
             "amount": b.get('amount'),
             "odd": b.get('odd'),

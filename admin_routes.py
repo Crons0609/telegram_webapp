@@ -830,3 +830,89 @@ def api_save_loading_screen():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# ─── SPORTS BETTING RESOLUTION ──────────────────────────────────────────────────
+
+@admin_bp.route('/api/bets', methods=['GET'])
+@admin_required_api
+@role_required_api('superadmin', 'admin')
+def api_get_admin_bets():
+    try:
+        status_filter = request.args.get('status', 'all')
+        bets_db = database._to_dict(database.get_fb("sports_bets"))
+        
+        bets = []
+        for k, b in bets_db.items():
+            if status_filter != 'all' and b.get('status', 'pending') != status_filter:
+                continue
+                
+            telegram_id = b.get('telegram_id', 'Desconocido')
+            user_info = database.get_fb(f"usuarios/{telegram_id}") or {}
+            
+            bets.append({
+                'id': k,
+                'telegram_id': telegram_id,
+                'username': user_info.get('username', 'N/A'),
+                'match_name': b.get('match_name', 'Unknown Match'),
+                'team_choice': b.get('team_choice', ''),
+                'amount': b.get('amount', 0),
+                'odd': b.get('odd', 1.0),
+                'status': b.get('status', 'pending'),
+                'created_at': b.get('created_at', '')
+            })
+            
+        bets.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        return jsonify({'success': True, 'bets': bets})
+        
+    except Exception as e:
+        print(f"[Admin] Error fetching bets: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@admin_bp.route('/api/bets/<bet_id>/resolve', methods=['POST'])
+@admin_required_api
+@role_required_api('superadmin', 'admin')
+def api_resolve_bet(bet_id):
+    try:
+        data = request.get_json() or {}
+        winner_choice = data.get('winner_choice') # The choice the user bet on, e.g. "Real Madrid", "1", "Empate"
+        action = data.get('action') # 'settle', 'cancel'
+        
+        bet = database.get_fb(f"sports_bets/{bet_id}")
+        if not bet:
+            return jsonify({'success': False, 'message': 'Apuesta no encontrada.'}), 404
+            
+        if bet.get('status') != 'pending':
+            return jsonify({'success': False, 'message': 'Esta apuesta ya fue resuelta.'}), 400
+            
+        telegram_id = bet.get('telegram_id')
+        amount = float(bet.get('amount', 0))
+        odd = float(bet.get('odd', 1.0))
+        user_choice = bet.get('team_choice')
+        
+        if action == 'cancel':
+            database.recargar_bits(telegram_id, int(amount)) # Refund
+            database.patch_fb(f"sports_bets/{bet_id}", {"status": "cancelled"})
+            msg = f"Apuesta CANCELADA. Se han devuelto {amount} bits al jugador."
+            
+        elif action == 'settle':
+            if not winner_choice:
+                return jsonify({'success': False, 'message': 'Falta el equipo ganador real.'}), 400
+            
+            if str(user_choice).lower().strip() == str(winner_choice).lower().strip():
+                # User Won
+                winnings = int(amount * odd)
+                database.recargar_bits(telegram_id, winnings)
+                database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
+                msg = f"Apuesta marcada como GANADA. Pagados {winnings} bits."
+            else:
+                # User Lost
+                database.patch_fb(f"sports_bets/{bet_id}", {"status": "lost"})
+                msg = "Apuesta marcada como PERDIDA."
+        else:
+            return jsonify({'success': False, 'message': 'Acción inválida.'}), 400
+            
+        return jsonify({'success': True, 'message': msg})
+        
+    except Exception as e:
+        print(f"[Admin] Error resolving bet: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+

@@ -160,6 +160,7 @@ function refreshCurrentView() {
         case 'mensajes': loadMessages(); break;
         case 'transactions': loadTransactions(); break;
         case 'withdrawals': loadWithdrawals('all'); break;
+        case 'bets': loadAdminBets('pending'); break;
         case 'marketing': loadMarketingStatus(); break;
         case 'loading': loadLoadingConfig(); break;
     }
@@ -197,6 +198,7 @@ function switchView(viewName) {
         'mensajes': 'Mensajes a Jugadores',
         'transactions': 'Historial de Transacciones',
         'withdrawals': 'Gestión de Retiros 💸',
+        'bets': 'Apuestas Deportivas ⚽',
         'marketing': 'Marketing Automatizado',
         'loading': 'Pantalla de Carga 🌀'
     };
@@ -213,12 +215,104 @@ function switchView(viewName) {
         case 'mensajes': loadMessages(); break;
         case 'transactions': loadTransactions(); break;
         case 'withdrawals': loadWithdrawals('all'); break;
+        case 'bets': loadAdminBets('pending'); break;
         case 'marketing': loadMarketingStatus(); break;
         case 'loading': loadLoadingConfig(); break;
     }
 }
 
 // --- API FETCHERS ---
+
+// SPORTS BETS
+async function loadAdminBets(status = 'all') {
+    const container = document.getElementById('adminBetsList');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Cargando apuestas...</div>';
+
+    try {
+        const res = await fetch(`/admin/api/bets?status=${status}`);
+        const data = await res.json();
+        if (data.success) {
+            if (!data.bets || data.bets.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">No hay apuestas con este estado.</div>';
+                return;
+            }
+
+            let html = '';
+            data.bets.forEach(b => {
+                const date = new Date(b.created_at).toLocaleString();
+                const potWin = (b.amount * b.odd).toLocaleString();
+                
+                let badgeColor = '#6b7280';
+                if (b.status === 'won') badgeColor = '#10b981';
+                if (b.status === 'lost') badgeColor = '#ef4444';
+                if (b.status === 'pending') badgeColor = '#f59e0b';
+                
+                let actions = '';
+                if (b.status === 'pending') {
+                    actions = `
+                        <div style="margin-top:12px; display:flex; gap:8px;">
+                            <button onclick="resolveBet('${b.id}', 'settle')" class="btn-primary" style="padding:6px 12px; font-size:0.75rem;"><i class="fas fa-gavel"></i> Dar Resultado</button>
+                            <button onclick="resolveBet('${b.id}', 'cancel')" class="btn-secondary" style="padding:6px 12px; font-size:0.75rem; background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3);"><i class="fas fa-ban"></i> Anular (Reembolso)</button>
+                        </div>
+                    `;
+                }
+
+                html += `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong style="color:var(--text-main); font-size:1.1rem;">${b.match_name}</strong>
+                        <span style="background:${badgeColor}20; color:${badgeColor}; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:700;">${b.status.toUpperCase()}</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.85rem; color:var(--text-muted);">
+                        <div>Jugador: <span style="color:#fff;">${b.username}</span></div>
+                        <div>Monto: <span style="color:var(--primary); font-weight:bold;">${b.amount.toLocaleString()} bits</span></div>
+                        <div>Eligió: <span style="color:#fff;">${b.team_choice}</span></div>
+                        <div>Cuota: <span style="color:#fff;">${b.odd}x</span></div>
+                        <div>Posible Ganancia: <span style="color:var(--success);">${potWin} bits</span></div>
+                        <div>Fecha: <span>${date}</span></div>
+                    </div>
+                    ${actions}
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--danger);">${data.message}</div>`;
+        }
+    } catch (err) {
+        container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--danger);">Error de conexión</div>';
+    }
+}
+
+window.resolveBet = async function(betId, action) {
+    let payload = { action };
+    
+    if (action === 'settle') {
+        const winner = prompt("Escriba EXACTAMENTE el equipo que ganó, o escriba 'Empate'.\\n(Si el jugador eligió esto, ganará; si no, perderá):");
+        if (!winner) return;
+        payload.winner_choice = winner;
+    } else {
+        if (!confirm("¿Está seguro de anular esta apuesta y devolver los bits al jugador?")) return;
+    }
+
+    try {
+        const res = await fetch(`/admin/api/bets/${betId}/resolve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            loadAdminBets('pending');
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch (err) {
+        showToast("Error de conexión", 'error');
+    }
+};
 
 // TRANSACTIONS
 async function loadTransactions() {

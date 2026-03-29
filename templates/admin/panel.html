@@ -96,6 +96,9 @@
             <a href="#" class="nav-item" data-view="players">
                 <i class="fas fa-users"></i> <span>Players</span>
             </a>
+            <a href="#" class="nav-item" data-view="bets">
+                <i class="fas fa-ticket"></i> <span>Apuestas Deportivas</span>
+            </a>
             <a href="#" class="nav-item" data-view="transactions">
                 <i class="fas fa-exchange-alt"></i> <span>Transacciones</span>
             </a>
@@ -197,6 +200,23 @@
                                 <canvas id="mainChart"></canvas>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── VIEW: APUESTAS DEPORTIVAS ── -->
+            <section id="view-bets" class="view-section">
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                    <h2 style="font-size:1.3rem; font-weight:700;"><i class="fas fa-ticket" style="color:var(--primary)"></i> Liquidación de Apuestas</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.3);" onclick="loadAdminBets('pending')"><i class="fas fa-clock"></i> Pendientes</button>
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3);" onclick="loadAdminBets('won')"><i class="fas fa-check"></i> Ganadas</button>
+                        <button class="btn-secondary" style="font-size:0.82rem; padding:8px 14px; background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3);" onclick="loadAdminBets('lost')"><i class="fas fa-times"></i> Perdidas</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div id="adminBetsList">
+                        <div style="text-align:center; padding:2rem; color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Cargando apuestas...</div>
                     </div>
                 </div>
             </section>
