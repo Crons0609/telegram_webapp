@@ -21,7 +21,7 @@
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function fmtDate(d) {
-    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
   }
 
   function teamLogo(teamId) {
@@ -333,9 +333,6 @@
         } else if (this.currentTab === 'stats') {
           const res = await SoccerAPI.fetchProxy(`api/match/${this.currentMatchId}/statistics`);
           this.renderStats(res);
-        } else if (this.currentTab === 'lineups') {
-          const res = await SoccerAPI.fetchProxy(`api/match/${this.currentMatchId}/lineups`);
-          this.renderLineups(res);
         }
       } catch (err) {
         body.innerHTML = `<div class="sm-empty"><div class="sm-empty-icon">⚠️</div><p>No se pudieron cargar los datos.</p></div>`;
@@ -399,46 +396,6 @@
       });
       
       body.innerHTML = html;
-    },
-
-    renderLineups(data) {
-      const body = document.getElementById('match-details-body');
-      if (!data || !data.home || !data.away) {
-        body.innerHTML = `<div class="sm-empty"><div class="sm-empty-icon">👕</div><p>Las alineaciones aún no están confirmadas para este partido.</p></div>`;
-        return;
-      }
-
-      const homeFormation = data.home.formation || 'Formación Local';
-      const awayFormation = data.away.formation || 'Formación Visita';
-
-      const renderTeamList = (teamData) => {
-        let listHTML = '';
-        const players = teamData.players || [];
-        players.forEach(p => {
-          const jersey = p.shirtNumber ? `<strong style="color:var(--sport-clr);margin-right:8px;">${p.shirtNumber}</strong>` : '';
-          const name = p.player?.shortName || p.player?.name || 'Jugador';
-          const pos = p.position ? `<span style="float:right;font-size:0.6rem;color:rgba(255,255,255,.4);">${p.position}</span>` : '';
-          listHTML += `<div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size:0.75rem;">${jersey}${name}${pos}</div>`;
-        });
-        return listHTML;
-      };
-
-      body.innerHTML = `
-        <div style="display:flex; gap:16px;">
-          <div style="flex:1;">
-            <h4 style="font-size:0.7rem; color:var(--sport-clr); text-align:center; border-bottom:2px solid var(--sport-clr); padding-bottom:6px; margin-bottom:8px;">
-              Local<br><span style="font-size:0.6rem;color:rgba(255,255,255,.5);">${homeFormation}</span>
-            </h4>
-            ${renderTeamList(data.home)}
-          </div>
-          <div style="flex:1;">
-            <h4 style="font-size:0.7rem; color:#fff; text-align:center; border-bottom:2px solid #fff; padding-bottom:6px; margin-bottom:8px;">
-              Visita<br><span style="font-size:0.6rem;color:rgba(255,255,255,.5);">${awayFormation}</span>
-            </h4>
-            ${renderTeamList(data.away)}
-          </div>
-        </div>
-      `;
     }
   };
 
