@@ -135,19 +135,19 @@
         </div>`;
     },
 
-    // ── 1. MAIN VIEW: Current & upcoming GPs ─────────────
+    // ── 1. MAIN VIEW: Full season calendar ───────────────
     async loadEvents() {
       const c = $('events-container');
       if (!c) return;
       this.showLoader('events-container');
 
       try {
-        // Current GP first, then fallback to full season
-        let data = await this.fetchProxy('v2/grands-prix', { isCurrent: true });
+        // Always fetch full season so all GPs are visible
+        let data = await this.fetchProxy('v2/grands-prix', { season: SEASON, pageSize: 30 });
         let items = data?.items || [];
 
         if (items.length === 0) {
-          data = await this.fetchProxy('v2/grands-prix', { season: SEASON, pageSize: 10 });
+          data = await this.fetchProxy('v2/grands-prix', { season: SEASON - 1, pageSize: 30 });
           items = data?.items || [];
         }
 
@@ -210,7 +210,7 @@
       }
     },
 
-    // ── 2. DRIVER STANDINGS (from Standings endpoint) ────
+    // ── 2 & 3: Removed (API endpoints deprecated by provider) ──
     async loadStandings() {
       const c = $('fb-standings-body');
       if (!c) return;

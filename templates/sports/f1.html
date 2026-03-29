@@ -237,11 +237,9 @@
     <p class="sm-hero-sub">Calendario, resultados y clasificación mundial</p>
   </header>
 
-  <!-- TABS -->
+  <!-- TABS: only the working calendar tab remains -->
   <div class="f1-tabs">
     <button class="f1-tab active" onclick="switchTab('calendar')">📅 Calendario</button>
-    <button class="f1-tab" onclick="switchTab('standings')">🏆 Clasificación</button>
-    <button class="f1-tab" onclick="switchTab('drivers')">👤 Pilotos</button>
   </div>
 
   <!-- FILTER BAR (calendar only) -->
@@ -264,35 +262,7 @@
     </div>
   </section>
 
-  <!-- STANDINGS PANEL -->
-  <section class="sm-section f1-panel" id="panel-standings">
-    <div class="sm-section-title"><span>🏆</span> Clasificación de Pilotos</div>
-    <table class="fb-table">
-      <thead>
-        <tr>
-          <th>Pos</th><th>Piloto</th><th>Escudería</th><th>Victorias</th><th>Pts</th>
-        </tr>
-      </thead>
-      <tbody id="fb-standings-body">
-        <tr><td colspan="5" style="text-align:center;padding:20px;color:rgba(255,255,255,.3);">Selecciona la pestaña para cargar.</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- DRIVERS SEARCH PANEL -->
-  <section class="sm-section f1-panel" id="panel-drivers">
-    <div class="sm-section-title"><span>👤</span> Buscar Piloto</div>
-    <div class="fb-search-bar">
-      <input class="fb-search-input" type="text" id="fb-search-input" placeholder="Ej: Verstappen, Hamilton…" onkeydown="if(event.key==='Enter') F1API.searchDrivers()">
-      <button class="fb-search-btn" onclick="F1API.searchDrivers()">🔍</button>
-    </div>
-    <div id="fb-players-container">
-      <div class="sm-empty">
-        <div class="sm-empty-icon">🔍</div>
-        <p>Escribe el nombre de un piloto y presiona buscar.</p>
-      </div>
-    </div>
-  </section>
+  <!-- STANDINGS & DRIVERS sections removed (Hyprace API endpoints deprecated) -->
 
   <!-- BET SLIP -->
   <div class="sm-betslip" id="betslip">
