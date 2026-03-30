@@ -222,7 +222,8 @@ const BetSlipAPI = {
           match_name: this.currentMatchName,
           team_choice: this.currentTeamChoice,
           odd: this.currentOdd,
-          amount: amount
+          amount: amount,
+          sport_source: window.SPORT_CONFIG?.source || 'soccer'
         })
       });
 

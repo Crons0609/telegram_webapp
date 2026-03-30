@@ -57,6 +57,8 @@ try:
 except Exception:
     CRON_SECRET = "zonajackpot777_cron_2026"
 
+import sports_resolver
+
 
 @app.before_request
 def make_session_permanent():
@@ -1403,6 +1405,14 @@ def cron_marketing():
     """
     provided_key = request.args.get("key", "")
     result = marketing_service.check_and_trigger(CRON_SECRET, provided_key)
+    
+    # También aprovechamos el hook del cron para revisar las apuestas automáticas en background
+    if provided_key == CRON_SECRET:
+        import threading
+        # Lanzar la revisión automática de apuestas en un hilo secundario
+        resolver_thread = threading.Thread(target=sports_resolver.run_resolver, daemon=True)
+        resolver_thread.start()
+        
     return jsonify(result)
 
 

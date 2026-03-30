@@ -899,7 +899,7 @@ def api_resolve_bet(bet_id):
             
             if str(user_choice).lower().strip() == str(winner_choice).lower().strip():
                 # User Won
-                winnings = int(amount * odd)
+                winnings = int(amount * 1.75)
                 database.recargar_bits(telegram_id, winnings)
                 database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
                 msg = f"Apuesta marcada como GANADA. Pagados {winnings} bits."

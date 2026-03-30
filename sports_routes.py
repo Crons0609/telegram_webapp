@@ -311,6 +311,7 @@ def place_bet():
     team_choice = data.get('team_choice')  # '1', '2', 'X' or specific team name
     amount = data.get('amount')
     odd = data.get('odd')
+    sport_source = data.get('sport_source', 'soccer')
 
     if not all([telegram_id, match_id, match_name, team_choice, amount, odd]):
         return jsonify({"success": False, "error": "Datos de apuesta incompletos"}), 400
@@ -330,7 +331,7 @@ def place_bet():
         return jsonify({"success": False, "error": "Saldo insuficiente"}), 400
 
     try:
-        odd = float(odd)
+        odd = 1.75 # Ganancia fija del 75%
     except:
         return jsonify({"success": False, "error": "Cuota (Odd) inválida"}), 400
 
@@ -346,6 +347,7 @@ def place_bet():
         "team_choice": team_choice,
         "amount": amount,
         "odd": odd,
+        "sport_source": sport_source,
         "status": "pending",
         "created_at": datetime.utcnow().isoformat()
     }
@@ -366,12 +368,13 @@ def get_bets(telegram_id):
     data = []
     for b in user_bets:
         match_title = b.get('match_name', 'Unknown Match')
-        pot_win = int(b.get('amount', 0) * b.get('odd', 1))
+        # Fix display of potential win to 1.75 directly to ensure consistency
+        pot_win = int(b.get('amount', 0) * 1.75) 
         data.append({
             "match": match_title,
             "choice": b.get('team_choice'),
             "amount": b.get('amount'),
-            "odd": b.get('odd'),
+            "odd": 1.75,
             "potential_win": pot_win,
             "status": b.get('status', 'pending'),
             "date": b.get('created_at')
