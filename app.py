@@ -1438,6 +1438,22 @@ def admin_marketing_send_now():
 
 
 # =====================================================
+# BACKGROUND AUTOSWEEPER (SPORTS)
+# =====================================================
+def auto_sweep_loop():
+    while True:
+        try:
+            import sports_resolver
+            sports_resolver.run_resolver()
+        except Exception as e:
+            print(f"[AutoSweep] Error: {e}")
+        time.sleep(300) # Revisa cada 5 minutos
+
+# Lanzar el hilo al iniciar la app
+sweep_thread = threading.Thread(target=auto_sweep_loop, daemon=True)
+sweep_thread.start()
+
+# =====================================================
 # MAIN
 # =====================================================
 if __name__ == "__main__":

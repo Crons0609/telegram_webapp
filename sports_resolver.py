@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timezone
 import database
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Fallback basic credentials like in sports_routes.py
