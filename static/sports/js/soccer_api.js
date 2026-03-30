@@ -156,14 +156,14 @@
             </div>
             ${showOdds && !isFinish ? `
             <div class="sm-odds">
-              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${away}','${home} vs ${away}',${odds['2']})">
-                <span class="sm-odd-label">VISITA</span><span class="sm-odd-value">${odds['2']}</span>
+              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${away}','${home} vs ${away}',1.75)">
+                <span class="sm-odd-label">VISITA</span><span class="sm-odd-value">1.75</span>
               </button>
-              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','Empate','${home} vs ${away}',${odds['X']})">
-                <span class="sm-odd-label">EMPATE</span><span class="sm-odd-value">${odds['X']}</span>
+              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','Empate','${home} vs ${away}',2.00)">
+                <span class="sm-odd-label">EMPATE</span><span class="sm-odd-value">2.00</span>
               </button>
-              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${home}','${home} vs ${away}',${odds['1']})">
-                <span class="sm-odd-label">LOCAL</span><span class="sm-odd-value">${odds['1']}</span>
+              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${home}','${home} vs ${away}',1.75)">
+                <span class="sm-odd-label">LOCAL</span><span class="sm-odd-value">1.75</span>
               </button>
             </div>` : ''}
           </div>`;

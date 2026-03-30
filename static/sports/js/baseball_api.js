@@ -143,13 +143,13 @@
               </div>
               ${!isFinished ? `
               <div class="sm-odds">
-                <button class="sm-odd-btn" onclick="openBetSlip('${matchId}', '${away}', '${away} vs ${home}', ${odds['2']})">
+                <button class="sm-odd-btn" onclick="openBetSlip('${matchId}', '${away}', '${away} vs ${home}', 1.75)">
                   <span class="sm-odd-label">VISITA (${away})</span>
-                  <span class="sm-odd-value">${odds['2']}</span>
+                  <span class="sm-odd-value">1.75</span>
                 </button>
-                <button class="sm-odd-btn" onclick="openBetSlip('${matchId}', '${home}', '${away} vs ${home}', ${odds['1']})">
+                <button class="sm-odd-btn" onclick="openBetSlip('${matchId}', '${home}', '${away} vs ${home}', 1.75)">
                   <span class="sm-odd-label">LOCAL (${home})</span>
-                  <span class="sm-odd-value">${odds['1']}</span>
+                  <span class="sm-odd-value">1.75</span>
                 </button>
               </div>` : ''}
             </div>`;

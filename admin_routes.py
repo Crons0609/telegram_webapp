@@ -899,7 +899,9 @@ def api_resolve_bet(bet_id):
             
             if str(user_choice).lower().strip() == str(winner_choice).lower().strip():
                 # User Won
-                winnings = int(amount * 1.75)
+                is_draw = str(user_choice).lower().strip() in ['empate', 'draw', 'x']
+                actual_odd = 2.00 if is_draw else 1.75
+                winnings = int(amount * actual_odd)
                 database.recargar_bits(telegram_id, winnings)
                 database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
                 msg = f"Apuesta marcada como GANADA. Pagados {winnings} bits."

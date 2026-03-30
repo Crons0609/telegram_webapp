@@ -66,7 +66,9 @@ def resolve_soccer_match(match_id, bet_id, bet_data):
         
         # Validamos si ganó
         if user_choice == winner_choice or (user_choice in winner_choice) or (winner_choice in user_choice):
-            winnings = int(amount * 1.75)
+            is_draw = user_choice in ['empate', 'draw', 'x']
+            actual_odd = 2.00 if is_draw else 1.75
+            winnings = int(amount * actual_odd)
             database.recargar_bits(telegram_id, winnings)
             database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
             try:
