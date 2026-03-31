@@ -31,3 +31,13 @@ CRON_SECRET = os.getenv("CRON_SECRET", "zonajackpot777_cron_2026")
 # RapidAPI (Deportes)
 RAPIDAPI_FOOTBALL_KEY  = os.getenv("RAPIDAPI_FOOTBALL_KEY", "")
 RAPIDAPI_FOOTBALL_HOST = os.getenv("RAPIDAPI_FOOTBALL_HOST", "footapi7.p.rapidapi.com")
+
+# Fallback para el resto de deportes usando la misma key por defecto
+RAPIDAPI_MLB_KEY  = os.getenv("RAPIDAPI_MLB_KEY", RAPIDAPI_FOOTBALL_KEY)
+RAPIDAPI_MLB_HOST = os.getenv("RAPIDAPI_MLB_HOST", "tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com")
+
+RAPIDAPI_NFL_KEY  = os.getenv("RAPIDAPI_NFL_KEY", RAPIDAPI_FOOTBALL_KEY)
+RAPIDAPI_NFL_HOST = os.getenv("RAPIDAPI_NFL_HOST", "nfl-api-data.p.rapidapi.com")
+
+RAPIDAPI_F1_KEY   = os.getenv("RAPIDAPI_F1_KEY", RAPIDAPI_FOOTBALL_KEY)
+RAPIDAPI_F1_HOST  = os.getenv("RAPIDAPI_F1_HOST", "hyprace-api.p.rapidapi.com")
