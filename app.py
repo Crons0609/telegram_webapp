@@ -143,23 +143,27 @@ def register():
 
     database.agregar_usuario(telegram_id, nombre, username, photo_url)
 
-    # Guardamos el usuario en la sesión
-    session["telegram_id"] = telegram_id
-    session["nombre"] = nombre
-    session["username"] = username
-    session["photo_url"] = photo_url
-
     # Recuperar datos actuales para devolver al cliente
     perfil = database.obtener_perfil_completo(telegram_id)
     bits_actuales = perfil.get('bits', 0) if perfil else 0
     nivel_actual = perfil.get('nivel', 1) if perfil else 1
     xp_actual = perfil.get('xp', 0) if perfil else 0
 
+    # Usar el nombre real de Firebase (puede ser personalizado), no el de Telegram
+    nombre_real = perfil.get('nombre', nombre) if perfil else nombre
+
+    # Guardamos el usuario en la sesión con el nombre correcto
+    session["telegram_id"] = telegram_id
+    session["nombre"] = nombre_real
+    session["username"] = username
+    session["photo_url"] = photo_url
+
     return jsonify({
         "status": "ok", 
         "bits": bits_actuales,
         "nivel": nivel_actual,
         "xp": xp_actual,
+        "nombre": nombre_real,
         "profile": perfil
     })
 
@@ -824,11 +828,31 @@ def update_profile_name():
     
     if len(new_name) < 3 or len(new_name) > 20:
         return jsonify({"status": "error", "message": "El nombre debe tener entre 3 y 20 caracteres."}), 400
+    
+    telegram_id = session["telegram_id"]
+    NAME_CHANGE_COST = 1000  # Bits reales a cobrar
+    
+    # Verificar saldo suficiente
+    bits_actuales = database.obtener_bits(telegram_id, is_demo=False)
+    if bits_actuales < NAME_CHANGE_COST:
+        return jsonify({
+            "status": "error",
+            "message": f"Necesitas {NAME_CHANGE_COST:,} bits reales para cambiar tu nombre. Tienes {bits_actuales:,}."
+        }), 400
+    
+    # Descontar bits antes de cambiar el nombre
+    if not database.descontar_bits(telegram_id, NAME_CHANGE_COST, is_demo=False):
+        return jsonify({"status": "error", "message": "Error al procesar el pago."}), 500
         
-    if database.actualizar_nombre_usuario(session["telegram_id"], new_name):
+    if database.actualizar_nombre_usuario(telegram_id, new_name):
         session["nombre"] = new_name
-        return jsonify({"status": "ok", "name": new_name})
+        nuevo_balance = database.obtener_bits(telegram_id, is_demo=False)
+        return jsonify({"status": "ok", "name": new_name, "bits": nuevo_balance})
+    
+    # Si falla el cambio de nombre, reembolsar
+    database.recargar_bits(telegram_id, NAME_CHANGE_COST)
     return jsonify({"status": "error", "message": "Error al actualizar el nombre (quizá ya exista o sea inválido)."}), 400
+
 
 @app.route('/api/profile/daily_reward', methods=["POST"])
 def claim_daily_reward():
@@ -858,15 +882,16 @@ def claim_daily_reward():
     else:
         racha = 1
         
-    # Reward calculation: 100 base + 50 for every streak day (max 500 bits per day)
-    reward_bits = min(100 + (racha - 1) * 50, 500)
+    # Recompensa diaria fija: 100 bits demo
+    reward_bits = 100
     
-    if database.reclamar_recompensa_diaria(telegram_id, hoy_str, reward_bits, racha):
+    if database.reclamar_recompensa_diaria(telegram_id, hoy_str, reward_bits, racha, is_demo=True):
         return jsonify({
             "status": "ok",
             "reward": reward_bits,
             "streak": racha,
-            "bits_actuales": database.obtener_bits(telegram_id)
+            "bits_actuales": database.obtener_bits(telegram_id, is_demo=True),
+            "is_demo": True
         })
     return jsonify({"status": "error", "message": "Error procesando la recompensa."}), 500
 

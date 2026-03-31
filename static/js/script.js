@@ -54,9 +54,8 @@
             });
           }).catch(err => console.error("Error guardando en Firebase:", err));
         } else {
-          // Actualizar nombre o foto si ya existe
+          // Actualizar solo username y photo_url — NO el nombre (puede ser personalizado)
           userRef.update({
-            nombre: user.first_name,
             username: user.username || "",
             photo_url: user.photo_url || ""
           });
@@ -113,10 +112,10 @@
           bitsDisplay.textContent = data.bits;
         }
         
-        // Actualizar NOMBRE si estaba vacío
+        // Actualizar NOMBRE si estaba vacío — usar el nombre real del servidor (puede ser personalizado)
         const nameDisplay = document.querySelector(".header-user .user-info h3, .user-info h3");
         if (nameDisplay && nameDisplay.textContent.trim() === "") {
-          nameDisplay.textContent = user.first_name;
+          nameDisplay.textContent = data.nombre || data.profile?.nombre || user.first_name;
         }
 
         // Emitir un evento custom por si algun otro script (ej: user_profile_manager.js) necesita reconectarse

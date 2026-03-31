@@ -375,7 +375,7 @@ window.UserProfileManager = {
                         <input type="text" id="profile-edit-name" class="form-control" value="${p.nombre}" maxlength="20" style="flex:1;">
                         <button class="btn-secondary" onclick="UserProfileManager.updateName()">Guardar</button>
                     </div>
-                    <small style="color:#888; display:block; margin-bottom:20px;">Este nombre será visible para otros jugadores en las tablas de clasificación y salas online.</small>
+                    <small style="color:#888; display:block; margin-bottom:20px;">Este nombre será visible para otros jugadores en las tablas de clasificación y salas online. <span style="color:#f59e0b; font-weight:bold;">💰 Costo: 1,000 bits reales.</span></small>
                     
                     <h4 style="color:var(--gold-lt);margin-bottom:15px; border-bottom:1px solid rgba(255,215,0,0.2); padding-bottom:5px; margin-top:20px;">Acciones de Cuenta</h4>
                     <button class="btn-secondary" style="width:100%; border-color:#d32f2f; color:#ffeded; background:rgba(211,47,47,0.1);" onclick="window.Telegram?.WebApp?.close()">Cerrar Juego Totalmente</button>
@@ -466,7 +466,15 @@ window.UserProfileManager = {
             grid.innerHTML = '';
             items.forEach(item => {
                 const isBase = item.req === 1;
-                const isUnlocked = isBase || myUnlocks.some(u => u.type === typeKey && u.id === item.id);
+                // Para los marcos, el desbloqueo depende 100% del nivel del usuario
+                // Para los temas, dependemos de myUnlocks o del nivel
+                let isUnlocked = false;
+                if (typeKey === 'frame') {
+                    isUnlocked = this.currentProfile.nivel >= item.req;
+                } else {
+                    isUnlocked = isBase || myUnlocks.some(u => u.type === typeKey && u.id === item.id);
+                }
+                
                 const isEquipped = activeId === item.id;
                 const div = document.createElement('div');
                 div.className = `inventory-item${!isUnlocked?' locked':''}${isEquipped?' equipped':''}`;
@@ -480,7 +488,14 @@ window.UserProfileManager = {
                     ${isEquipped ? '<div class="item-equipped-badge">✓ Equipado</div>' : ''}
                     ${!isUnlocked ? '<div class="item-lock-icon">🔒</div>' : ''}
                 `;
-                if (isUnlocked && !isEquipped) div.onclick = () => this.equipItem(typeKey, item.id);
+                
+                // Solo los temas se pueden equipar manualmente. Los marcos son automáticos y fijos.
+                if (typeKey === 'theme' && isUnlocked && !isEquipped) {
+                    div.onclick = () => this.equipItem(typeKey, item.id);
+                } else if (typeKey === 'frame') {
+                    div.style.cursor = 'default';
+                }
+                
                 grid.appendChild(div);
             });
         };
@@ -668,6 +683,11 @@ window.UserProfileManager = {
         if (!input) return;
         const newName = input.value.trim();
         if (newName.length < 3 || newName.length > 20) { alert("El nombre debe tener entre 3 y 20 caracteres."); return; }
+        
+        // Confirmar el costo
+        const confirmed = confirm(`⚠️ Cambiar tu nombre público cuesta 1,000 bits reales.\n\n¿Deseas continuar?`);
+        if (!confirmed) return;
+        
         try {
             const res = await fetch('/api/profile/update_name', {
                 method:'POST', headers:{'Content-Type':'application/json'},
@@ -675,8 +695,13 @@ window.UserProfileManager = {
             });
             const data = await res.json();
             if (data.status==='ok') {
-                alert("Nombre actualizado correctamente");
+                alert(`✅ Nombre actualizado correctamente.\n💰 Se descontaron 1,000 bits reales.`);
                 this.currentProfile.nombre = data.name;
+                // Actualizar display de bits reales en la página
+                if (data.bits !== undefined) {
+                    const bitsEl = document.getElementById('global-bits-display');
+                    if (bitsEl) bitsEl.innerText = data.bits.toLocaleString();
+                }
                 const hn = document.querySelector('.elite-name');
                 if (hn) hn.innerText = data.name;
                 this.renderProfile();

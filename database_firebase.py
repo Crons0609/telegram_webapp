@@ -250,8 +250,9 @@ def agregar_usuario(telegram_id: str, nombre: str, username: Optional[str] = Non
         _asegurar_stats(telegram_id)
         return True
     else:
+        # Solo actualizamos username y photo_url desde Telegram, NO el nombre
+        # El nombre puede haber sido personalizado por el jugador (función de pago)
         patch_fb(f"usuarios/{telegram_id}", {
-            "nombre": nombre,
             "username": username or user.get("username", ""),
             "photo_url": photo_url or user.get("photo_url", "")
         })
@@ -419,13 +420,14 @@ def equipar_item(telegram_id: str, tipo_campo: str, item_id: str) -> bool:
     patch_fb(f"usuarios/{telegram_id}", {campos[tipo_campo]: item_id})
     return True
 
-def reclamar_recompensa_diaria(telegram_id: str, hoy_str: str, recompensa: int, racha: int) -> bool:
+def reclamar_recompensa_diaria(telegram_id: str, hoy_str: str, recompensa: int, racha: int, is_demo: bool = False) -> bool:
     telegram_id = str(telegram_id)
     u = get_fb(f"usuarios/{telegram_id}")
     if u:
-        new_bits = int(u.get('bits', 0)) + recompensa
+        campo = "bits_demo" if is_demo else "bits"
+        new_bits = int(u.get(campo, 0)) + recompensa
         patch_fb(f"usuarios/{telegram_id}", {
-            "bits": new_bits, "last_daily_reward": hoy_str, "daily_streak": racha
+            campo: new_bits, "last_daily_reward": hoy_str, "daily_streak": racha
         })
         return True
     return False

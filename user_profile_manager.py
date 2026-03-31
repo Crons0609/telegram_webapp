@@ -27,7 +27,8 @@ XP_REQUIREMENTS = [
     250000,  # Lv 22
     350000,  # Lv 23
     500000,  # Lv 24
-    1000000  # Lv 25 (Emperador)
+    1000000, # Lv 25
+    2500000  # Lv 26 (Emperador Supremo)
 ]
 
 RANK_NAMES = [
@@ -39,7 +40,8 @@ RANK_NAMES = [
     "Maestro del Azar",          # 16-18
     "Gran Maestro del Casino",   # 19-21
     "Leyenda Viva",              # 22-24
-    "Emperador del Casino"       # 25
+    "Emperador del Casino",      # 25
+    "Emperador Supremo"          # 26
 ]
 
 REWARDS = {
@@ -68,7 +70,8 @@ LEVEL_FRAME_MAP = [
     (18, 'diamond2'),
     (20, 'diamond3'),
     (22, 'legendary1'),
-    (25, 'legendary1'),
+    (24, 'legendary2'),
+    (26, 'legendary3'),
 ]
 
 def get_frame_for_level(level: int) -> str:
@@ -82,38 +85,42 @@ def get_frame_for_level(level: int) -> str:
 class UserProfileManager:
     @staticmethod
     def calculate_level(xp: int) -> int:
-        """Determines user level based on total XP (Max 25)"""
+        """Determines user level based on total XP (Max 26)"""
         for i, req in enumerate(XP_REQUIREMENTS):
             if xp < req:
                 return i
-        return 25
+        return 26
         
     @staticmethod
     def get_rank_info(level: int) -> dict:
         """Translates numerical level into categorical Rank names and badges"""
         if level <= 0: return {"name": "Desconocido", "sub": "", "icon": "❓"}
-        if level >= 25: return {"name": RANK_NAMES[8], "sub": "", "icon": "👑"}
+        if level >= 26: return {"name": RANK_NAMES[9], "sub": "", "icon": "👑"}
         
         # Every 3 levels corresponds to a new major category
         category_idx = (level - 1) // 3
         sub_idx = (level - 1) % 3
         sub_numerals = ["I", "II", "III"]
         
-        icons = ["🪨", "🔧", "⚔️", "💰", "🔥", "💎", "🐉", "🌌", "👑"]
+        icons = ["🪨", "🔧", "⚔️", "💰", "🔥", "💎", "🐉", "🌌", "👑", "🌟"]
         
+        # Handle cases where category index might exceed bounds gracefully (e.g. lvl 25)
+        if category_idx >= len(RANK_NAMES):
+            category_idx = len(RANK_NAMES) - 1
+            
         return {
             "name": RANK_NAMES[category_idx],
-            "sub": sub_numerals[sub_idx],
-            "full_name": f"{RANK_NAMES[category_idx]} {sub_numerals[sub_idx]}",
-            "icon": icons[category_idx]
+            "sub": sub_numerals[sub_idx] if category_idx < 8 else "",
+            "full_name": f"{RANK_NAMES[category_idx]} {sub_numerals[sub_idx]}" if category_idx < 8 else RANK_NAMES[category_idx],
+            "icon": icons[min(category_idx, len(icons)-1)]
         }
         
     @staticmethod
     def get_progress(xp: int) -> dict:
         """Returns XP progress towards the next level"""
         lvl = UserProfileManager.calculate_level(xp)
-        if lvl >= 25:
-            return {"current_xp": xp, "next_xp": xp, "percent": 100, "level": 25}
+        if lvl >= 26:
+            return {"current_xp": xp, "next_xp": xp, "percent": 100, "level": 26}
         
         base_xp = XP_REQUIREMENTS[lvl - 1] if lvl > 1 else 0
         target_xp = XP_REQUIREMENTS[lvl]
@@ -152,16 +159,18 @@ class UserProfileManager:
     @staticmethod
     def sync_rewards_for_level(telegram_id: str, current_level: int):
         """
-        Idempotently ensures all level rewards up to current_level are unlocked.
-        Safe to call on every profile load — INSERT OR IGNORE prevents duplicates.
+        Idempotently ensures all level rewards up to current_level are unlocked
+        AND the correct frame is equipped. Safe to call on every profile load.
         """
         for lvl in range(1, current_level + 1):
             if lvl in REWARDS:
                 for r_type, r_id in REWARDS[lvl]:
                     database.desbloquear_item(telegram_id, r_type, r_id)
-        # Also ensure the correct frame for the level is unlocked
+        # Ensure the correct frame for the current level is unlocked AND equipped
         correct_frame = get_frame_for_level(current_level)
         database.desbloquear_item(telegram_id, 'frame', correct_frame)
+        # Force-equip the frame that corresponds to the current level
+        database.actualizar_perfil(telegram_id, {'avatar_frame': correct_frame, 'marco_actual': correct_frame})
 
     @staticmethod
     def add_xp(telegram_id: str, event_type: str, custom_amount: int = 0) -> dict:
