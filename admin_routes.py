@@ -918,3 +918,174 @@ def api_resolve_bet(bet_id):
         print(f"[Admin] Error resolving bet: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# =====================================================================
+# GESTIÓN DE PARTIDOS PERSONALIZADOS
+# =====================================================================
+@admin_bp.route('/api/custom_matches', methods=['GET', 'POST'])
+@admin_required_api
+def handle_custom_matches():
+    if request.method == 'GET':
+        matches = database.get_fb('custom_matches') or {}
+        matches_list = []
+        for sport, sport_matches in matches.items():
+            if not isinstance(sport_matches, dict):
+                continue
+            for m_id, m_data in sport_matches.items():
+                if not m_data:
+                    continue
+                entry = dict(m_data)
+                entry['id'] = m_id
+                entry['sport'] = sport
+                matches_list.append(entry)
+        matches_list.sort(key=lambda x: str(x.get('date', '')), reverse=True)
+        return jsonify({'success': True, 'matches': matches_list})
+
+    elif request.method == 'POST':
+        data = request.json or {}
+        sport     = data.get('sport', 'soccer')
+        home      = (data.get('home_team') or '').strip()
+        away      = (data.get('away_team') or '').strip()
+        match_date = (data.get('date') or '').strip()
+        league    = (data.get('league') or 'Evento Especial').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not home or not away or not match_date:
+            return jsonify({'success': False, 'message': 'Faltan campos obligatorios (equipos y fecha)'}), 400
+            
+        import time
+        custom_id = f"custom_{int(time.time()*1000)}"
+        match_data = {
+            "home_team":   home,
+            "away_team":   away,
+            "date":        match_date,
+            "league":      league,
+            "description": description,
+            "sport":       sport,
+            "status":      "upcoming",
+            "score_home":  None,
+            "score_away":  None,
+            "created_at":  time.time(),
+            "name":        f"{home} vs {away}"
+        }
+        database.patch_fb(f"custom_matches/{sport}/{custom_id}", match_data)
+        return jsonify({'success': True, 'message': f'Partido "{home} vs {away}" creado en {sport}', 'id': custom_id})
+
+
+@admin_bp.route('/api/custom_matches/<sport>/<match_id>', methods=['DELETE'])
+@admin_required_api
+def delete_custom_match(sport, match_id):
+    try:
+        database.patch_fb(f"custom_matches/{sport}/{match_id}", None)
+        return jsonify({'success': True, 'message': 'Partido eliminado'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/api/custom_matches/resolve', methods=['POST'])
+@admin_required_api
+def resolve_custom_match():
+    data = request.json or {}
+    sport        = data.get('sport')
+    match_id     = data.get('match_id')
+    winner_choice = data.get('winner')   # 'home', 'away', or 'empate'
+    score_home   = data.get('score_home')  # Optional: numeric score
+    score_away   = data.get('score_away')  # Optional: numeric score
+    
+    if not sport or not match_id or not winner_choice:
+        return jsonify({'success': False, 'message': 'Faltan datos: sport, match_id y winner son requeridos'}), 400
+        
+    match_data = database.get_fb(f"custom_matches/{sport}/{match_id}")
+    if not match_data:
+        return jsonify({'success': False, 'message': 'Partido no encontrado'}), 404
+        
+    if match_data.get('status') in ('finished', 'resolved'):
+        return jsonify({'success': False, 'message': 'El partido ya fue resuelto anteriormente'}), 400
+    
+    home_team = match_data.get('home_team', '')
+    away_team = match_data.get('away_team', '')
+        
+    winner_str_compare = ""
+    if winner_choice == 'home':
+        winner_str_compare = home_team.lower().strip()
+    elif winner_choice == 'away':
+        winner_str_compare = away_team.lower().strip()
+    else:
+        winner_str_compare = "empate"
+    
+    import time as _time
+    # Build score display string
+    score_display = f"{score_home}-{score_away}" if score_home is not None and score_away is not None else None
+    
+    update_payload = {
+        "status":      "finished",
+        "winner":      winner_choice,
+        "resolved_at": _time.time()
+    }
+    if score_home is not None:
+        update_payload['score_home'] = score_home
+    if score_away is not None:
+        update_payload['score_away'] = score_away
+    if score_display:
+        update_payload['score_display'] = score_display
+        
+    database.patch_fb(f"custom_matches/{sport}/{match_id}", update_payload)
+    
+    bets = database.get_fb('sports_bets') or {}
+    resolved_count = 0
+    won_count = 0
+    lost_count = 0
+    
+    for bet_id, b in bets.items():
+        if not b:
+            continue
+        # Match by match_id OR by match_name containing both team names
+        bet_match_id = b.get('match_id', '')
+        bet_match_name = b.get('match_name', '').lower()
+        is_this_match = (bet_match_id == match_id) or (
+            home_team.lower() in bet_match_name and away_team.lower() in bet_match_name
+        )
+        
+        if is_this_match and b.get('status') == 'pending':
+            telegram_id = b.get('telegram_id')
+            amount      = float(b.get('amount', 0))
+            user_choice = str(b.get('team_choice', '')).lower().strip()
+            
+            user_won = (
+                user_choice == winner_str_compare or
+                (winner_str_compare and user_choice in winner_str_compare) or
+                (user_choice and winner_str_compare in user_choice)
+            )
+            
+            if user_won:
+                is_draw = user_choice in ['empate', 'draw', 'x']
+                actual_odd = 2.00 if is_draw else 1.75
+                winnings = int(amount * actual_odd)
+                
+                database.recargar_bits(telegram_id, winnings)
+                database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
+                score_info = f" (Resultado: {score_display})" if score_display else ""
+                try:
+                    database.notify_user(
+                        telegram_id,
+                        "✅ ¡Apuesta Ganada!",
+                        f"Tu apuesta en {home_team} vs {away_team} ganó{score_info}.\nCobraste {winnings:,} bits."
+                    )
+                except: pass
+                won_count += 1
+            else:
+                database.patch_fb(f"sports_bets/{bet_id}", {"status": "lost"})
+                try:
+                    database.notify_user(
+                        telegram_id,
+                        "❌ Apuesta Perdida",
+                        f"Perdiste tu apuesta de {int(amount):,} bits en {home_team} vs {away_team}."
+                    )
+                except: pass
+                lost_count += 1
+            resolved_count += 1
+    
+    score_msg = f" Marcador: {score_display}" if score_display else ""
+    return jsonify({
+        'success': True,
+        'message': f'Partido resuelto.{score_msg} Apuestas procesadas: {resolved_count} ({won_count} ganadas, {lost_count} perdidas).'
+    })

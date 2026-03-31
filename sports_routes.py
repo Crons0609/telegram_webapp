@@ -98,14 +98,110 @@ def sport_view(source):
 
 # Keep old futbol route as alias
 @sports_bp.route('/futbol')
-def futbol_view():
+def sport_futbol():
     return sport_view('soccer')
 
+# ── Duración por deporte (minutos hasta considerar partido finalizado) ─────────
+SPORT_DURATION_MINUTES = {
+    'soccer':  110,  # 90 min partido + 20 buffer
+    'nba':     150,  # 120 min + 30
+    'nfl':     210,  # 180 min + 30
+    'mlb':     210,  # 180 min + 30
+    'tennis':  180,  # 150 min + 30
+    'nhl':     120,  # 90 min + 30
+    'f1':      120,  # 90 min + 30
+    'rugby':   100,  # 80 min + 20
+    'golf':    420,  # 6 horas + 60 buffer
+}
 
+def _check_match_expired(sport, match_date_str, match_status):
+    """
+    Retorna True si el partido ya debería estar finalizado según la duración del deporte.
+    match_date_str: ISO string (ej: '2026-03-28T18:00')
+    """
+    if match_status in ('finished', 'resolved'):
+        return False  # Ya está marcado, no tocar
+    try:
+        duration_minutes = SPORT_DURATION_MINUTES.get(sport, 120)
+        match_dt = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
+        now_utc = datetime.utcnow().replace(tzinfo=None)
+        if match_dt.tzinfo is not None:
+            # Convert to naive UTC
+            import calendar
+            epoch = calendar.timegm(match_dt.utctimetuple())
+            match_dt = datetime.utcfromtimestamp(epoch)
+        elapsed_minutes = (now_utc - match_dt).total_seconds() / 60.0
+        return elapsed_minutes >= duration_minutes
+    except Exception as e:
+        logger.warning(f"[AutoExpire] parse error for date '{match_date_str}': {e}")
+        return False
+
+# ── API CUSTOM MATCHES ───────────────────────────────────────────
+@sports_bp.route('/api/custom_matches/<sport>', methods=['GET'])
+def get_custom_matches(sport):
+    customs = database.get_fb('custom_matches') or {}
+    sport_customs = customs.get(sport, {})
+    
+    show_finished = request.args.get('include_finished', 'false').lower() == 'true'
+    
+    results = []
+    for m_id, m_data in sport_customs.items():
+        if not m_data:
+            continue
+        
+        current_status = m_data.get('status', 'upcoming')
+        match_date = m_data.get('date', '')
+        
+        # Auto-expiración: si el tiempo ha pasado, marcar como finished
+        if current_status == 'upcoming' and match_date:
+            if _check_match_expired(sport, match_date, current_status):
+                # Actualizar en Firebase
+                database.patch_fb(f"custom_matches/{sport}/{m_id}", {"status": "finished"})
+                m_data['status'] = 'finished'
+                current_status = 'finished'
+                logger.info(f"[AutoExpire] Partido {m_id} ({sport}) marcado como finished automáticamente")
+        
+        m_data['id'] = m_id
+        
+        if show_finished:
+            results.append(m_data)
+        elif current_status == 'upcoming':
+            results.append(m_data)
+            
+    results.sort(key=lambda x: str(x.get('date', '')), reverse=False)
+    return jsonify(results)
+
+@sports_bp.route('/api/custom_matches_finished/<sport>', methods=['GET'])
+def get_custom_matches_finished(sport):
+    """Devuelve partidos custom finalizados (para pestaña Finalizados)."""
+    customs = database.get_fb('custom_matches') or {}
+    sport_customs = customs.get(sport, {})
+    
+    finished = []
+    for m_id, m_data in sport_customs.items():
+        if not m_data:
+            continue
+        
+        current_status = m_data.get('status', 'upcoming')
+        match_date = m_data.get('date', '')
+        
+        # Auto-expiración
+        if current_status == 'upcoming' and match_date:
+            if _check_match_expired(sport, match_date, current_status):
+                database.patch_fb(f"custom_matches/{sport}/{m_id}", {"status": "finished"})
+                m_data['status'] = 'finished'
+                current_status = 'finished'
+        
+        if current_status in ('finished', 'resolved'):
+            m_data['id'] = m_id
+            finished.append(m_data)
+    
+    finished.sort(key=lambda x: str(x.get('date', '')), reverse=True)
+    return jsonify(finished)
 
 
 # =====================================================
-# FOOTBALL API PROXY
+# API PROXIES (FootApi)
 # =====================================================
 
 @sports_bp.route('/api/football/<path:endpoint>')

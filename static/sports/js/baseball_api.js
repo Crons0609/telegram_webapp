@@ -93,6 +93,37 @@
           matches = Object.values(data.body);
         }
 
+        try {
+          const customRes = await fetch('/sports/api/custom_matches/mlb');
+          const customData = await customRes.json();
+          const finishedRes = await fetch('/sports/api/custom_matches_finished/mlb');
+          const finishedData = await finishedRes.json();
+
+          const allCustom = [
+            ...(Array.isArray(customData)  ? customData  : []),
+            ...(Array.isArray(finishedData) ? finishedData : [])
+          ];
+
+          allCustom.forEach(c => {
+            const norm = CustomMatchTimer.normalizeCustomMatch(c, 'mlb');
+            matches.push({
+              isCustom:    true,
+              gameID:      norm.id,
+              home:        norm.home_team,
+              away:        norm.away_team,
+              gameStatus:  norm.isFinished ? 'Final' : 'Scheduled',
+              gameTime:    norm.buildTime,
+              _norm:       norm,
+              lineScore: norm.score_home != null && norm.score_away != null ? {
+                home: { R: norm.score_home },
+                away: { R: norm.score_away }
+              } : undefined
+            });
+          });
+        } catch(e) { console.error('Error fetching custom baseball matches', e); }
+
+        matches.sort((a,b) => (b.isCustom ? 1 : 0) - (a.isCustom ? 1 : 0));
+
         if (matches.length === 0) {
           this.showEmpty('events-container', 'No hay partidos de béisbol disponibles en este momento.');
           return;
@@ -102,38 +133,45 @@
         matches.slice(0, 15).forEach(m => {
           const home = m.home || 'Local';
           const away = m.away || 'Visitante';
-          const homeLogo = `https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/${home.toLowerCase()}.png`;
-          const awayLogo = `https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/${away.toLowerCase()}.png`;
           const matchId = m.gameID || `${away}_${home}`;
+          const norm = m._norm || null;
 
           // Score formatting
           let gH = m.lineScore?.home?.R;
           let gA = m.lineScore?.away?.R;
 
-          let scoreStr = 'VS';
-          if (m.gameStatus !== 'Scheduled' && m.gameStatus !== 'Pre-Game') {
+          let scoreStr = norm ? norm.scoreStr : 'VS';
+          if (!norm && m.gameStatus !== 'Scheduled' && m.gameStatus !== 'Pre-Game') {
             scoreStr = `${gA !== undefined ? gA : '0'} - ${gH !== undefined ? gH : '0'}`;
           }
 
-          const description = m.currentInning || m.gameStatus || 'Próximamente';
-          const isLive = String(m.gameStatus).toLowerCase().includes('live') || String(m.gameStatus).toLowerCase().includes('in progress');
-          const isFinished = String(m.gameStatus).toLowerCase().includes('completed') || String(m.gameStatus).toLowerCase().includes('final');
+          const isLive     = !norm && (String(m.gameStatus).toLowerCase().includes('live') || String(m.gameStatus).toLowerCase().includes('in progress'));
+          const isFinished = norm ? norm.isFinished : (String(m.gameStatus).toLowerCase().includes('completed') || String(m.gameStatus).toLowerCase().includes('final'));
 
-          const dateStr = m.gameTime_epoch ? new Date(parseFloat(m.gameTime_epoch) * 1000).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : m.gameTime;
+          let displayTime;
+          if (norm) {
+            displayTime = norm.timeDisplay;
+          } else if (isLive) {
+            const description = m.currentInning || m.gameStatus || '';
+            displayTime = `<span style="color:#ef4444;font-weight:bold;">🔴 EN VIVO ${description}</span>`;
+          } else if (isFinished) {
+            displayTime = `<span style="color:rgba(255,255,255,0.5);">FINALIZADO</span>`;
+          } else {
+            const dateStr = m.gameTime_epoch ? new Date(parseFloat(m.gameTime_epoch) * 1000).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : (m.gameTime || 'Próximamente');
+            displayTime = dateStr;
+          }
 
-          const displayTime = isLive 
-              ? `<span style="color:#ef4444;font-weight:bold;">🔴 EN VIVO ${description}</span>` 
-              : (isFinished ? `<span style="color:rgba(255,255,255,0.5);">FINALIZADO</span>` : (dateStr ? dateStr : description));
-          
-          const odds = this.generateOdds();
-          
+          const homeLogo  = (!m.isCustom) ? `https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/${home.toLowerCase()}.png` : '';
+          const awayLogo  = (!m.isCustom) ? `https://a.espncdn.com/i/teamlogos/mlb/500/scoreboard/${away.toLowerCase()}.png` : '';
           const homeImgHtml = homeLogo ? `<img src="${homeLogo}" style="height:20px;width:20px;vertical-align:middle;margin-left:5px;" onerror="this.style.display='none'">` : '';
           const awayImgHtml = awayLogo ? `<img src="${awayLogo}" style="height:20px;width:20px;vertical-align:middle;margin-right:5px;" onerror="this.style.display='none'">` : '';
+          const displayLeague = norm ? (norm.league || '🔥 EVENTO ESPECIAL') : 'MLB';
+          const dataStatus = isLive ? 'live' : (isFinished ? 'finished' : 'upcoming');
 
           html += `
             <div class="sm-event" data-status="${isLive ? 'live' : (isFinished ? 'finished' : 'upcoming')}">
               <div class="sm-event-meta">
-                <span class="sm-event-league">MLB</span>
+                <span class="sm-event-league">${displayLeague}</span>
                 <span class="sm-event-time">${displayTime}</span>
               </div>
               <div class="sm-event-matchup">

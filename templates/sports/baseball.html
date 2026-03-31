@@ -305,6 +305,7 @@
     <button class="sm-filter active" data-filter="all">Todos</button>
     <button class="sm-filter" data-filter="live">🔴 En Vivo</button>
     <button class="sm-filter" data-filter="upcoming">Próximos</button>
+    <button class="sm-filter" data-filter="finished">✅ Finalizados</button>
   </div>
 
   <!-- EVENTS -->
@@ -339,6 +340,7 @@
 
   {% include 'user_profile_modal.html' ignore missing %}
 
+  <script src="/static/sports/js/custom_match_timer.js"></script>
   <script defer src="/static/sports/js/baseball_api.js"></script>
   <script defer src="/static/sports/js/bet_slip.js"></script>
 </body>

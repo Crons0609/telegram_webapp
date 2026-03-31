@@ -106,13 +106,16 @@
       const statusD = m.status?.description || '';
       const isLive  = statusT === 'inprogress';
       const isFinish= statusT === 'finished';
-      const gH = m.homeScore?.current ?? null;
-      const gA = m.awayScore?.current ?? null;
-      const scoreStr = (isLive || isFinish) && gH !== null && gA !== null
-        ? `${gH} - ${gA}` : 'VS';
+      const gH = m.homeScore?.current ?? m.score_home ?? null;
+      const gA = m.awayScore?.current ?? m.score_away ?? null;
+      const scoreStr = m._scoreStr || ((isLive || isFinish) && gH !== null && gA !== null
+        ? `${gH} - ${gA}` : 'VS');
 
       let displayTime;
-      if (isLive) {
+      if (m._customDisplay) {
+        // Use pre-built display from CustomMatchTimer
+        displayTime = m._customDisplay;
+      } else if (isLive) {
         displayTime = `<span style="color:#ef4444;font-weight:bold;">🔴 EN VIVO${statusD ? ' · ' + statusD : ''}</span>`;
       } else if (isFinish) {
         displayTime = `<span style="color:rgba(255,255,255,0.4);">FINALIZADO (${statusD || 'Final'})</span>`;
@@ -140,10 +143,12 @@
         const odds = this.generateOdds();
         const matchId = m.id || `${home}_${away}_${Date.now()}`;
         const dataStatus = isLive ? 'live' : (isFinish ? 'finished' : 'upcoming');
+        const clickAction = m.isCustom ? '' : `onclick="SoccerMatchDetails.open('${m.id}','${home}','${away}')"`;
+        const cursorStyle = m.isCustom ? 'default' : 'pointer';
 
         html += `
           <div class="sm-event" data-status="${dataStatus}">
-            <div style="cursor:pointer;" onclick="SoccerMatchDetails.open('${m.id}','${home}','${away}')">
+            <div style="cursor:${cursorStyle};" ${clickAction}>
               <div class="sm-event-meta">
                 <span class="sm-event-league">${league}</span>
                 <span class="sm-event-time">${displayTime}</span>
@@ -196,6 +201,42 @@
           });
         };
 
+        // Step 0 - Custom Matches (upcoming + finished)
+        try {
+          // Fetch upcoming
+          const customRes = await fetch('/sports/api/custom_matches/soccer');
+          const customData = await customRes.json();
+          // Fetch finished
+          const finishedRes = await fetch('/sports/api/custom_matches_finished/soccer');
+          const finishedData = await finishedRes.json();
+
+          const allCustom = [
+            ...(Array.isArray(customData) ? customData : []),
+            ...(Array.isArray(finishedData) ? finishedData : [])
+          ];
+
+          allCustom.forEach(c => {
+            const norm = CustomMatchTimer.normalizeCustomMatch(c, 'soccer');
+            matches.push({
+              isCustom:      true,
+              id:            norm.id,
+              homeTeam:      { name: norm.home_team },
+              awayTeam:      { name: norm.away_team },
+              status:        {
+                type:        norm.isFinished ? 'finished' : 'notstarted',
+                description: norm.isFinished ? 'Finalizado' : 'Personalizado'
+              },
+              startTimestamp: new Date(norm.date).getTime() / 1000,
+              tournament:    { name: norm.league },
+              _scoreStr:     norm.scoreStr,
+              _customDisplay:norm.timeDisplay,
+              _isFinished:   norm.isFinished,
+              score_home:    c.score_home,
+              score_away:    c.score_away,
+            });
+          });
+        } catch(e) { console.error('Error fetching custom matches', e); }
+
         // Step 1 — Live matches
         const live = await this.fetchProxy('api/matches/live');
         merge(live?.events);
@@ -232,9 +273,10 @@
           return;
         }
 
-        // Sort: live first, then upcoming, then finished
+        // Sort: custom first, then live, then upcoming, then finished
         matches.sort((a, b) => {
           const rank = m => {
+            if (m.isCustom) return -1;
             const s = String(m.status?.type || '').toLowerCase();
             if (s === 'inprogress') return 0;
             if (s === 'notstarted') return 1;

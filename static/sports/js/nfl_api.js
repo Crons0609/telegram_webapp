@@ -78,6 +78,23 @@
      * The API returns ESPN-styled JSON: events[] -> competitions[0] -> competitors[] -> team, score, etc.
      */
     _parseGame(event) {
+      if (event.isCustom) {
+        const norm = event._norm;
+        return {
+          home:        norm ? norm.home_team : (event.home || 'Local'),
+          away:        norm ? norm.away_team : (event.away || 'Visitante'),
+          gameId:      norm ? norm.id : event.gameId,
+          scoreStr:    norm ? norm.scoreStr : 'VS',
+          displayTime: norm ? norm.timeDisplay : (event.displayTime || ''),
+          dataStatus:  norm ? (norm.isFinished ? 'finished' : 'upcoming') : 'upcoming',
+          isFinished:  norm ? norm.isFinished : false,
+          league:      norm ? (norm.league || '🔥 EVENTO ESPECIAL') : '🔥 EVENTO ESPECIAL',
+          homeLogo: '',
+          awayLogo: '',
+          isCustom: true
+        };
+      }
+
       const comp = event.competitions?.[0] || {};
       const competitors = comp.competitors || [];
       const homeTeamObj = competitors.find(c => c.homeAway === 'home') || {};
@@ -146,13 +163,38 @@
 
         let matches = data.events;
 
+        try {
+          const customRes  = await fetch('/sports/api/custom_matches/nfl');
+          const customData = await customRes.json();
+          const finishedRes  = await fetch('/sports/api/custom_matches_finished/nfl');
+          const finishedData = await finishedRes.json();
+
+          const allCustom = [
+            ...(Array.isArray(customData)   ? customData   : []),
+            ...(Array.isArray(finishedData) ? finishedData : [])
+          ];
+
+          allCustom.forEach(c => {
+            const norm = CustomMatchTimer.normalizeCustomMatch(c, 'nfl');
+            matches.push({
+              isCustom: true,
+              gameId:   norm.id,
+              home:     norm.home_team,
+              away:     norm.away_team,
+              _norm:    norm,
+            });
+          });
+        } catch(e) { console.error('Error fetching custom NFL matches', e); }
+
         if (matches.length === 0) {
           this.showEmpty('events-container', 'No hay partidos de NFL disponibles en este momento. La temporada regular es de septiembre a enero.');
           return;
         }
 
-        // Sort: Live/Upcoming first, Finished later
+        // Sort: Custom first, then Live/Upcoming first, Finished later
         matches.sort((a,b) => {
+           if (a.isCustom && !b.isCustom) return -1;
+           if (!a.isCustom && b.isCustom) return 1;
            let stateA = a.competitions?.[0]?.status?.type?.state === 'post' ? 1 : 0;
            let stateB = b.competitions?.[0]?.status?.type?.state === 'post' ? 1 : 0;
            if (stateA !== stateB) return stateA - stateB;
@@ -161,17 +203,19 @@
 
         let html = '';
         matches.slice(0, 30).forEach(m => {
-          const { home, away, gameId, scoreStr, displayTime, dataStatus, isFinished, homeLogo, awayLogo } = this._parseGame(m);
+          const { home, away, gameId, scoreStr, displayTime, dataStatus, isFinished, homeLogo, awayLogo, league: parsed } = this._parseGame(m);
+          const parsed2 = this._parseGame(m);
 
-          const homeImgHtml = `<img src="${homeLogo}" style="height:22px;width:22px;vertical-align:middle;margin-left:6px;object-fit:contain;" onerror="this.style.display='none'">`;
-          const awayImgHtml = `<img src="${awayLogo}" style="height:22px;width:22px;vertical-align:middle;margin-right:6px;object-fit:contain;" onerror="this.style.display='none'">`;
+          const homeImgHtml = (homeLogo && !m.isCustom) ? `<img src="${homeLogo}" style="height:22px;width:22px;vertical-align:middle;margin-left:6px;object-fit:contain;" onerror="this.style.display='none'">` : '';
+          const awayImgHtml = (awayLogo && !m.isCustom) ? `<img src="${awayLogo}" style="height:22px;width:22px;vertical-align:middle;margin-right:6px;object-fit:contain;" onerror="this.style.display='none'">` : '';
+          const displayLeague = (m.isCustom && parsed.league) ? parsed.league : (m.isCustom ? '🔥 EVENTO ESPECIAL' : 'NFL');
 
           const odds = this.generateOdds();
 
           html += `
             <div class="sm-event" data-status="${dataStatus}">
               <div class="sm-event-meta">
-                <span class="sm-event-league">NFL</span>
+                <span class="sm-event-league">${displayLeague}</span>
                 <span class="sm-event-time">${displayTime}</span>
               </div>
               <div class="sm-event-matchup">
