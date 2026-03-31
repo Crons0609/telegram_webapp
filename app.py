@@ -1167,7 +1167,7 @@ def _handle_recharge(chat_id):
     btn = {"inline_keyboard": [
         [{"text": "👨‍💻 Young plague FTP",  "callback_data": "adm_0"}],
         [{"text": "👨‍💻 antraxx g59",       "callback_data": "adm_1"}],
-        [{"text": "👨‍💻 Cortezalex17",     "callback_data": "adm_2"}],
+        [{"text": "👨‍💻 Alex Cortez",   "callback_data": "adm_2"}],
     ]}
     _send_bot(chat_id, texto, reply_markup=btn)
 
