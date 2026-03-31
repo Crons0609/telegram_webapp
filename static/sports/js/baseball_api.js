@@ -84,13 +84,18 @@
         const dd = String(today.getDate()).padStart(2, '0');
         const gameDate = `${yyyy}${mm}${dd}`;
 
-        const data = await this.fetchProxy('getMLBScoresOnly', { gameDate });
-        
-        if (!data || data.statusCode !== 200 || data.status === 'error') throw new Error(data?.message || 'API error');
-        
         let matches = [];
-        if (data.body && typeof data.body === 'object') {
-          matches = Object.values(data.body);
+        try {
+          const data = await this.fetchProxy('getMLBScoresOnly', { gameDate });
+          if (data && data.statusCode === 200 && data.status !== 'error') {
+            if (data.body && typeof data.body === 'object') {
+              matches = Object.values(data.body);
+            }
+          } else {
+            console.warn('External MLB API returned error status:', data);
+          }
+        } catch (apiErr) {
+          console.warn('Error fetching from external MLB API:', apiErr);
         }
 
         try {
