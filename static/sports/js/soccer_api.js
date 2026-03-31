@@ -65,6 +65,13 @@
         const res = await fetch(`/sports/api/football/${path}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        if (data && data.status === 'error') {
+          console.warn('[FootAPI] Fetch proxy error status:', data.message);
+          if (window.Telegram && window.Telegram.WebApp && !this._alertedError) {
+             window.Telegram.WebApp.showAlert('Aviso API Fútbol: ' + data.message);
+             this._alertedError = true;
+          }
+        }
         if (data && !data.error && data.status !== 'error') this._writeCache(path, data);
         return data;
       } catch(err) {

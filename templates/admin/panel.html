@@ -1123,7 +1123,7 @@
     // Inject server-side session role into JS for client-side role checks
     window.ADMIN_ROLE = "{{ session.get('admin_role', 'admin') }}";
 </script>
-<script src="{{ url_for('static', filename='js/admin.js') }}?v=3.2"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v=3.3"></script>
 <script src="/static/js/theme-manager.js"></script>
 </body>
 </html>

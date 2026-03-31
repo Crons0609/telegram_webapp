@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sport:       document.getElementById('cm_sport').value,
             home_team:   document.getElementById('cm_home').value.trim(),
             away_team:   document.getElementById('cm_away').value.trim(),
-            date:        document.getElementById('cm_date').value,
+            date:        document.getElementById('cm_date').value ? new Date(document.getElementById('cm_date').value).toISOString() : '',
             league:      document.getElementById('cm_league').value.trim() || 'Evento Especial',
             description: document.getElementById('cm_description').value.trim(),
         };
@@ -665,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = {
             home_team:   document.getElementById('ecm_home').value.trim(),
             away_team:   document.getElementById('ecm_away').value.trim(),
-            date:        document.getElementById('ecm_date').value,
+            date:        document.getElementById('ecm_date').value ? new Date(document.getElementById('ecm_date').value).toISOString() : '',
             league:      document.getElementById('ecm_league').value.trim(),
             description: document.getElementById('ecm_description').value.trim(),
         };

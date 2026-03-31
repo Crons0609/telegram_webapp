@@ -130,6 +130,11 @@ def _check_match_expired(sport, match_date_str, match_status):
             import calendar
             epoch = calendar.timegm(match_dt.utctimetuple())
             match_dt = datetime.utcfromtimestamp(epoch)
+        else:
+            # Asumir que la fecha vino en hora local (UTC-6) por caché del front
+            from datetime import timedelta
+            match_dt = match_dt + timedelta(hours=6)
+            
         elapsed_minutes = (now_utc - match_dt).total_seconds() / 60.0
         return elapsed_minutes >= duration_minutes
     except Exception as e:
