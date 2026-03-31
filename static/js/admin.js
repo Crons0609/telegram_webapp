@@ -161,8 +161,10 @@ function refreshCurrentView() {
         case 'transactions': loadTransactions(); break;
         case 'withdrawals': loadWithdrawals('all'); break;
         case 'bets': loadAdminBets('pending'); break;
+        case 'custom-matches': loadCustomMatches(); break;
         case 'marketing': loadMarketingStatus(); break;
         case 'loading': loadLoadingConfig(); break;
+        case 'support': loadSupportChats(); break;
     }
 }
 
@@ -199,8 +201,10 @@ function switchView(viewName) {
         'transactions': 'Historial de Transacciones',
         'withdrawals': 'Gestión de Retiros 💸',
         'bets': 'Apuestas Deportivas ⚽',
+        'custom-matches': 'Partidos Personalizados 🏆',
         'marketing': 'Marketing Automatizado',
-        'loading': 'Pantalla de Carga 🌀'
+        'loading': 'Pantalla de Carga 🌀',
+        'support': 'Soporte Telegram 💬'
     };
     document.getElementById('currentPageTitle').textContent = titleMap[viewName] || 'Dashboard';
 
@@ -216,8 +220,10 @@ function switchView(viewName) {
         case 'transactions': loadTransactions(); break;
         case 'withdrawals': loadWithdrawals('all'); break;
         case 'bets': loadAdminBets('pending'); break;
+        case 'custom-matches': loadCustomMatches(); break;
         case 'marketing': loadMarketingStatus(); break;
         case 'loading': loadLoadingConfig(); break;
+        case 'support': loadSupportChats(); break;
     }
 }
 
@@ -313,6 +319,379 @@ window.resolveBet = async function(betId, action) {
         showToast("Error de conexión", 'error');
     }
 };
+
+// ─── CUSTOM MATCHES MANAGEMENT ───────────────────────────────────────────────
+
+const SPORT_LABELS = {
+    soccer: '⚽ Fútbol',
+    mlb:    '⚾ Béisbol',
+    nfl:    '🏈 NFL',
+    nba:    '🏀 Baloncesto',
+    tennis: '🎾 Tenis',
+    f1:     '🏎️ Fórmula 1',
+    nhl:    '🏒 Hockey',
+    rugby:  '🏉 Rugby',
+    golf:   '⛳ Golf',
+};
+
+const SPORT_DURATIONS_ADMIN = {
+    soccer: 110, nba: 150, nfl: 210, mlb: 210,
+    tennis: 180, nhl: 120, f1: 120, rugby: 100, golf: 420
+};
+
+function _cmIsExpired(sport, dateStr) {
+    if (!dateStr) return false;
+    try {
+        const durationMs = (SPORT_DURATIONS_ADMIN[sport] || 120) * 60 * 1000;
+        const startMs = new Date(dateStr).getTime();
+        if (isNaN(startMs)) return false;
+        return (Date.now() - startMs) >= durationMs;
+    } catch(_) { return false; }
+}
+
+function _cmTimeRemaining(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const diff = new Date(dateStr).getTime() - Date.now();
+        if (diff <= 0) return null; // already started or past
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        if (h > 24) return `en ${Math.floor(h/24)}d ${h%24}h`;
+        if (h > 0) return `en ${h}h ${m}m`;
+        return `en ${m}m`;
+    } catch(_) { return ''; }
+}
+
+let _cmAllMatches = [];
+let _cmCurrentSportFilter = 'all';
+let _cmCurrentStatusFilter = 'all';
+
+async function loadCustomMatches() {
+    const tbody = document.querySelector('#customMatchesTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem;"><i class="fas fa-spinner fa-spin"></i> Cargando partidos...</td></tr>';
+
+    try {
+        const res = await fetch('/admin/api/custom_matches');
+        const data = await res.json();
+        if (!data.success) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger); padding:1.5rem;">${data.message || 'Error'}</td></tr>`;
+            return;
+        }
+        _cmAllMatches = data.matches || [];
+        _renderCustomMatchesTable();
+        _buildCMFilters();
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--danger); padding:1.5rem;">Error de conexión</td></tr>';
+    }
+}
+
+function _buildCMFilters() {
+    const bar = document.getElementById('cmFilterBar');
+    if (!bar) return;
+    const sports = [...new Set(_cmAllMatches.map(m => m.sport).filter(Boolean))];
+    // Build sport options
+    let sportOpts = '<option value="all">🌐 Todos los deportes</option>';
+    sports.forEach(s => { sportOpts += `<option value="${s}">${SPORT_LABELS[s] || s}</option>`; });
+
+    bar.innerHTML = `
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <select id="cmSportFilter" class="form-control" style="width:auto; padding:7px 12px; font-size:0.85rem;" onchange="_cmApplyFilter()">
+                ${sportOpts}
+            </select>
+            <select id="cmStatusFilter" class="form-control" style="width:auto; padding:7px 12px; font-size:0.85rem;" onchange="_cmApplyFilter()">
+                <option value="all">📋 Todos los estados</option>
+                <option value="upcoming">🕐 Próximos</option>
+                <option value="expired_pending">⚠️ Expirados sin resultado</option>
+                <option value="finished">✅ Finalizados</option>
+            </select>
+            <span id="cmMatchCount" style="color:var(--text-muted); font-size:0.82rem; margin-left:4px;"></span>
+        </div>`;
+}
+
+window._cmApplyFilter = function() {
+    _cmCurrentSportFilter  = document.getElementById('cmSportFilter')?.value  || 'all';
+    _cmCurrentStatusFilter = document.getElementById('cmStatusFilter')?.value || 'all';
+    _renderCustomMatchesTable();
+};
+
+function _renderCustomMatchesTable() {
+    const tbody = document.querySelector('#customMatchesTable tbody');
+    if (!tbody) return;
+
+    let filtered = _cmAllMatches.filter(m => {
+        if (!m) return false;
+        const expired = _cmIsExpired(m.sport, m.date);
+        const alreadyFinished = m.status === 'finished' || m.status === 'resolved';
+        const hasScore = m.score_home != null && m.score_away != null;
+
+        // Compute effective status
+        let effStatus = 'upcoming';
+        if (alreadyFinished && hasScore) effStatus = 'finished';
+        else if (alreadyFinished && !hasScore) effStatus = 'finished';
+        else if (expired && !alreadyFinished) effStatus = 'expired_pending';
+
+        m._effStatus = effStatus;
+
+        if (_cmCurrentSportFilter !== 'all' && m.sport !== _cmCurrentSportFilter) return false;
+        if (_cmCurrentStatusFilter !== 'all' && effStatus !== _cmCurrentStatusFilter) return false;
+        return true;
+    });
+
+    const countEl = document.getElementById('cmMatchCount');
+    if (countEl) countEl.textContent = `${filtered.length} partido${filtered.length !== 1 ? 's' : ''}`;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">No hay partidos con estos filtros.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(m => {
+        const sportLabel = SPORT_LABELS[m.sport] || m.sport || '—';
+        const matchName  = `${m.home_team || '?'} vs ${m.away_team || '?'}`;
+        const dateLocal  = m.date ? new Date(m.date).toLocaleString('es-MX', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '—';
+        const remaining  = m.date ? _cmTimeRemaining(m.date) : null;
+
+        // Status badge
+        let statusBadge = '';
+        let rowStyle    = '';
+        if (m._effStatus === 'finished') {
+            const score = (m.score_home != null && m.score_away != null) ? ` · ${m.score_home}-${m.score_away}` : '';
+            statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">✅ FINALIZADO${score}</span>`;
+        } else if (m._effStatus === 'expired_pending') {
+            statusBadge = `<span style="background:rgba(239,68,68,0.15);color:#ef4444;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;animation:blink 1.2s infinite;">⚠️ EXPIRADO · SIN RESULTADO</span>`;
+            rowStyle    = 'background:rgba(239,68,68,0.04);';
+        } else if (remaining) {
+            statusBadge = `<span style="background:rgba(99,102,241,0.15);color:#818cf8;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">🕐 ${remaining}</span>`;
+        } else {
+            statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">📅 PRÓXIMO</span>`;
+        }
+
+        const league = m.league ? `<br><small style="color:var(--text-muted);font-size:0.75rem;">${m.league}</small>` : '';
+
+        // Action buttons
+        let actions = '';
+        if (m._effStatus !== 'finished') {
+            actions += `<button onclick="openResolveCustomMatchModal('${m.sport}','${m.id}','${(m.home_team||'').replace(/'/g,"\\'")}','${(m.away_team||'').replace(/'/g,"\\'")}','${m._effStatus}')" class="btn-primary" style="padding:5px 10px;font-size:0.75rem;white-space:nowrap;"><i class="fas fa-gavel"></i> Resolver</button>`;
+        }
+        actions += `<button onclick="openEditCustomMatchModal('${m.sport}','${m.id}','${(m.home_team||'').replace(/'/g,"\\'")}','${(m.away_team||'').replace(/'/g,"\\'")}','${m.date||''}','${(m.league||'').replace(/'/g,"\\'")}','${(m.description||'').replace(/'/g,"\\'")}','${m.sport}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;" title="Editar"><i class="fas fa-edit"></i></button>`;
+        actions += `<button onclick="deleteCustomMatch('${m.sport}','${m.id}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;color:#ef4444;border-color:rgba(239,68,68,0.3);" title="Eliminar"><i class="fas fa-trash"></i></button>`;
+
+        return `<tr style="${rowStyle}">
+            <td>${sportLabel}</td>
+            <td><strong>${matchName}</strong>${league}</td>
+            <td style="font-size:0.82rem;">${dateLocal}</td>
+            <td>${statusBadge}</td>
+            <td><div style="display:flex;gap:6px;flex-wrap:wrap;">${actions}</div></td>
+        </tr>`;
+    }).join('');
+}
+
+// --- OPEN CREATE CUSTOM MATCH MODAL ---
+window.openCreateCustomMatchModal = function() {
+    const modal = document.getElementById('createCustomMatchModal');
+    if (!modal) return;
+
+    // Pre-fill date: now + 1 hour
+    const dateInput = document.getElementById('cm_date');
+    if (dateInput) {
+        const soon = new Date(Date.now() + 3600000);
+        // Format for datetime-local: YYYY-MM-DDTHH:mm
+        const pad = n => String(n).padStart(2,'0');
+        const defaultDate = `${soon.getFullYear()}-${pad(soon.getMonth()+1)}-${pad(soon.getDate())}T${pad(soon.getHours())}:${pad(soon.getMinutes())}`;
+        dateInput.value = defaultDate;
+        dateInput.min   = defaultDate; // can't set past dates
+    }
+
+    // Reset other fields
+    ['cm_home','cm_away','cm_description'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const leagueEl = document.getElementById('cm_league');
+    if (leagueEl) leagueEl.value = 'Evento Especial';
+
+    modal.classList.add('active');
+};
+
+// --- OPEN EDIT CUSTOM MATCH MODAL ---
+window.openEditCustomMatchModal = function(sport, id, home, away, date, league, description, sportVal) {
+    const modal = document.getElementById('editCustomMatchModal');
+    if (!modal) {
+        // Fallback: use create modal to show edit mode
+        showToast('Abriendo editor...', 'success');
+        return;
+    }
+    document.getElementById('ecm_id').value       = id;
+    document.getElementById('ecm_sport').value     = sport || sportVal;
+    document.getElementById('ecm_home').value      = home;
+    document.getElementById('ecm_away').value      = away;
+    document.getElementById('ecm_league').value    = league;
+    document.getElementById('ecm_description').value = description;
+
+    // Format date for datetime-local input
+    if (date) {
+        try {
+            const d = new Date(date);
+            const pad = n => String(n).padStart(2,'0');
+            document.getElementById('ecm_date').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } catch(_) {}
+    }
+    modal.classList.add('active');
+};
+
+// --- OPEN RESOLVE MODAL ---
+window.openResolveCustomMatchModal = function(sport, id, home, away, effStatus) {
+    document.getElementById('resolve_cm_id').value        = id;
+    document.getElementById('resolve_cm_sport').value     = sport;
+    document.getElementById('resolve_cm_home_name').value = home;
+    document.getElementById('resolve_cm_away_name').value = away;
+    document.getElementById('resolve_cm_name').textContent = `${home} vs ${away}`;
+    document.getElementById('resolve_home_label').textContent = home.toUpperCase();
+    document.getElementById('resolve_away_label').textContent = away.toUpperCase();
+    document.getElementById('resolve_home_btn_label').textContent = home;
+    document.getElementById('resolve_away_btn_label').textContent = away;
+
+    // Clear score inputs
+    ['resolve_score_home','resolve_score_away'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    document.getElementById('resolveCustomMatchModal')?.classList.add('active');
+};
+
+// --- SUBMIT RESOLVE ---
+window.submitResolveCustomMatch = async function(winnerSide) {
+    const id        = document.getElementById('resolve_cm_id').value;
+    const sport     = document.getElementById('resolve_cm_sport').value;
+    const scoreHome = document.getElementById('resolve_score_home').value;
+    const scoreAway = document.getElementById('resolve_score_away').value;
+
+    if (!id || !sport || !winnerSide) {
+        showToast('Faltan datos para resolver', 'error');
+        return;
+    }
+
+    const payload = { sport, match_id: id, winner: winnerSide };
+    if (scoreHome !== '' && scoreAway !== '') {
+        payload.score_home = parseInt(scoreHome);
+        payload.score_away = parseInt(scoreAway);
+    }
+
+    try {
+        const res  = await fetch('/admin/api/custom_matches/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message, 'success');
+            document.getElementById('resolveCustomMatchModal')?.classList.remove('active');
+            loadCustomMatches();
+        } else {
+            showToast(data.message || 'Error al resolver', 'error');
+        }
+    } catch(e) {
+        showToast('Error de conexión', 'error');
+    }
+};
+
+// --- DELETE CUSTOM MATCH ---
+window.deleteCustomMatch = async function(sport, id) {
+    if (!confirm('¿Eliminar este partido? Las apuestas pendientes NO serán reembolsadas automáticamente.')) return;
+    try {
+        const res  = await fetch(`/admin/api/custom_matches/${sport}/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Partido eliminado', 'success');
+            loadCustomMatches();
+        } else {
+            showToast(data.message || 'Error al eliminar', 'error');
+        }
+    } catch(e) {
+        showToast('Error de conexión', 'error');
+    }
+};
+
+// Wire create custom match form
+document.addEventListener('DOMContentLoaded', () => {
+    const cmForm = document.getElementById('createCustomMatchForm');
+    cmForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveCustomMatchBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...'; }
+
+        const payload = {
+            sport:       document.getElementById('cm_sport').value,
+            home_team:   document.getElementById('cm_home').value.trim(),
+            away_team:   document.getElementById('cm_away').value.trim(),
+            date:        document.getElementById('cm_date').value,
+            league:      document.getElementById('cm_league').value.trim() || 'Evento Especial',
+            description: document.getElementById('cm_description').value.trim(),
+        };
+
+        try {
+            const res  = await fetch('/admin/api/custom_matches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`✅ ${data.message}`, 'success');
+                cmForm.reset();
+                document.getElementById('createCustomMatchModal')?.classList.remove('active');
+                loadCustomMatches();
+            } else {
+                showToast(data.message || 'Error al crear partido', 'error');
+            }
+        } catch(err) {
+            showToast('Error de conexión', 'error');
+        }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Crear Partido'; }
+    });
+
+    // Wire edit custom match form
+    const ecmForm = document.getElementById('editCustomMatchForm');
+    ecmForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('saveEditCustomMatchBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+
+        const sport = document.getElementById('ecm_sport').value;
+        const id    = document.getElementById('ecm_id').value;
+        const payload = {
+            home_team:   document.getElementById('ecm_home').value.trim(),
+            away_team:   document.getElementById('ecm_away').value.trim(),
+            date:        document.getElementById('ecm_date').value,
+            league:      document.getElementById('ecm_league').value.trim(),
+            description: document.getElementById('ecm_description').value.trim(),
+        };
+
+        try {
+            const res  = await fetch(`/admin/api/custom_matches/${sport}/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('✅ Partido actualizado', 'success');
+                document.getElementById('editCustomMatchModal')?.classList.remove('active');
+                loadCustomMatches();
+            } else {
+                showToast(data.message || 'Error', 'error');
+            }
+        } catch(err) {
+            showToast('Error de conexión', 'error');
+        }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios'; }
+    });
+});
+
+window.loadCustomMatches = loadCustomMatches;
 
 // TRANSACTIONS
 async function loadTransactions() {

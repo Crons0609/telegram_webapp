@@ -226,10 +226,12 @@
 
             <!-- ── VIEW: PARTIDOS PERSONALIZADOS ── -->
             <section id="view-custom-matches" class="view-section">
-                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                     <h2 style="font-size:1.3rem; font-weight:700;"><i class="fas fa-calendar-plus" style="color:var(--primary)"></i> Creador de Partidos</h2>
                     <button class="btn-primary" onclick="openCreateCustomMatchModal()"><i class="fas fa-plus"></i> Crear Partido</button>
                 </div>
+                <!-- Filter bar — populated by JS after loading data -->
+                <div id="cmFilterBar" style="margin-bottom:1rem;"></div>
                 <div class="card">
                     <div class="table-responsive">
                         <table class="data-table" id="customMatchesTable">
@@ -237,7 +239,7 @@
                                 <tr>
                                     <th>Deporte</th>
                                     <th>Partido</th>
-                                    <th>Fecha</th>
+                                    <th>Fecha inicio</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -248,6 +250,12 @@
                         </table>
                     </div>
                 </div>
+                <style>
+                    @keyframes blink {
+                        0%,100% { opacity:1; }
+                        50%      { opacity:0.45; }
+                    }
+                </style>
             </section>
 
             <!-- ── VIEW: RETIROS ── -->
@@ -947,6 +955,52 @@
         </form>
     </div>
 </div>
+<!-- Modal: Editar Partido Personalizado -->
+<div class="modal-overlay" id="editCustomMatchModal">
+    <div class="modal-container" style="max-width:540px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit" style="color:var(--warning)"></i> Editar Partido</h3>
+            <button class="close-modal-btn" style="background:transparent;border:none;font-size:1.5rem;color:var(--text-muted);cursor:pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="editCustomMatchForm">
+                <input type="hidden" id="ecm_id">
+                <input type="hidden" id="ecm_sport">
+                <div class="form-row">
+                    <div class="form-group" style="flex:1;">
+                        <label><i class="fas fa-home"></i> Equipo Local / Competidor 1</label>
+                        <input type="text" id="ecm_home" class="form-control" placeholder="Ej: Real Estelí" required>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label><i class="fas fa-plane"></i> Equipo Visitante / Competidor 2</label>
+                        <input type="text" id="ecm_away" class="form-control" placeholder="Ej: Diriangén" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:1;">
+                        <label><i class="fas fa-trophy"></i> Liga / Torneo</label>
+                        <input type="text" id="ecm_league" class="form-control" placeholder="Ej: Liga Nicaragüense">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-calendar-alt"></i> Nueva Fecha y Hora</label>
+                    <input type="datetime-local" id="ecm_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-align-left"></i> Descripción <span style="color:var(--text-muted);font-size:0.8rem;">(Opcional)</span></label>
+                    <input type="text" id="ecm_description" class="form-control" placeholder="Ej: Cuartos de final...">
+                </div>
+                <div class="modal-actions" style="margin-top:1.5rem;">
+                    <button type="button" class="btn-secondary close-modal-btn">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="saveEditCustomMatchBtn" style="background:linear-gradient(135deg,var(--warning),#d97706);">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Crear Partido Personalizado (MEJORADO) -->
 <div class="modal-overlay" id="createCustomMatchModal">
     <div class="modal-container" style="max-width:540px;">

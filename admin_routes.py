@@ -981,6 +981,40 @@ def delete_custom_match(sport, match_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@admin_bp.route('/api/custom_matches/<sport>/<match_id>', methods=['PATCH'])
+@admin_required_api
+def edit_custom_match(sport, match_id):
+    """Edit an existing custom match's metadata (date, teams, league, description)."""
+    try:
+        existing = database.get_fb(f"custom_matches/{sport}/{match_id}")
+        if not existing:
+            return jsonify({'success': False, 'message': 'Partido no encontrado'}), 404
+
+        data = request.json or {}
+        update = {}
+
+        if 'home_team' in data and data['home_team'].strip():
+            update['home_team'] = data['home_team'].strip()
+        if 'away_team' in data and data['away_team'].strip():
+            update['away_team'] = data['away_team'].strip()
+        if 'date' in data and data['date'].strip():
+            update['date'] = data['date'].strip()
+        if 'league' in data:
+            update['league'] = (data['league'] or 'Evento Especial').strip()
+        if 'description' in data:
+            update['description'] = (data['description'] or '').strip()
+
+        # Rebuild name if teams changed
+        home = update.get('home_team', existing.get('home_team', ''))
+        away = update.get('away_team', existing.get('away_team', ''))
+        update['name'] = f"{home} vs {away}"
+
+        database.patch_fb(f"custom_matches/{sport}/{match_id}", update)
+        return jsonify({'success': True, 'message': 'Partido actualizado correctamente'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @admin_bp.route('/api/custom_matches/resolve', methods=['POST'])
 @admin_required_api
 def resolve_custom_match():

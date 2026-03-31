@@ -106,14 +106,16 @@
 
           allCustom.forEach(c => {
             const norm = CustomMatchTimer.normalizeCustomMatch(c, 'mlb');
+            const effectiveStatus = norm.isFinished ? 'finished' : (norm.isLive ? 'live' : 'upcoming');
             matches.push({
               isCustom:    true,
               gameID:      norm.id,
               home:        norm.home_team,
               away:        norm.away_team,
-              gameStatus:  norm.isFinished ? 'Final' : 'Scheduled',
+              gameStatus:  norm.isFinished ? 'Final' : (norm.isLive ? 'Live' : 'Scheduled'),
               gameTime:    norm.buildTime,
               _norm:       norm,
+              _effStatus:  effectiveStatus,
               lineScore: norm.score_home != null && norm.score_away != null ? {
                 home: { R: norm.score_home },
                 away: { R: norm.score_away }
@@ -147,6 +149,8 @@
 
           const isLive     = !norm && (String(m.gameStatus).toLowerCase().includes('live') || String(m.gameStatus).toLowerCase().includes('in progress'));
           const isFinished = norm ? norm.isFinished : (String(m.gameStatus).toLowerCase().includes('completed') || String(m.gameStatus).toLowerCase().includes('final'));
+          // For custom matches, use the effective status computed by the timer
+          const dataStatus = (m._effStatus) ? m._effStatus : (isLive ? 'live' : (isFinished ? 'finished' : 'upcoming'));
 
           let displayTime;
           if (norm) {
@@ -166,10 +170,9 @@
           const homeImgHtml = homeLogo ? `<img src="${homeLogo}" style="height:20px;width:20px;vertical-align:middle;margin-left:5px;" onerror="this.style.display='none'">` : '';
           const awayImgHtml = awayLogo ? `<img src="${awayLogo}" style="height:20px;width:20px;vertical-align:middle;margin-right:5px;" onerror="this.style.display='none'">` : '';
           const displayLeague = norm ? (norm.league || '🔥 EVENTO ESPECIAL') : 'MLB';
-          const dataStatus = isLive ? 'live' : (isFinished ? 'finished' : 'upcoming');
 
           html += `
-            <div class="sm-event" data-status="${isLive ? 'live' : (isFinished ? 'finished' : 'upcoming')}">
+            <div class="sm-event" data-status="${dataStatus}">
               <div class="sm-event-meta">
                 <span class="sm-event-league">${displayLeague}</span>
                 <span class="sm-event-time">${displayTime}</span>

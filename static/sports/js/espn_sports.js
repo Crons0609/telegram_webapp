@@ -95,7 +95,9 @@
             <span class="sm-odd-value">1.75</span>
           </button>
         </div>` : `
-        <div style="text-align:center; font-size:.72rem; color:rgba(255,255,255,0.3); padding: 4px 0;">⏹ Partido Finalizado</div>
+        <div style="text-align:center; font-size:.72rem; color:rgba(255,255,255,0.35); padding: 4px 0;">
+          ${scoreStr !== 'VS' ? `✅ Finalizado &nbsp;·&nbsp; <span style="color:#10b981;font-weight:700;">${scoreStr}</span>` : '⏹ Partido Finalizado'}
+        </div>
         `}
       </div>`;
   }
@@ -163,13 +165,15 @@
 
       allCustom.forEach(c => {
         const norm = CustomMatchTimer.normalizeCustomMatch(c, SPORT);
+        // isLive is new in updated timer
+        const effectiveStatus = norm.isFinished ? 'finished' : (norm.isLive ? 'live' : 'upcoming');
         cards.push({
           matchId:     norm.id,
           home:        norm.home_team,
           away:        norm.away_team,
           scoreStr:    norm.scoreStr,
           displayTime: norm.timeDisplay,
-          dataStatus:  norm.isFinished ? 'finished' : 'upcoming',
+          dataStatus:  effectiveStatus,
           isFinished:  norm.isFinished,
           league:      norm.league || '🔥 EVENTO ESPECIAL',
           homeLogo:    '',
