@@ -363,7 +363,6 @@ window.UserProfileManager = {
                 <button class="profile-tab tab-highlight" onclick="UserProfileManager.switchTab('missions',this)">🎯 Misiones</button>
                 <button class="profile-tab" onclick="UserProfileManager.switchTab('sports',this)">⚽ Apuestas</button>
                 <button class="profile-tab" onclick="UserProfileManager.switchTab('frames',this)">🖼️ Marcos</button>
-                <button class="profile-tab" onclick="UserProfileManager.switchTab('themes',this)">🎨 Temas</button>
             </div>
 
             <!-- TAB: GENERAL INFO -->
@@ -387,7 +386,6 @@ window.UserProfileManager = {
             <div id="tab-missions" class="tab-content"><div class="missions-list" id="list-missions"><p style="text-align:center;color:#888;padding:20px;">Cargando Misiones...</p></div></div>
             <div id="tab-sports" class="tab-content"><div class="sports-list" id="list-sports"><p style="text-align:center;color:#888;padding:20px;">Cargando Apuestas...</p></div></div>
             <div id="tab-frames" class="tab-content"><div class="items-grid" id="grid-frames"></div></div>
-            <div id="tab-themes" class="tab-content"><div class="items-grid" id="grid-themes"></div></div>
         `;
 
         this.renderInventory();
@@ -451,57 +449,34 @@ window.UserProfileManager = {
             {id:'diamond1',name:'Diamante I',req:16},{id:'diamond2',name:'Diamante II',req:18},{id:'diamond3',name:'Diamante III',req:20},
             {id:'legendary1',name:'Legendario I',req:22},{id:'legendary2',name:'Legendario II',req:24},{id:'legendary3',name:'Legendario III',req:26}
         ];
-        const ALL_THEMES = [
-            {id:'default',name:'Moderno (Base)',req:1},{id:'dark_premium',name:'Dark Premium',req:7},
-            {id:'gold_imperial',name:'Gold Imperial',req:13},{id:'las_vegas',name:'Las Vegas',req:19},{id:'noir',name:'Noir Élite',req:25}
-        ];
 
-        const myUnlocks = this.currentProfile.unlocked_items || [];
         const activeFrame = this.currentProfile.marco_actual || this.currentProfile.avatar_frame || 'none';
-        const activeTheme = this.currentProfile.tema_actual || 'default';
-
-        const fillGrid = (items, typeKey, activeId, containerId) => {
-            const grid = document.getElementById(containerId);
-            if (!grid) return;
-            grid.innerHTML = '';
-            items.forEach(item => {
-                const isBase = item.req === 1;
-                // Para los marcos, el desbloqueo depende 100% del nivel del usuario
-                // Para los temas, dependemos de myUnlocks o del nivel
-                let isUnlocked = false;
-                if (typeKey === 'frame') {
-                    isUnlocked = this.currentProfile.nivel >= item.req;
-                } else {
-                    isUnlocked = isBase || myUnlocks.some(u => u.type === typeKey && u.id === item.id);
-                }
-                
-                const isEquipped = activeId === item.id;
-                const div = document.createElement('div');
-                div.className = `inventory-item${!isUnlocked?' locked':''}${isEquipped?' equipped':''}`;
-                const previewHtml = typeKey === 'frame'
-                    ? `<div class="item-frame-preview" style="background-image:url('/static/img/frames/${item.id}.png')"></div>`
-                    : `<div class="item-icon">🎨</div>`;
-                div.innerHTML = `
-                    <div class="item-type-badge">Nv.${item.req}</div>
-                    ${previewHtml}
-                    <div class="item-name">${item.name}</div>
-                    ${isEquipped ? '<div class="item-equipped-badge">✓ Equipado</div>' : ''}
-                    ${!isUnlocked ? '<div class="item-lock-icon">🔒</div>' : ''}
-                `;
-                
-                // Solo los temas se pueden equipar manualmente. Los marcos son automáticos y fijos.
-                if (typeKey === 'theme' && isUnlocked && !isEquipped) {
-                    div.onclick = () => this.equipItem(typeKey, item.id);
-                } else if (typeKey === 'frame') {
-                    div.style.cursor = 'default';
-                }
-                
-                grid.appendChild(div);
-            });
-        };
-
-        fillGrid(ALL_FRAMES, 'frame', activeFrame, 'grid-frames');
-        fillGrid(ALL_THEMES, 'theme', activeTheme, 'grid-themes');
+        const grid = document.getElementById('grid-frames');
+        
+        if (!grid) return;
+        grid.innerHTML = '';
+        
+        ALL_FRAMES.forEach(item => {
+            const isUnlocked = this.currentProfile.nivel >= item.req;
+            const isEquipped = activeFrame === item.id;
+            const div = document.createElement('div');
+            
+            div.className = `inventory-item${!isUnlocked ? ' locked' : ''}${isEquipped ? ' equipped' : ''}`;
+            const previewHtml = `<div class="item-frame-preview" style="background-image:url('/static/img/frames/${item.id}.png')"></div>`;
+            
+            div.innerHTML = `
+                <div class="item-type-badge">Nv.${item.req}</div>
+                ${previewHtml}
+                <div class="item-name">${item.name}</div>
+                ${isEquipped ? '<div class="item-equipped-badge">✓ Equipado</div>' : ''}
+                ${!isUnlocked ? '<div class="item-lock-icon">🔒</div>' : ''}
+            `;
+            
+            // Los marcos son automáticos y fijos, no se pueden equipar manualmente
+            div.style.cursor = 'default';
+            
+            grid.appendChild(div);
+        });
     },
 
     loadTrophies: async function () {
