@@ -74,7 +74,9 @@
       font-weight: 900; font-size: 1rem;
       letter-spacing: 2px;
       background: linear-gradient(135deg, #6366f1, #10b981);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     /* ── Hero ────────────────────────────────────────────────── */
@@ -99,7 +101,9 @@
       font-size: clamp(1.6rem, 5vw, 2.4rem);
       font-weight: 900; margin: 0 0 10px;
       background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
       line-height: 1.15;
     }
     .sp-hero p {
@@ -203,7 +207,10 @@
 
   <!-- NAVBAR -->
   <nav class="sp-nav" aria-label="Navegación sports">
-    <button class="sp-nav-back" onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close(); else window.history.back();" aria-label="Volver">✕</button>
+    <div style="display: flex; gap: 8px;">
+      <button class="sp-nav-back" onclick="window.history.back();" aria-label="Atrás">←</button>
+      <button class="sp-nav-back" onclick="if(window.Telegram?.WebApp) window.Telegram.WebApp.close();" aria-label="Cerrar">✕</button>
+    </div>
     <span class="sp-nav-title">DEPORTES</span>
     <div>{% include 'user_menu.html' %}</div>
   </nav>

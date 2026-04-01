@@ -975,7 +975,7 @@ def handle_custom_matches():
 @admin_required_api
 def delete_custom_match(sport, match_id):
     try:
-        database.patch_fb(f"custom_matches/{sport}/{match_id}", None)
+        database.delete_fb(f"custom_matches/{sport}/{match_id}")
         return jsonify({'success': True, 'message': 'Partido eliminado'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -1003,6 +1003,11 @@ def edit_custom_match(sport, match_id):
             update['league'] = (data['league'] or 'Evento Especial').strip()
         if 'description' in data:
             update['description'] = (data['description'] or '').strip()
+            
+        if 'score_home' in data:
+            update['score_home'] = data['score_home']
+        if 'score_away' in data:
+            update['score_away'] = data['score_away']
 
         # Rebuild name if teams changed
         home = update.get('home_team', existing.get('home_team', ''))

@@ -474,7 +474,11 @@ function _renderCustomMatchesTable() {
         if (m._effStatus !== 'finished') {
             actions += `<button onclick="openResolveCustomMatchModal('${m.sport}','${m.id}','${(m.home_team||'').replace(/'/g,"\\'")}','${(m.away_team||'').replace(/'/g,"\\'")}','${m._effStatus}')" class="btn-primary" style="padding:5px 10px;font-size:0.75rem;white-space:nowrap;"><i class="fas fa-gavel"></i> Resolver</button>`;
         }
-        actions += `<button onclick="openEditCustomMatchModal('${m.sport}','${m.id}','${(m.home_team||'').replace(/'/g,"\\'")}','${(m.away_team||'').replace(/'/g,"\\'")}','${m.date||''}','${(m.league||'').replace(/'/g,"\\'")}','${(m.description||'').replace(/'/g,"\\'")}','${m.sport}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;" title="Editar"><i class="fas fa-edit"></i></button>`;
+        
+        let sh = (m.score_home !== null && m.score_home !== undefined) ? m.score_home : '';
+        let sa = (m.score_away !== null && m.score_away !== undefined) ? m.score_away : '';
+        
+        actions += `<button onclick="openEditCustomMatchModal('${m.sport}','${m.id}','${(m.home_team||'').replace(/'/g,"\\'")}','${(m.away_team||'').replace(/'/g,"\\'")}','${m.date||''}','${(m.league||'').replace(/'/g,"\\'")}','${(m.description||'').replace(/'/g,"\\'")}','${m.sport}','${sh}','${sa}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;" title="Editar"><i class="fas fa-edit"></i></button>`;
         actions += `<button onclick="deleteCustomMatch('${m.sport}','${m.id}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;color:#ef4444;border-color:rgba(239,68,68,0.3);" title="Eliminar"><i class="fas fa-trash"></i></button>`;
 
         return `<tr style="${rowStyle}">
@@ -515,7 +519,7 @@ window.openCreateCustomMatchModal = function() {
 };
 
 // --- OPEN EDIT CUSTOM MATCH MODAL ---
-window.openEditCustomMatchModal = function(sport, id, home, away, date, league, description, sportVal) {
+window.openEditCustomMatchModal = function(sport, id, home, away, date, league, description, sportVal, scoreHome, scoreAway) {
     const modal = document.getElementById('editCustomMatchModal');
     if (!modal) {
         // Fallback: use create modal to show edit mode
@@ -528,6 +532,11 @@ window.openEditCustomMatchModal = function(sport, id, home, away, date, league, 
     document.getElementById('ecm_away').value      = away;
     document.getElementById('ecm_league').value    = league;
     document.getElementById('ecm_description').value = description;
+    
+    if (document.getElementById('ecm_score_home')) {
+        document.getElementById('ecm_score_home').value = (scoreHome !== 'undefined' && scoreHome !== null && String(scoreHome).trim() !== '') ? scoreHome : '';
+        document.getElementById('ecm_score_away').value = (scoreAway !== 'undefined' && scoreAway !== null && String(scoreAway).trim() !== '') ? scoreAway : '';
+    }
 
     // Format date for datetime-local input
     if (date) {
@@ -598,9 +607,23 @@ window.submitResolveCustomMatch = async function(winnerSide) {
     }
 };
 
+
+
 // --- DELETE CUSTOM MATCH ---
-window.deleteCustomMatch = async function(sport, id) {
-    if (!confirm('¿Eliminar este partido? Las apuestas pendientes NO serán reembolsadas automáticamente.')) return;
+window.deleteCustomMatch = function(sport, id) {
+    const modal = document.getElementById('deleteMatchConfirmModal');
+    if (!modal) return;
+    document.getElementById('delete_match_sport').value = sport;
+    document.getElementById('delete_match_id').value = id;
+    modal.classList.add('active');
+};
+
+window.execDeleteCustomMatch = async function() {
+    const sport = document.getElementById('delete_match_sport').value;
+    const id = document.getElementById('delete_match_id').value;
+    const btn = document.getElementById('confirmDeleteMatchBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
     try {
         const res  = await fetch(`/admin/api/custom_matches/${sport}/${id}`, { method: 'DELETE' });
         const data = await res.json();
@@ -613,6 +636,9 @@ window.deleteCustomMatch = async function(sport, id) {
     } catch(e) {
         showToast('Error de conexión', 'error');
     }
+    
+    document.getElementById('deleteMatchConfirmModal').classList.remove('active');
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Eliminar'; }
 };
 
 // Wire create custom match form
@@ -669,6 +695,14 @@ document.addEventListener('DOMContentLoaded', () => {
             league:      document.getElementById('ecm_league').value.trim(),
             description: document.getElementById('ecm_description').value.trim(),
         };
+        
+        const sh = document.getElementById('ecm_score_home');
+        const sa = document.getElementById('ecm_score_away');
+        if (sh && sa) {
+            payload.score_home = sh.value.trim() !== '' ? parseInt(sh.value, 10) : null;
+            payload.score_away = sa.value.trim() !== '' ? parseInt(sa.value, 10) : null;
+        }
+
 
         try {
             const res  = await fetch(`/admin/api/custom_matches/${sport}/${id}`, {
