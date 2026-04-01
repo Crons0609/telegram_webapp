@@ -495,7 +495,6 @@ body {
   border: 2px solid var(--bg-panel);
 }
 
-/* Dropdown */
 .notif-panel {
   display: none;
   position: absolute;
@@ -503,9 +502,11 @@ body {
   right: 0;
   width: 360px;
   background: var(--bg-card, #1a1a1f);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
   z-index: 1000;
   overflow: hidden;
   animation: fadeSlide 0.2s ease;

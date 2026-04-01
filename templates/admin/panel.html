@@ -176,7 +176,7 @@
                     <div class="section-title" style="margin-bottom:1rem; color:var(--text-main); display:flex; justify-content:space-between; align-items:center;">
                         <h3>Resumen General</h3>
                         {% if session.get('admin_role') == 'superadmin' %}
-                        <button class="btn-primary" style="background:#ef4444; border-color:#ef4444; font-size:0.9rem; padding:8px 16px; border-radius:8px;" onclick="resetDashboardMetrics()"><i class="fas fa-broom"></i> Limpiar Registro Mensual</button>
+                        <button class="btn-primary" style="background:#ef4444; border-color:#ef4444; font-size:0.75rem; padding:4px 10px; border-radius:6px; height:fit-content;" onclick="resetDashboardMetrics()"><i class="fas fa-broom"></i> Limpiar Mes</button>
                         {% endif %}
                     </div>
                     <div class="kpi-grid" id="dashboardKPIs"></div>
