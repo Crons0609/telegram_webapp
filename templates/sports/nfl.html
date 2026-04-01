@@ -291,7 +291,16 @@
       <button class="sm-betslip-close" onclick="closeBetSlip()">×</button>
     </div>
     <div class="sm-betslip-info" id="betslip-info">Selecciona un evento para apostar</div>
-    <div class="sm-betslip-input">
+    <!-- 15-min window closed notice -->
+    <div id="betslip-closed-notice" style="display:none; align-items:center; gap:10px;
+         background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3);
+         border-radius:10px; padding:10px 14px; margin-bottom:8px;">
+      <span style="font-size:1.3rem;">⏱️</span>
+      <span id="betslip-closed-msg" style="font-size:0.78rem; color:#ef4444; font-weight:600; line-height:1.4;">
+        Las apuestas para este partido ya cerraron (ventana: primeros 15 min).
+      </span>
+    </div>
+    <div id="betslip-form-area" class="sm-betslip-input">
       <input class="sm-betslip-amount" type="number" id="bet-amount" placeholder="Mínimo 1,000 bits" min="1000" step="100">
       <button class="sm-betslip-submit" onclick="submitBet()">Apostar</button>
     </div>

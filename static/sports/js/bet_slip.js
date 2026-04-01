@@ -149,16 +149,49 @@ const BetSlipAPI = {
   currentTeamChoice: null,
   currentMatchName: null,
   currentOdd: null,
+  currentMatchDate: null,   // ISO string of match start time
 
-  open(matchId, teamChoice, matchName, odd) {
+  /** Returns true if 15-minute betting window has closed */
+  _isBettingClosed() {
+    if (!this.currentMatchDate) return false; // no date → allow (API matches)
+    try {
+      const matchTs = new Date(this.currentMatchDate).getTime();
+      if (isNaN(matchTs)) return false;
+      const elapsed = (Date.now() - matchTs) / 60000; // minutes since start
+      return elapsed > 15;
+    } catch { return false; }
+  },
+
+  open(matchId, teamChoice, matchName, odd, matchDate = null) {
     this.currentMatchId = matchId;
     this.currentTeamChoice = teamChoice;
     this.currentMatchName = matchName;
     this.currentOdd = parseFloat(odd);
+    this.currentMatchDate = matchDate || null;
 
     const infoEl = document.getElementById('betslip-info');
     if (infoEl) {
       infoEl.innerHTML = `Partido: <strong>${matchName}</strong><br>Selección: <strong>${teamChoice}</strong><br>Cuota (Odd): <strong>${odd}</strong>`;
+    }
+
+    // ── 15-min window check ───────────────────────────────────────
+    const closedEl  = document.getElementById('betslip-closed-notice');
+    const formEl    = document.getElementById('betslip-form-area');
+    const submitBtn = document.querySelector('.sm-betslip-submit');
+
+    if (this._isBettingClosed()) {
+      if (closedEl) {
+        closedEl.style.display = 'flex';
+        const elapsed = Math.round((Date.now() - new Date(this.currentMatchDate).getTime()) / 60000);
+        const noticeMsg = document.getElementById('betslip-closed-msg');
+        if (noticeMsg) noticeMsg.textContent = `⏱️ Las apuestas para este partido cerraron hace ${elapsed - 15} min (ventana: primeros 15 min).`;
+      }
+      if (formEl)    formEl.style.display    = 'none';
+      if (submitBtn) submitBtn.style.display = 'none';
+    } else {
+      if (closedEl) closedEl.style.display = 'none';
+      if (formEl)   formEl.style.display   = '';
+      if (submitBtn) submitBtn.style.display = '';
     }
 
     const modal = document.getElementById('betslip');
@@ -173,6 +206,7 @@ const BetSlipAPI = {
     this.currentTeamChoice = null;
     this.currentMatchName = null;
     this.currentOdd = null;
+    this.currentMatchDate = null;
 
     const modal = document.getElementById('betslip');
     if (modal) modal.classList.remove('open');
@@ -182,6 +216,14 @@ const BetSlipAPI = {
 
     const amountEl = document.getElementById('bet-amount');
     if (amountEl) amountEl.value = '';
+
+    // Reset closed notice
+    const closedEl = document.getElementById('betslip-closed-notice');
+    const formEl   = document.getElementById('betslip-form-area');
+    const submitBtn = document.querySelector('.sm-betslip-submit');
+    if (closedEl) closedEl.style.display = 'none';
+    if (formEl)   formEl.style.display   = '';
+    if (submitBtn) submitBtn.style.display = '';
   },
 
   showToast(message, type = 'success') {
@@ -194,6 +236,12 @@ const BetSlipAPI = {
 
   async submit() {
     if (!this.currentMatchId) return;
+
+    // ── Block if betting window closed ────────────────────────────
+    if (this._isBettingClosed()) {
+      this.showToast('⏱️ El tiempo para apostar en este partido ya cerró (15 min desde el inicio).', 'error');
+      return;
+    }
 
     const amountEl = document.getElementById('bet-amount');
     if (!amountEl || !amountEl.value || parseInt(amountEl.value, 10) < 1000) {
@@ -223,7 +271,8 @@ const BetSlipAPI = {
           team_choice: this.currentTeamChoice,
           odd: this.currentOdd,
           amount: amount,
-          sport_source: window.SPORT_CONFIG?.source || 'soccer'
+          sport_source: window.SPORT_CONFIG?.source || 'soccer',
+          match_date: this.currentMatchDate || null
         })
       });
 
@@ -386,7 +435,7 @@ const MyBetsPanel = {
 };
 
 /* ─── GLOBAL BINDINGS ────────────────────────────────────────────────────────── */
-window.openBetSlip = (matchId, teamChoice, matchName, odd) => BetSlipAPI.open(matchId, teamChoice, matchName, odd);
+window.openBetSlip = (matchId, teamChoice, matchName, odd, matchDate) => BetSlipAPI.open(matchId, teamChoice, matchName, odd, matchDate || null);
 window.closeBetSlip = () => BetSlipAPI.close();
 window.submitBet    = () => BetSlipAPI.submit();
 window.MyBetsPanel  = MyBetsPanel;

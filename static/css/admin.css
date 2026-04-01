@@ -424,6 +424,13 @@ body {
   gap: 1.5rem;
 }
 
+/* Mobile hamburger — hidden on desktop, shown via media query */
+.mobile-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
 .datetime {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -1245,95 +1252,298 @@ input:checked + .slider:before {
   align-items: center;
 }
 
-/* --- RESPONSIVIDAD (MOBILE & TABLETS) --- */
+/* =========================================================
+   RESPONSIVE SYSTEM — Mobile-First Admin Panel
+   Breakpoints: 900px (tablet), 640px (phone), 480px (small)
+   ========================================================= */
+
+/* ── TABLET (≤ 900px) ─────────────────────────────────── */
 @media (max-width: 900px) {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+  }
+
+  .views-container {
+    padding: 1.25rem;
+  }
+
+  /* Support chat: stack panels */
+  #view-support > div {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  #supportChatsList { max-height: 260px; }
+  #supportThreadContainer { height: 450px; }
+
+  /* Messages: stack columns */
+  #view-mensajes > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  .missions-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 768px) {
-  /* Login */
-  .login-glass {
-    padding: 2rem 1.5rem;
-    border-radius: 16px;
-  }
-  
-  /* Sidebar Off-canvas */
+/* ── PHONE (≤ 640px) ──────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* ─ Layout ─────────────────────────────────────────── */
   .sidebar {
     position: fixed;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     height: 100vh;
+    width: 280px;
     transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
+    z-index: 200;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .sidebar.open {
-    transform: translateX(0);
-  }
+  .sidebar.open { transform: translateX(0); }
 
-  /* Main Content */
-  .admin-main .topbar,
-  .main-content {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
+  .sidebar-overlay { display: block; }
 
-  /* Toolbar */
+  .main-content { margin-left: 0 !important; width: 100% !important; }
+
+  /* ─ Topbar ─────────────────────────────────────────── */
   .topbar {
-    padding: 1rem;
-    flex-wrap: wrap;
-    left: 0 !important;
-    width: 100% !important;
+    padding: 0 1rem;
+    height: 58px;
   }
-  
-  .mobile-toggle {
-    display: block !important;
-  }
-  
-  .datetime {
-    display: none;
-  }
-
-  /* Overlay visible on mobile */
-  .sidebar-overlay {
-    display: block;
+  .mobile-toggle { display: flex !important; }
+  .datetime { display: none; }
+  .page-title h1 { font-size: 0.95rem; }
+  /* Notification panel: full-width on mobile */
+  .notif-panel {
+    width: calc(100vw - 2rem);
+    right: -4.5rem;
+    left: auto;
   }
 
-  /* Grids and Tables */
+  /* ─ Views Container ─────────────────────────────────── */
+  .views-container { padding: 1rem 0.85rem; }
+
+  /* ─ Section headers ─────────────────────────────────── */
+  .section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1rem;
+  }
+  .section-header > div { width: 100%; }
+  .section-header .btn-primary,
+  .section-header .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ─ KPI Grid ─────────────────────────────────────────── */
   .kpi-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
   }
-  
-  .charts-row, .form-row {
-    flex-direction: column;
-  }
-  
-  .theme-builder-grid {
-    grid-template-columns: 1fr !important;
-  }
-  
-  .table-responsive {
-    overflow-x: auto;
-  }
-  
-  .content-card {
-    padding: 1rem;
-  }
-  
+  .kpi-card { padding: 1rem; }
+  .kpi-value { font-size: 1.35rem; }
+  .kpi-title { font-size: 0.72rem; }
+  .kpi-icon { font-size: 1.5rem; }
+  .chart-container { height: 220px; padding: 1rem; }
+
+  /* ─ Card / Content Card ─────────────────────────────── */
+  .content-card { border-radius: 10px; margin-bottom: 1rem; }
+  .card-header { padding: 0.9rem 1rem; }
+  .card-header h2 { font-size: 1rem; }
   .flex-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
   }
-  
   .flex-header > div {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     width: 100%;
   }
-  
-  .search-bar {
+  .flex-header .btn-primary,
+  .flex-header .btn-secondary {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+
+  /* ─ Search bar ──────────────────────────────────────── */
+  .search-bar { width: 100%; }
+
+  /* ─ Form rows stack on mobile ───────────────────────── */
+  .form-row { flex-direction: column; gap: 0; }
+  .modal-body { padding: 1.1rem; }
+  .modal-header { padding: 0.9rem 1.1rem; }
+
+  /* ─ Modals: near-fullscreen on phone ───────────────── */
+  .modal-container {
+    max-width: 100% !important;
+    width: calc(100vw - 1.5rem) !important;
+    margin: 0 0.75rem;
+    border-radius: 16px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .modal-overlay {
+    align-items: flex-end;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .modal-overlay.active .modal-container {
+    transform: translateY(0) scale(1);
+  }
+
+  /* ─ Tables: horizontal scroll ───────────────────────── */
+  .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table th, .data-table td { padding: 0.7rem 0.85rem; font-size: 0.8rem; }
+  .data-table th { font-size: 0.68rem; }
+
+  /* ─ Dashboard ──────────────────────────────────────── */
+  #view-dashboard .section-title {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+  #view-dashboard .section-title button {
     width: 100%;
+    justify-content: center;
+    font-size: 0.8rem;
+  }
+  .charts-row { flex-direction: column; }
+
+  /* ─ Apuestas Deportivas (Bet cards) ─────────────────── */
+  #adminBetsList > div { gap: 8px; }
+  #adminBetsList > div > div {
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+  /* Stack action buttons horizontally on phone */
+  #adminBetsList > div > div > div:last-child {
+    flex-direction: row !important;
+    min-width: unset !important;
+    width: 100%;
+    gap: 8px !important;
+  }
+  #adminBetsList > div > div > div:last-child button {
+    flex: 1;
+  }
+  /* Bet info grid: single column */
+  #adminBetsList .bet-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ─ Partidos Personalizados ──────────────────────────── */
+  #cmFilterBar > div {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  #cmFilterBar select { width: 100% !important; }
+  /* Table columns: hide date on small screens */
+  #customMatchesTable th:nth-child(3),
+  #customMatchesTable td:nth-child(3) { display: none; }
+
+  /* Action buttons in table: icon only */
+  #customMatchesTable .btn-secondary,
+  #customMatchesTable .btn-primary {
+    padding: 6px 8px !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* ─ Players Table: compact ──────────────────────────── */
+  #playersTable th:nth-child(5),
+  #playersTable td:nth-child(5) { display: none; } /* hide Partidas */
+  #playersTable th:nth-child(1),
+  #playersTable td:nth-child(1) { display: none; } /* hide ID */
+
+  /* ─ Transactions Table: hide less important cols ─────── */
+  #transactionsTable th:nth-child(4),
+  #transactionsTable td:nth-child(4) { display: none; } /* Telegram ID */
+
+  /* ─ Retiros: filter buttons wrap ───────────────────── */
+  #view-withdrawals .section-header > div {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  #view-withdrawals .section-header .btn-secondary {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    font-size: 0.78rem;
+  }
+
+  /* ─ Bets filter buttons wrap ────────────────────────── */
+  #view-bets .section-header > div {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  #view-bets .section-header .btn-secondary {
+    flex: 1 1 calc(33% - 4px);
+    justify-content: center;
+    font-size: 0.78rem;
+    padding: 7px 8px;
+  }
+
+  /* ─ Support chat ────────────────────────────────────── */
+  #view-support > div {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    gap: 1rem !important;
+  }
+  #supportChatsList { max-height: 220px; }
+  #supportThreadContainer { height: 60vh !important; }
+  #supportReplyText { font-size: 0.85rem; }
+
+  /* ─ Mensajes: stack panels ──────────────────────────── */
+  #view-mensajes > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ─ Missions grid ───────────────────────────────────── */
+  .missions-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .mission-card { padding: 1rem; }
+
+  /* ─ Temas: full width cards ─────────────────────────── */
+  #temasGrid { grid-template-columns: 1fr !important; }
+  #view-temas > div > div { flex-direction: column !important; align-items: flex-start !important; }
+  #view-temas > div > div button { width: 100%; justify-content: center; }
+
+  /* ─ Toast: full width at bottom ─────────────────────── */
+  .toast-container {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    padding: 0 1rem 1rem;
+  }
+  .toast { border-radius: 10px; font-size: 0.85rem; padding: 0.9rem 1rem; }
+
+  /* ─ History table: compact ──────────────────────────── */
+  #historyTable th:nth-child(4),
+  #historyTable td:nth-child(4) { display: none; } /* Apuesta */
+  #view-history .card-header > div {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  #view-history .card-header > div > div { width: 100%; }
+  #filterGame { width: 100% !important; }
+
+  /* ─ Marketing view ──────────────────────────────────── */
+  #view-marketing > div { max-width: 100%; }
+
+  /* ─ Loading screen config ───────────────────────────── */
+  #loadingConfigArea { padding: 0; }
+
+  /* ─ Min touch target (WCAG) 44px ───────────────────── */
+  .nav-item { min-height: 44px; padding: 0.75rem 1rem; }
+  .btn-primary, .btn-secondary, .btn-danger { min-height: 40px; }
+}
+
+/* ── SMALL PHONE (≤ 400px) ── */
+@media (max-width: 400px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi-value { font-size: 1.2rem; }
+  .topbar-actions { gap: 0.5rem; }
+  #view-bets .section-header .btn-secondary {
+    flex: 1 1 100%;
   }
 }

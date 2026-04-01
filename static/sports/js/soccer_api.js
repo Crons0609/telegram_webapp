@@ -153,6 +153,11 @@
         const clickAction = m.isCustom ? '' : `onclick="SoccerMatchDetails.open('${m.id}','${home}','${away}')"`;
         const cursorStyle = m.isCustom ? 'default' : 'pointer';
 
+        const matchDate = m.isCustom
+          ? (m._matchDate || (m.startTimestamp ? new Date(m.startTimestamp * 1000).toISOString() : null))
+          : (m.startTimestamp ? new Date(m.startTimestamp * 1000).toISOString() : null);
+        const dateArg = matchDate ? `,'${matchDate}'` : '';
+
         html += `
           <div class="sm-event" data-status="${dataStatus}">
             <div style="cursor:${cursorStyle};" ${clickAction}>
@@ -168,13 +173,13 @@
             </div>
             ${showOdds && !isFinish ? `
             <div class="sm-odds">
-              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${away}','${home} vs ${away}',1.75)">
+              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${away}','${home} vs ${away}',1.75${dateArg})">
                 <span class="sm-odd-label">VISITA</span><span class="sm-odd-value">1.75</span>
               </button>
-              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','Empate','${home} vs ${away}',2.00)">
+              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','Empate','${home} vs ${away}',2.00${dateArg})">
                 <span class="sm-odd-label">EMPATE</span><span class="sm-odd-value">2.00</span>
               </button>
-              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${home}','${home} vs ${away}',1.75)">
+              <button class="sm-odd-btn" onclick="openBetSlip('${matchId}','${home}','${home} vs ${away}',1.75${dateArg})">
                 <span class="sm-odd-label">LOCAL</span><span class="sm-odd-value">1.75</span>
               </button>
             </div>` : ''}

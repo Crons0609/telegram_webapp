@@ -244,50 +244,137 @@ async function loadAdminBets(status = 'all') {
                 return;
             }
 
-            let html = '';
+            // ── Group bets by match_name ───────────────────────────────
+            const matchGroups = {};  // { match_name -> { bets:[], stats:{choice->count}, amounts:{choice->total} } }
             data.bets.forEach(b => {
-                const date = new Date(b.created_at).toLocaleString();
-                const potWin = (b.amount * b.odd).toLocaleString();
-                
-                let badgeColor = '#6b7280';
-                if (b.status === 'won') badgeColor = '#10b981';
-                if (b.status === 'lost') badgeColor = '#ef4444';
-                if (b.status === 'pending') badgeColor = '#f59e0b';
-                
-                let actions = '';
-                if (b.status === 'pending') {
-                    actions = `
-                        <div style="margin-top:12px; display:flex; gap:8px;">
-                            <button onclick="resolveBet('${b.id}', 'settle')" class="btn-primary" style="padding:6px 12px; font-size:0.75rem;"><i class="fas fa-gavel"></i> Dar Resultado</button>
-                            <button onclick="resolveBet('${b.id}', 'cancel')" class="btn-secondary" style="padding:6px 12px; font-size:0.75rem; background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3);"><i class="fas fa-ban"></i> Anular (Reembolso)</button>
-                        </div>
-                    `;
-                }
-
-                html += `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:1rem; border-radius:8px; margin-bottom:1rem;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <strong style="color:var(--text-main); font-size:1.1rem;">${b.match_name}</strong>
-                        <span style="background:${badgeColor}20; color:${badgeColor}; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:700;">${b.status.toUpperCase()}</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.85rem; color:var(--text-muted);">
-                        <div>Jugador: <span style="color:#fff;">${b.username}</span></div>
-                        <div>Monto: <span style="color:var(--primary); font-weight:bold;">${b.amount.toLocaleString()} bits</span></div>
-                        <div>Eligió: <span style="color:#fff;">${b.team_choice}</span></div>
-                        <div>Cuota: <span style="color:#fff;">${b.odd}x</span></div>
-                        <div>Posible Ganancia: <span style="color:var(--success);">${potWin} bits</span></div>
-                        <div>Fecha: <span>${date}</span></div>
-                    </div>
-                    ${actions}
-                </div>
-                `;
+                const key = b.match_name || 'Desconocido';
+                if (!matchGroups[key]) matchGroups[key] = { bets: [], stats: {}, amounts: {} };
+                matchGroups[key].bets.push(b);
+                const ch = (b.team_choice || '').toLowerCase().trim();
+                matchGroups[key].stats[ch]   = (matchGroups[key].stats[ch] || 0) + 1;
+                matchGroups[key].amounts[ch] = (matchGroups[key].amounts[ch] || 0) + (b.amount || 0);
             });
+
+            const STATUS_CFG = {
+                won:       { color: '#10b981', icon: 'fa-check-circle', label: 'GANADA'    },
+                lost:      { color: '#ef4444', icon: 'fa-times-circle', label: 'PERDIDA'   },
+                pending:   { color: '#f59e0b', icon: 'fa-clock',        label: 'PENDIENTE' },
+                cancelled: { color: '#6b7280', icon: 'fa-ban',          label: 'ANULADA'   },
+            };
+
+            // ── Build distribution bar for a match group ──────────────
+            function buildDistBar(matchName, group) {
+                const allChoices = Object.entries(group.stats);
+                const total = allChoices.reduce((s, [,c]) => s + c, 0);
+                if (total === 0) return '';
+
+                // Sort choices by count desc
+                allChoices.sort((a,b) => b[1] - a[1]);
+
+                const CHOICE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#64748b'];
+                let barSegments = '';
+                let legend = '';
+
+                allChoices.forEach(([choice, count], i) => {
+                    const pct = Math.round((count / total) * 100);
+                    const color = CHOICE_COLORS[i % CHOICE_COLORS.length];
+                    const bits  = (group.amounts[choice] || 0).toLocaleString();
+                    barSegments += `<div style="width:${pct}%;background:${color};height:100%;transition:width .4s ease;" title="${choice}: ${pct}%"></div>`;
+                    legend += `<div style="display:flex;align-items:center;gap:5px;font-size:0.72rem;">
+                        <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+                        <span style="color:#ccc;font-weight:600;">${choice}</span>
+                        <span style="color:#888;">${count} apuesta${count!==1?'s':''}</span>
+                        <span style="color:${color};font-weight:700;">${pct}%</span>
+                        <span style="color:#555;font-size:0.68rem;">(${bits} bits)</span>
+                    </div>`;
+                });
+
+                return `
+                <div style="background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.06);
+                            border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                        <span style="font-size:0.82rem;font-weight:700;color:var(--text-main);">
+                            📊 ${matchName}
+                        </span>
+                        <span style="font-size:0.7rem;color:var(--text-muted);">${total} apuesta${total!==1?'s':''} totales</span>
+                    </div>
+                    <!-- Bar -->
+                    <div style="height:10px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.06);
+                                display:flex;margin-bottom:8px;">
+                        ${barSegments}
+                    </div>
+                    <!-- Legend -->
+                    <div style="display:flex;flex-wrap:wrap;gap:8px 16px;">
+                        ${legend}
+                    </div>
+                </div>`;
+            }
+
+            let html = '';
+
+            // ── Render each match group ────────────────────────────────
+            Object.entries(matchGroups).forEach(([matchName, group]) => {
+                html += buildDistBar(matchName, group);
+
+                // Individual bet cards (collapsible under the bar)
+                html += `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">`;
+                group.bets.forEach(b => {
+                    const date   = new Date(b.created_at).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+                    const potWin = Math.round(b.amount * b.odd).toLocaleString();
+                    const sc = STATUS_CFG[b.status] || STATUS_CFG.cancelled;
+
+                    let actionButtons = '';
+                    if (b.status === 'pending') {
+                        actionButtons = `
+                            <button onclick="resolveBet('${b.id}', 'settle')"
+                                style="display:flex;align-items:center;gap:6px;padding:7px 12px;font-size:0.78rem;font-weight:600;
+                                       background:linear-gradient(135deg,#6366f1,#7c3aed);border:none;color:#fff;
+                                       border-radius:8px;cursor:pointer;white-space:nowrap;width:100%;justify-content:center;
+                                       box-shadow:0 2px 8px rgba(99,102,241,0.35);transition:opacity .2s;"
+                                onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">
+                                <i class="fas fa-gavel"></i> Dar Resultado
+                            </button>
+                            <button onclick="resolveBet('${b.id}', 'cancel')"
+                                style="display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:0.74rem;font-weight:600;
+                                       background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;
+                                       border-radius:8px;cursor:pointer;white-space:nowrap;width:100%;justify-content:center;transition:background .2s;"
+                                onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                                <i class="fas fa-ban"></i> Anular
+                            </button>`;
+                    }
+
+                    html += `
+                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);
+                                border-left:3px solid ${sc.color};border-radius:8px;padding:10px 14px;
+                                display:flex;align-items:flex-start;gap:14px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap;">
+                                <span style="background:${sc.color}18;color:${sc.color};padding:2px 8px;
+                                             border-radius:20px;font-size:0.65rem;font-weight:700;letter-spacing:.5px;">
+                                    <i class="fas ${sc.icon}"></i> ${sc.label}
+                                </span>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:3px 14px;font-size:0.78rem;color:var(--text-muted);">
+                                <div>👤 <span style="color:#ccc;">${b.username}</span></div>
+                                <div>🎯 <span style="color:#fff;font-weight:600;">${b.team_choice}</span></div>
+                                <div>💰 <span style="color:var(--primary);font-weight:700;">${b.amount.toLocaleString()} bits</span></div>
+                                <div>✨ <span style="color:#10b981;font-weight:700;">${potWin} bits</span></div>
+                                <div>🕐 <span>${date}</span></div>
+                            </div>
+                        </div>
+                        ${b.status === 'pending' ? `<div style="display:flex;flex-direction:column;gap:5px;min-width:120px;flex-shrink:0;">${actionButtons}</div>` : ''}
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+
             container.innerHTML = html;
         } else {
             container.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--danger);">${data.message}</div>`;
         }
     } catch (err) {
         container.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--danger);">Error de conexión</div>';
+
     }
 }
 
@@ -481,10 +568,45 @@ function _renderCustomMatchesTable() {
         actions += `<button onclick="openEditCustomMatchModal('${m.sport}','${m.id}','${(m.home_team||'').replace(/'/g,"\\'")}','${(m.away_team||'').replace(/'/g,"\\'")}','${m.date||''}','${(m.league||'').replace(/'/g,"\\'")}','${(m.description||'').replace(/'/g,"\\'")}','${m.sport}','${sh}','${sa}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;" title="Editar"><i class="fas fa-edit"></i></button>`;
         actions += `<button onclick="deleteCustomMatch('${m.sport}','${m.id}')" class="btn-secondary" style="padding:5px 10px;font-size:0.75rem;color:#ef4444;border-color:rgba(239,68,68,0.3);" title="Eliminar"><i class="fas fa-trash"></i></button>`;
 
+        // ── Bet stats cell ─────────────────────────────────────────────
+        const stats = m.bet_stats || {};
+        const total = m.bet_total || 0;
+        let betCell = '';
+        if (total === 0) {
+            betCell = `<span style="color:var(--text-muted); font-size:0.75rem;">Sin apuestas</span>`;
+        } else {
+            const home_lc  = (m.home_team || '').toLowerCase().trim();
+            const away_lc  = (m.away_team || '').toLowerCase().trim();
+            const homeCount = stats[home_lc]  || 0;
+            const awayCount = stats[away_lc]  || 0;
+            const drawCount = stats['empate'] || stats['draw'] || 0;
+            const otherCounts = Object.entries(stats).filter(([k]) =>
+                k !== home_lc && k !== away_lc && k !== 'empate' && k !== 'draw'
+            ).reduce((s, [,v]) => s + v, 0);
+
+            const chip = (label, count, color) =>
+                count > 0
+                    ? `<span style="background:${color}20; color:${color}; border:1px solid ${color}40; border-radius:20px; padding:2px 8px; font-size:0.7rem; font-weight:700; white-space:nowrap;">${label}: ${count}</span>`
+                    : '';
+
+            const parts = [
+                chip((m.home_team || 'Local').substring(0,10), homeCount, '#6366f1'),
+                chip((m.away_team || 'Visita').substring(0,10), awayCount, '#f59e0b'),
+                chip('Empate', drawCount, '#10b981'),
+                otherCounts > 0 ? chip('Otros', otherCounts, '#64748b') : ''
+            ].filter(Boolean);
+
+            betCell = `<div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                ${parts.join('')}
+                <span style="color:var(--text-muted); font-size:0.7rem; margin-left:2px;">(${total} total)</span>
+            </div>`;
+        }
+
         return `<tr style="${rowStyle}">
             <td>${sportLabel}</td>
             <td><strong>${matchName}</strong>${league}</td>
             <td style="font-size:0.82rem;">${dateLocal}</td>
+            <td>${betCell}</td>
             <td>${statusBadge}</td>
             <td><div style="display:flex;gap:6px;flex-wrap:wrap;">${actions}</div></td>
         </tr>`;

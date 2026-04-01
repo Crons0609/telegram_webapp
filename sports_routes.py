@@ -413,6 +413,7 @@ def place_bet():
     amount = data.get('amount')
     odd = data.get('odd')
     sport_source = data.get('sport_source', 'soccer')
+    match_date = data.get('match_date')    # ISO datetime string, optional
 
     if not all([telegram_id, match_id, match_name, team_choice, amount, odd]):
         return jsonify({"success": False, "error": "Datos de apuesta incompletos"}), 400
@@ -423,6 +424,25 @@ def place_bet():
             raise ValueError
     except:
         return jsonify({"success": False, "error": "Cantidad inválida"}), 400
+
+    # ── 15-minute betting window check ──────────────────────────────────────
+    if match_date:
+        try:
+            from datetime import datetime, timezone, timedelta
+            # Parse ISO date; accept both naive and tz-aware
+            match_dt = datetime.fromisoformat(str(match_date).replace('Z', '+00:00'))
+            now_utc  = datetime.now(timezone.utc)
+            if match_dt.tzinfo is None:
+                match_dt = match_dt.replace(tzinfo=timezone.utc)
+            elapsed_minutes = (now_utc - match_dt).total_seconds() / 60.0
+            if elapsed_minutes > 15:
+                return jsonify({
+                    "success": False,
+                    "error": f"⏱️ El tiempo para apostar cerró. Han pasado {int(elapsed_minutes)} min desde el inicio del partido (límite: 15 min)."
+                }), 400
+        except Exception as e:
+            logger.warning(f"[BetWindow] Date parse error: {e}")
+            # If we can't parse, let it through (don't block on bad date)
 
     user = database.get_fb(f"usuarios/{telegram_id}")
     if not user:
@@ -441,7 +461,6 @@ def place_bet():
     database.descontar_bits(telegram_id, amount)
     
     # Registramos la apuesta con los datos enviados por la API deportiva
-    # (Ya no dependemos de sports_matches en Firebase)
     bet_data = {
         "telegram_id": str(telegram_id),
         "match_id": match_id,
@@ -451,7 +470,8 @@ def place_bet():
         "odd": odd,
         "sport_source": sport_source,
         "status": "pending",
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.utcnow().isoformat(),
+        "match_date": match_date or None
     }
     database.post_fb("sports_bets", bet_data)
     

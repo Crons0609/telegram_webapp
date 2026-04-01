@@ -938,6 +938,47 @@ def handle_custom_matches():
                 entry['sport'] = sport
                 matches_list.append(entry)
         matches_list.sort(key=lambda x: str(x.get('date', '')), reverse=True)
+
+        # ── Aggregate bet counts per match ────────────────────────────────
+        try:
+            bets_db = database._to_dict(database.get_fb('sports_bets')) or {}
+        except Exception:
+            bets_db = {}
+
+        # Build a lookup: { match_id -> { team_choice -> count } }
+        bet_counts = {}
+        for b in bets_db.values():
+            if not b or not isinstance(b, dict):
+                continue
+            b_match_id = b.get('match_id', '')
+            b_choice   = str(b.get('team_choice', '')).lower().strip()
+            if not b_match_id:
+                continue
+            if b_match_id not in bet_counts:
+                bet_counts[b_match_id] = {}
+            bet_counts[b_match_id][b_choice] = bet_counts[b_match_id].get(b_choice, 0) + 1
+
+        # Also match by home+away string for bets placed using match_name
+        for m in matches_list:
+            m_id   = m.get('id', '')
+            home   = (m.get('home_team') or '').lower().strip()
+            away   = (m.get('away_team') or '').lower().strip()
+            stats  = dict(bet_counts.get(m_id, {}))
+
+            # Fallback: scan bets matching by home+away team name in match_name
+            for b in bets_db.values():
+                if not b or not isinstance(b, dict):
+                    continue
+                if b.get('match_id', '') == m_id:
+                    continue  # already counted
+                b_name   = (b.get('match_name') or '').lower()
+                b_choice = str(b.get('team_choice', '')).lower().strip()
+                if home and away and home in b_name and away in b_name and b_choice:
+                    stats[b_choice] = stats.get(b_choice, 0) + 1
+
+            m['bet_stats'] = stats
+            m['bet_total'] = sum(stats.values())
+
         return jsonify({'success': True, 'matches': matches_list})
 
     elif request.method == 'POST':
