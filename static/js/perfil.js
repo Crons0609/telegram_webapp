@@ -695,11 +695,25 @@ window.UserProfileManager = {
             const res = await fetch('/api/profile/daily_reward', {method:'POST'});
             const data = await res.json();
             if (data.status==='ok') {
-                alert(`¡Felicidades! Has reclamado ${data.reward} Bits. Racha actual: ${data.streak} días.`);
-                const bitsEl = document.getElementById('global-bits-display');
+                alert(`¡Felicidades! Has reclamado ${data.reward} Bits Demo.\nRacha actual: ${data.streak} días.`);
+                
+                // Actualizar Odometer del Home si existe
+                const odDemoSpan = document.getElementById('hero-bits-demo');
+                if (odDemoSpan) {
+                    odDemoSpan.textContent = data.bits_actuales; // Esto dispara automático el window.GpcOdometer
+                }
+                
+                // Actualizar algún span global
+                const bitsEl = document.getElementById('global-bits-demo-display');
                 if (bitsEl) bitsEl.innerText = data.bits_actuales;
-                this.openModal('info');
-            } else { alert(data.message); }
+                
+                // Disparar haptic si está en Telegram
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                }
+            } else { 
+                alert(data.message); 
+            }
         } catch(e) { console.error(e); }
     },
 

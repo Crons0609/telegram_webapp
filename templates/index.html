@@ -672,10 +672,10 @@
        PANEL FLOTANTE IZQUIERDO
     ═══════════════════════════════════════ */
     .gpc-float-panel {
-      position: absolute;
+      position: fixed;
       top: 40px;
       left: 10px;
-      z-index: 50;
+      z-index: 1000;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
@@ -1063,27 +1063,44 @@
 
     /* === Enviar Regalo === */
     function _handleEnviarRegalo() {
-      const username = prompt('Ingresa el nombre de usuario del jugador al que deseas enviar un regalo.\n(Ej: Young-G59)');
-      if (!username || !username.trim()) return;
-      const bits = parseInt(prompt(`¿Cuántos bits quieres enviar a ${username.trim()}?`) || '0', 10);
-      if (!bits || bits <= 0) return;
-      fetch('/api/profile/send_gift', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to_username: username.trim(), bits })
-      })
+      const targetId = prompt('Ingresa el ID único de Telegram del jugador al que deseas enviar un regalo.\n(Ej: 123456789)');
+      if (!targetId || !targetId.trim()) return;
+      
+      // Buscar el nombre del jugador primero
+      fetch('/api/profile/' + targetId.trim())
       .then(r => r.json())
       .then(d => {
-        if (d.status === 'ok') {
-          alert(`✅ Regalo enviado: ${bits.toLocaleString()} bits a ${username.trim()}`);
-          if (window.Telegram?.WebApp?.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-          }
+        if (d.status === 'ok' && d.profile) {
+          const playerName = d.profile.nombre;
+          
+          // Confirmar con el usuario
+          const bits = parseInt(prompt(`Vas a enviar un regalo a: ${playerName}\n¿Cuántos bits quieres enviarle?`) || '0', 10);
+          if (!bits || bits <= 0) return;
+          
+          // Enviar el regalo
+          fetch('/api/profile/send_gift', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_telegram_id: targetId.trim(), bits: bits })
+          })
+          .then(r2 => r2.json())
+          .then(d2 => {
+            if (d2.status === 'ok') {
+              alert(`✅ Regalo enviado: ${bits.toLocaleString()} bits a ${playerName}`);
+              if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+              }
+            } else {
+              alert('❌ ' + (d2.message || 'Error al enviar el regalo.'));
+            }
+          })
+          .catch(() => alert('❌ Error de red al procesar el envío.'));
+
         } else {
-          alert('❌ ' + (d.message || 'Error al enviar el regalo.'));
+          alert('❌ No se encontró ningún jugador con ese ID de Telegram.');
         }
       })
-      .catch(() => alert('❌ Error de red.'));
+      .catch(() => alert('❌ Error de red al buscar al jugador.'));
     }
   </script>
 

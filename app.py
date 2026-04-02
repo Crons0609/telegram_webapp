@@ -903,30 +903,24 @@ def send_gift():
         return jsonify({"status": "error", "message": "No autenticado"}), 401
     
     data = request.get_json() or {}
-    to_username = data.get("to_username")
+    to_telegram_id = data.get("to_telegram_id")
     bits_to_send = int(data.get("bits", 0))
     
-    if not to_username or bits_to_send <= 0:
+    if not to_telegram_id or bits_to_send <= 0:
         return jsonify({"status": "error", "message": "Datos inválidos"}), 400
         
     sender_id = session["telegram_id"]
+    if str(to_telegram_id) == str(sender_id):
+        return jsonify({"status": "error", "message": "No puedes enviarte bits a ti mismo"}), 400
+
     sender_bits = database.obtener_bits(sender_id, is_demo=False)
-    
     if sender_bits < bits_to_send:
         return jsonify({"status": "error", "message": f"No tienes suficientes bits. Balance: {sender_bits}"}), 400
         
-    # Find recipient by name (exact match, case insensitive)
-    users = database.obtener_todos_usuarios()
-    recipient = None
-    for u in users:
-        if u.get("nombre", "").lower() == to_username.lower():
-            if str(u.get("telegram_id")) == str(sender_id):
-                return jsonify({"status": "error", "message": "No puedes enviarte bits a ti mismo"}), 400
-            recipient = u
-            break
-            
+    # Find recipient by ID
+    recipient = database.obtener_perfil_completo(to_telegram_id)
     if not recipient:
-        return jsonify({"status": "error", "message": "Jugador no encontrado"}), 404
+        return jsonify({"status": "error", "message": "El ID de jugador no fue encontrado en la base de datos"}), 404
         
     recipient_id = str(recipient.get("telegram_id"))
     
