@@ -29,15 +29,15 @@ WITHDRAWAL_MAX_PER_DAY = 5
 CRON_SECRET = os.getenv("CRON_SECRET", "zonajackpot777_cron_2026")
 
 # RapidAPI (Deportes)
-RAPIDAPI_FOOTBALL_KEY  = os.getenv("RAPIDAPI_FOOTBALL_KEY", "")
-RAPIDAPI_FOOTBALL_HOST = os.getenv("RAPIDAPI_FOOTBALL_HOST", "footapi7.p.rapidapi.com")
+RAPIDAPI_FOOTBALL_KEY  = os.getenv("RAPIDAPI_FOOTBALL_KEY", "050089e867mshb8bc7a3333bb3cfp1e5f4djsn41c27e7522d5")
+RAPIDAPI_FOOTBALL_HOST = os.getenv("RAPIDAPI_FOOTBALL_HOST", "free-api-live-football-data.p.rapidapi.com")
 
 # Fallback para el resto de deportes usando la misma key por defecto
-RAPIDAPI_MLB_KEY  = os.getenv("RAPIDAPI_MLB_KEY", RAPIDAPI_FOOTBALL_KEY)
+RAPIDAPI_MLB_KEY  = os.getenv("RAPIDAPI_MLB_KEY", "6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6")
 RAPIDAPI_MLB_HOST = os.getenv("RAPIDAPI_MLB_HOST", "tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com")
 
-RAPIDAPI_NFL_KEY  = os.getenv("RAPIDAPI_NFL_KEY", RAPIDAPI_FOOTBALL_KEY)
+RAPIDAPI_NFL_KEY  = os.getenv("RAPIDAPI_NFL_KEY", "6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6")
 RAPIDAPI_NFL_HOST = os.getenv("RAPIDAPI_NFL_HOST", "nfl-api-data.p.rapidapi.com")
 
-RAPIDAPI_F1_KEY   = os.getenv("RAPIDAPI_F1_KEY", RAPIDAPI_FOOTBALL_KEY)
+RAPIDAPI_F1_KEY   = os.getenv("RAPIDAPI_F1_KEY", "6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6")
 RAPIDAPI_F1_HOST  = os.getenv("RAPIDAPI_F1_HOST", "hyprace-api.p.rapidapi.com")

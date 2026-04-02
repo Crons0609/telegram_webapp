@@ -21,7 +21,7 @@
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function fmtDate(d) {
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   }
 
   function teamLogo(teamId) {
@@ -104,33 +104,38 @@
 
     // Parse event
     _parse(m) {
-      const home    = m.homeTeam?.name || m.homeTeam?.shortName || 'Local';
-      const away    = m.awayTeam?.name || m.awayTeam?.shortName || 'Visitante';
-      const homeId  = m.homeTeam?.id;
-      const awayId  = m.awayTeam?.id;
-      const league  = m.tournament?.name || m.tournament?.uniqueTournament?.name || 'Liga';
-      const statusT = String(m.status?.type || '').toLowerCase();
-      const statusD = m.status?.description || '';
-      const isLive  = statusT === 'inprogress';
-      const isFinish= statusT === 'finished';
-      const gH = m.homeScore?.current ?? m.score_home ?? null;
-      const gA = m.awayScore?.current ?? m.score_away ?? null;
-      const scoreStr = m._scoreStr || ((isLive || isFinish) && gH !== null && gA !== null
-        ? `${gH} - ${gA}` : 'VS');
+      // Compatibility with old properties via OR (||) just in case
+      const home    = m.home?.name || m.homeTeam?.name || 'Local';
+      const away    = m.away?.name || m.awayTeam?.name || 'Visitante';
+      const homeId  = m.home?.id || m.homeTeam?.id;
+      const awayId  = m.away?.id || m.awayTeam?.id;
+      const league  = m.tournament?.name || (m.leagueId ? `Liga` : 'Liga');
+      
+      const st = m.status || {};
+      const isLive = st.ongoing === true || String(st.type).toLowerCase() === 'inprogress';
+      const isFinish = st.finished === true || String(st.type).toLowerCase() === 'finished';
+      
+      const statusD = st.liveTime?.short || st.description || '';
+      
+      const gH = (m.home && m.home.score !== undefined) ? m.home.score : (m.homeScore?.current ?? m.score_home ?? null);
+      const gA = (m.away && m.away.score !== undefined) ? m.away.score : (m.awayScore?.current ?? m.score_away ?? null);
+      
+      const scoreStr = m._scoreStr || st.scoreStr || ((isLive || isFinish) && gH !== null && gA !== null ? `${gH} - ${gA}` : 'VS');
 
       let displayTime;
       if (m._customDisplay) {
-        // Use pre-built display from CustomMatchTimer
         displayTime = m._customDisplay;
       } else if (isLive) {
         displayTime = `<span style="color:#ef4444;font-weight:bold;">🔴 EN VIVO${statusD ? ' · ' + statusD : ''}</span>`;
       } else if (isFinish) {
         displayTime = `<span style="color:rgba(255,255,255,0.4);">FINALIZADO (${statusD || 'Final'})</span>`;
       } else {
-        const ts = m.startTimestamp;
+        const utcTime = st.utcTime || null;
+        let ts = m.startTimestamp || (utcTime ? new Date(utcTime).getTime() / 1000 : null);
+        
         displayTime = ts
           ? new Date(ts * 1000).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-          : 'Próximamente';
+          : (m.time || 'Próximamente');
       }
       return { home, away, homeId, awayId, league, scoreStr, displayTime, isLive, isFinish };
     },
@@ -189,10 +194,12 @@
       c.innerHTML = html;
     },
 
-    // ── Fetch matches for a given date string "YYYY/MM/DD" ────────────────────
+    // ── Fetch matches for a given date string "YYYYMMDD" ────────────────────
     async _fetchMatchesByDate(dateStr) {
       const data = await this.fetchProxy(`api/matches/${dateStr}`);
-      return Array.isArray(data?.events) ? data.events : [];
+      // Handle different API response shapes (RapidAPI usually wraps it in "response")
+      let items = data?.events || data?.response?.live || data?.response?.matches || data?.response || [];
+      return Array.isArray(items) ? items : [];
     },
 
     // ── 1. MAIN EVENT LOADER ─────────────────────────────────────────────────
@@ -251,8 +258,11 @@
 
         // Step 1 — Live matches
         const live = await this.fetchProxy('api/matches/live');
-        merge(live?.events);
-        console.log('[FootAPI] Live matches:', live?.events?.length || 0);
+        let liveItems = live?.events || live?.response?.live || live?.response?.matches || live?.response;
+        if (Array.isArray(liveItems)) {
+            merge(liveItems);
+            console.log('[FootAPI] Live matches:', liveItems.length);
+        }
 
         // Step 2 — Today, yesterday, day before yesterday
         const now = new Date();

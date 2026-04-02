@@ -213,15 +213,29 @@ def get_custom_matches_finished(sport):
 def football_proxy(endpoint):
     """
     Secure backend proxy to Free API Live Football Data (RapidAPI).
-    Accepts full endpoint path and passes along all GET query arguments.
+    Maps old front-end routes to the new API endpoints.
     """
-    cache_key = f"{endpoint}?{request.query_string.decode('utf-8')}"
+    if endpoint == "api/matches/live":
+        target_path = "football-current-live"
+    elif endpoint.startswith("api/matches/"):
+        date_str = endpoint.split("/")[-1] # Expected YYYYMMDD
+        target_path = f"football-get-matches-by-date?date={date_str}"
+    else:
+        target_path = endpoint
+
+    cache_key = f"{target_path}?{request.query_string.decode('utf-8')}"
     cached = _fb_cached(cache_key)
     if cached:
         return jsonify(cached)
 
-    url = f"https://{_FB_HOST}/{endpoint}"
-    active_key = _FB_KEY if _FB_KEY else '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+    # Si target_path ya tiene '?', añadimos los query_string extra con '&' en la URL
+    qs = request.query_string.decode('utf-8')
+    final_path = target_path
+    if qs:
+        final_path = target_path + "&" + qs if "?" in target_path else target_path + "?" + qs
+
+    url = f"https://{_FB_HOST}/{final_path}"
+    active_key = _FB_KEY if _FB_KEY else '050089e867mshb8bc7a3333bb3cfp1e5f4djsn41c27e7522d5'
     headers = {
         "x-rapidapi-key": active_key,
         "x-rapidapi-host": _FB_HOST,
@@ -229,8 +243,9 @@ def football_proxy(endpoint):
     }
     
     try:
-        resp = http_requests.get(url, headers=headers, params=request.args, timeout=12)
-        logger.info(f"[Football API] {endpoint} -> HTTP {resp.status_code}")
+        # Avoid passing params because we injected them into final_path
+        resp = http_requests.get(url, headers=headers, timeout=12)
+        logger.info(f"[Football API] {endpoint} -> {target_path} HTTP {resp.status_code}")
 
         if resp.status_code == 403:
             return jsonify({

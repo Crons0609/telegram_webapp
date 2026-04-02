@@ -9,20 +9,30 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Fallback basic credentials like in sports_routes.py
-FB_HOST = 'footapi7.p.rapidapi.com'
+FB_HOST = 'free-api-live-football-data.p.rapidapi.com'
 MLB_HOST = 'tank01-mlb-live-in-game-real-time-statistics.p.rapidapi.com'
 NFL_HOST = 'nfl-api-data.p.rapidapi.com'
 
 def get_api_key():
     try:
         import config
-        return getattr(config, 'RAPIDAPI_FOOTBALL_KEY', '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6')
+        return getattr(config, 'RAPIDAPI_FOOTBALL_KEY', '050089e867mshb8bc7a3333bb3cfp1e5f4djsn41c27e7522d5')
     except:
-        return '6baf9fc61cmsh68fc825745fb754p1d702djsn35393a209de6'
+        return '050089e867mshb8bc7a3333bb3cfp1e5f4djsn41c27e7522d5'
 
 def resolve_soccer_match(match_id, bet_id, bet_data):
-    """Verifica el estado de un partido de fútbol en footapi7 y resuelve la apuesta."""
-    url = f"https://{FB_HOST}/api/match/{match_id}"
+    """Verifica el estado de un partido de fútbol en la nueva API y resuelve la apuesta."""
+    raw_date = bet_data.get('match_date') or bet_data.get('created_at', '')
+    if raw_date:
+        try:
+            dt = datetime.fromisoformat(raw_date.replace('Z', '+00:00'))
+            date_str = dt.strftime("%Y%m%d")
+        except:
+            date_str = datetime.utcnow().strftime("%Y%m%d")
+    else:
+        date_str = datetime.utcnow().strftime("%Y%m%d")
+
+    url = f"https://{FB_HOST}/football-get-matches-by-date?date={date_str}"
     headers = {
         "x-rapidapi-key": get_api_key(),
         "x-rapidapi-host": FB_HOST,
@@ -30,24 +40,35 @@ def resolve_soccer_match(match_id, bet_id, bet_data):
     }
 
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        if resp.status_code == 404:
-            return False # Match not found, might be invalid
-        resp.raise_for_status()
+        resp = requests.get(url, headers=headers, timeout=12)
+        if resp.status_code != 200:
+            return False
+            
         data = resp.json()
-
-        event = data.get('event', {})
-        status_type = str(event.get('status', {}).get('type', '')).lower()
-        
-        # Solo resolvemos si ha terminado
-        if status_type not in ['finished', 'ended', 'closed']:
+        resp_node = data.get('response', [])
+        if isinstance(resp_node, dict):
+            items = resp_node.get('live') or resp_node.get('matches') or resp_node.get('events') or []
+        else:
+            items = resp_node
+            
+        match_data = None
+        for m in items:
+            if str(m.get('id', '')) == str(match_id):
+                match_data = m
+                break
+                
+        if not match_data:
             return False
 
-        home_score = event.get('homeScore', {}).get('current')
-        away_score = event.get('awayScore', {}).get('current')
-        
-        home_team = event.get('homeTeam', {}).get('name', '').lower().strip()
-        away_team = event.get('awayTeam', {}).get('name', '').lower().strip()
+        st = match_data.get('status', {})
+        status_finished = st.get('finished', False) or str(st.get('type', '')).lower() in ['finished', 'ended', 'closed']
+        if not status_finished:
+            return False
+
+        home_score = match_data.get('home', {}).get('score')
+        away_score = match_data.get('away', {}).get('score')
+        home_team = match_data.get('home', {}).get('name', '').lower().strip()
+        away_team = match_data.get('away', {}).get('name', '').lower().strip()
         
         if home_score is None or away_score is None:
             return False
