@@ -83,7 +83,7 @@
   </nav>
 
   <!-- ===================================================
-       HERO — animated gradient + particles + bold CTA
+       HERO — Ghost Plague Casino redesign
   =================================================== -->
   <header class="hero" id="top">
 
@@ -91,77 +91,356 @@
     <div class="hero-particles" aria-hidden="true" id="hero-particles"></div>
 
     <!-- Hero Content -->
-    <div class="hero-content-wrap">
+    <div class="hero-content-wrap gpc-wrap">
 
-      <div class="hero-eyebrow reveal">
-        ✨ Casino Premium · Telegram Mini App
+      <!-- ── LOGO ── -->
+      <div class="gpc-logo-wrap reveal">
+        <img src="/static/img/logo.png" alt="Ghost Plague Casino Logo" class="gpc-logo-img">
+        <div class="gpc-logo-glow"></div>
       </div>
 
-      <h1 id="hero-title" class="hero-title reveal reveal-d1">
-        Juega.<br><span class="gradient-text">Gana. Domina.</span>
+      <!-- ── TITLE ── -->
+      <h1 class="gpc-title reveal reveal-d1">
+        GHOST PLAGUE<br><span>CASINO</span>
       </h1>
 
-      <p class="hero-subtitle reveal reveal-d2">
-        La experiencia de casino más premium dentro de Telegram.
-        Slots, cartas y ruleta con efectos ultra reales.
-      </p>
-
-      <!-- Mega CTA -->
-      <button class="hero-cta reveal reveal-d3" type="button" onclick="navigateTo('/juegos')" id="hero-cta-btn">
-        🎰 JUGAR AHORA
+      <!-- ── JUGAR AHORA ── -->
+      <button class="gpc-btn-play reveal reveal-d2" type="button" onclick="navigateTo('/juegos')" id="hero-cta-btn">
+        🎁 JUGAR AHORA
       </button>
 
-      <!-- Deportes CTA -->
-      <button class="reveal reveal-d3" type="button" onclick="window.location.href='/sports'" id="hero-cta-sports-btn"
-        style="width:min(320px,90vw); margin-top:15px; padding:16px 42px; font-size:clamp(1rem,4vw,1.1rem); font-weight:800; letter-spacing:.04em; color:#fff; background:linear-gradient(135deg,#0ba360,#3cba92); border:none; border-radius:50px; cursor:pointer; box-shadow:0 0 25px rgba(11,163,96,0.4),0 15px 40px rgba(0,0,0,0.5); touch-action:manipulation;">
-        ⚽ APUESTAS DEPORTIVAS
-      </button>
-
-      <!-- Dual Bits Display + Mode Switcher -->
-      <div class="reveal reveal-d3" style="margin: 18px 0 8px 0; display:flex; flex-direction:column; align-items:center; gap:10px;">
-
-        <!-- Real / Demo Tab Switcher -->
-        <div id="hero-mode-switch" style="display:flex; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); border-radius:30px; padding:3px; gap:2px;">
-          <button id="hero-btn-real" onclick="setHeroMode('real')"
-            style="border:none; border-radius:25px; padding:6px 18px; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.25s; background:var(--gold-1,#d4af37); color:#000;">
-            💰 Real
-          </button>
-          <button id="hero-btn-demo" onclick="setHeroMode('demo')"
-            style="border:none; border-radius:25px; padding:6px 18px; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.25s; background:transparent; color:#aaa;">
-            🎮 Demo
-          </button>
+      <!-- ── APUESTAS DEPORTIVAS ── -->
+      <button class="gpc-btn-sports reveal reveal-d2" type="button" onclick="window.location.href='/sports'" id="hero-cta-sports-btn">
+        <div class="gpc-sports-inner">
+          <span class="gpc-sports-icon">⚽</span>
+          <span class="gpc-sports-label">APUESTAS DEPORTIVAS</span>
         </div>
+      </button>
 
-        <!-- Dual Balance Row -->
-        <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
-          <div id="hero-balance-real" style="text-align:center; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:12px; padding:8px 16px; min-width:120px;">
-            <div style="font-size:0.75rem; color:rgba(212,175,55,0.7); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Cuenta Real</div>
-            <div style="font-size:1.3rem; font-weight:800; color:var(--gold-1,#d4af37);">💎 <span id="hero-bits-display">{{ global_profile.bits if global_profile else 0 }}</span></div>
-          </div>
-          <div id="hero-balance-demo" style="text-align:center; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:12px; padding:8px 16px; min-width:120px; opacity:0.6;">
-            <div style="font-size:0.75rem; color:rgba(168,85,247,0.7); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Cuenta Demo</div>
-            <div style="font-size:1.3rem; font-weight:800; color:#a855f7;">🎮 <span id="hero-bits-demo">{{ global_profile.bits_demo if global_profile else 0 }}</span></div>
-          </div>
+      <!-- ── MODE SWITCHER ── -->
+      <div class="gpc-mode-switch reveal reveal-d3" id="hero-mode-switch">
+        <button id="hero-btn-real" class="gpc-mode-btn gpc-mode-active" onclick="setHeroMode('real')">
+          💰 Real
+        </button>
+        <button id="hero-btn-demo" class="gpc-mode-btn" onclick="setHeroMode('demo')">
+          🎮 Demo
+        </button>
+      </div>
+
+      <!-- ── BALANCE CARDS ── -->
+      <div class="gpc-balance-row reveal reveal-d3">
+        <div class="gpc-balance-card gpc-card-real" id="hero-balance-real">
+          <div class="gpc-balance-label">CUENTA REAL</div>
+          <div class="gpc-balance-amount gpc-amount-real">💎 <span id="hero-bits-display">{{ global_profile.bits if global_profile else 0 }}</span></div>
+        </div>
+        <div class="gpc-balance-card gpc-card-demo" id="hero-balance-demo">
+          <div class="gpc-balance-label gpc-label-demo">CUENTA DEMO</div>
+          <div class="gpc-balance-amount gpc-amount-demo">🎮 <span id="hero-bits-demo">{{ global_profile.bits_demo if global_profile else 0 }}</span></div>
         </div>
       </div>
 
-      <!-- Sub actions -->
-      <div class="hero-cta-sub reveal reveal-d3" style="flex-direction:column; align-items:center; gap:10px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
-          <button class="btn-primary" type="button" data-action="paypal"
-            style="background: linear-gradient(135deg, #00457C, #0079C1); color: white; border: 1px solid #0079C1;">
-            <span style="font-weight:900; font-style: italic;">Pay<span style="color:#89b4e0;">Pal</span></span> Bits
+      <!-- ── ACTION BUTTONS ── -->
+      <div class="gpc-actions reveal reveal-d3">
+        <div class="gpc-actions-row">
+          <button class="gpc-action-btn gpc-btn-paypal" type="button" data-action="paypal">
+            <span style="font-weight:900; font-style:italic; color:#fff;">Pay<span style="color:#89b4e0;">Pal</span></span> Bits
           </button>
-          <button class="btn-primary" type="button" data-action="recargar">💳 Recargar Bits</button>
+          <button class="gpc-action-btn gpc-btn-recargar" type="button" data-action="recargar">
+            💰 Recargar Bits
+          </button>
         </div>
-        <button class="btn-primary" type="button" data-action="retirar"
-          style="background:linear-gradient(135deg,#10b981,#059669); border:none; color:#fff; width:min(280px,90vw); display:flex; align-items:center; justify-content:center; gap:8px;">
-          💸 Retirar Bits
+        <button class="gpc-action-btn gpc-btn-retirar" type="button" data-action="retirar">
+          ♻️ Retirar Bits
         </button>
       </div>
 
     </div>
   </header>
+
+  <style>
+    /* ═══════════════════════════════════════
+       Ghost Plague Casino — Hero Styles
+    ═══════════════════════════════════════ */
+
+    .gpc-wrap {
+      padding: 16px 16px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* --- Logo --- */
+    .gpc-logo-wrap {
+      position: relative;
+      width: 190px;
+      height: 190px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gpc-logo-img {
+      width: 176px;
+      height: 176px;
+      object-fit: contain;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 0 22px rgba(0,255,180,0.5)) drop-shadow(0 0 44px rgba(0,200,140,0.28));
+      animation: gpcFloat 4s ease-in-out infinite;
+    }
+
+    .gpc-logo-glow {
+      position: absolute;
+      inset: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,255,180,0.18) 0%, transparent 70%);
+      animation: gpcPulse 3s ease-in-out infinite alternate;
+      z-index: 1;
+    }
+
+    @keyframes gpcFloat {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-9px); }
+    }
+
+    @keyframes gpcPulse {
+      0%   { opacity: 0.35; transform: scale(0.88); }
+      100% { opacity: 1;    transform: scale(1.12); }
+    }
+
+    /* --- Title --- */
+    .gpc-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(1.9rem, 7.5vw, 2.6rem);
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.1;
+      letter-spacing: 0.05em;
+      margin: 2px 0 16px;
+      background: linear-gradient(180deg, #ffe566 0%, #d4a017 40%, #f2c840 70%, #ffe566 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 2px 10px rgba(212,160,23,0.55));
+    }
+
+    /* --- JUGAR AHORA --- */
+    .gpc-btn-play {
+      width: min(340px, 90vw);
+      padding: 15px 32px;
+      margin-bottom: 12px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #1a0800;
+      background: linear-gradient(180deg, #ffe046 0%, #d48000 55%, #b86200 100%);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow:
+        0 0 0 2px rgba(255,200,50,0.45),
+        0 6px 30px rgba(200,120,0,0.65),
+        inset 0 1px 0 rgba(255,240,110,0.65);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .gpc-btn-play:hover  { transform: translateY(-2px); box-shadow: 0 0 0 2px rgba(255,200,50,0.65), 0 10px 40px rgba(200,120,0,0.75), inset 0 1px 0 rgba(255,240,110,0.65); }
+    .gpc-btn-play:active { transform: translateY(1px); }
+
+    /* --- APUESTAS DEPORTIVAS --- */
+    .gpc-btn-sports {
+      width: min(340px, 90vw);
+      padding: 0;
+      margin-bottom: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+      background: linear-gradient(135deg, #071e0d, #0c3518, #071e0d);
+      box-shadow:
+        0 0 0 1.5px rgba(0,255,130,0.4),
+        0 0 22px rgba(0,200,90,0.3),
+        0 8px 28px rgba(0,0,0,0.55);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .gpc-btn-sports::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 55% 45% at 50% 85%, rgba(16,110,45,0.65) 0%, transparent 70%),
+        repeating-linear-gradient(0deg,   transparent 0, transparent 21px, rgba(255,255,255,0.025) 21px, rgba(255,255,255,0.025) 22px),
+        repeating-linear-gradient(90deg,  transparent 0, transparent 34px, rgba(255,255,255,0.02)  34px, rgba(255,255,255,0.02)  35px);
+      pointer-events: none;
+    }
+
+    .gpc-btn-sports::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1.5px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,130,0.75), transparent);
+      animation: gpcSportsShimmer 2.5s ease-in-out infinite;
+    }
+
+    @keyframes gpcSportsShimmer {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 1;   }
+    }
+
+    .gpc-sports-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 28px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .gpc-sports-icon  { font-size: 1.3rem; }
+    .gpc-sports-label {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(0,255,130,0.65);
+    }
+
+    .gpc-btn-sports:hover  { transform: translateY(-2px); box-shadow: 0 0 0 1.5px rgba(0,255,130,0.65), 0 0 30px rgba(0,200,90,0.45), 0 10px 40px rgba(0,0,0,0.55); }
+    .gpc-btn-sports:active { transform: translateY(1px); }
+
+    /* --- Mode switch --- */
+    .gpc-mode-switch {
+      display: flex;
+      background: rgba(0,0,0,0.42);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 2px;
+      margin-bottom: 12px;
+    }
+
+    .gpc-mode-btn {
+      border: none;
+      border-radius: 25px;
+      padding: 7px 22px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s;
+      background: transparent;
+      color: #777;
+    }
+
+    .gpc-mode-active {
+      background: linear-gradient(135deg, #d4a017, #f0c040) !important;
+      color: #1a0900 !important;
+      box-shadow: 0 2px 10px rgba(212,160,23,0.45);
+    }
+
+    /* --- Balance cards --- */
+    .gpc-balance-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 14px;
+      width: min(340px, 90vw);
+    }
+
+    .gpc-balance-card {
+      flex: 1;
+      text-align: center;
+      border-radius: 14px;
+      padding: 11px 10px;
+    }
+
+    .gpc-card-real {
+      background: rgba(0,220,160,0.07);
+      border: 1.5px solid rgba(0,220,160,0.45);
+      box-shadow: 0 0 16px rgba(0,200,140,0.13), inset 0 0 18px rgba(0,180,120,0.05);
+    }
+
+    .gpc-card-demo {
+      background: rgba(0,200,255,0.055);
+      border: 1.5px solid rgba(0,200,255,0.35);
+      box-shadow: 0 0 16px rgba(0,180,255,0.1), inset 0 0 18px rgba(0,150,220,0.04);
+    }
+
+    .gpc-balance-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(0,240,180,0.8);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+
+    .gpc-label-demo { color: rgba(0,210,255,0.8); }
+
+    .gpc-balance-amount {
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
+
+    .gpc-amount-real { color: #00f0b0; text-shadow: 0 0 10px rgba(0,240,176,0.5); }
+    .gpc-amount-demo { color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.4); }
+
+    /* --- Action buttons --- */
+    .gpc-actions {
+      width: min(340px, 90vw);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .gpc-actions-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .gpc-action-btn {
+      flex: 1;
+      padding: 13px 10px;
+      font-size: 0.875rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.02em;
+    }
+
+    .gpc-action-btn:hover  { transform: translateY(-1px); }
+    .gpc-action-btn:active { transform: scale(0.97); }
+
+    .gpc-btn-paypal {
+      background: linear-gradient(135deg, #003060, #005aaa);
+      color: #fff;
+      border: 1px solid rgba(100,175,255,0.3);
+      box-shadow: 0 4px 16px rgba(0,75,180,0.42);
+    }
+
+    .gpc-btn-recargar {
+      background: linear-gradient(135deg, #6e3e00, #b36800);
+      color: #fff;
+      border: 1px solid rgba(220,155,0,0.38);
+      box-shadow: 0 4px 16px rgba(175,110,0,0.42);
+    }
+
+    .gpc-btn-retirar {
+      width: 100%;
+      background: linear-gradient(135deg, #072415, #0b3d22);
+      color: #fff;
+      border: 1.5px solid rgba(0,200,100,0.35);
+      box-shadow: 0 4px 20px rgba(0,145,75,0.32);
+    }
+  </style>
+
 
   <!-- ===================================================
        MAIN CONTENT

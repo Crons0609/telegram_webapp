@@ -586,10 +586,19 @@ def api_schedule_delete(schedule_id):
 @admin_required_api
 def api_support_chats():
     chats = database.get_fb("user_telegrams") or {}
+    users = database.get_fb("usuarios") or {}
     results = []
     for chat_id, data in chats.items():
         info = data.get("info", {}) if isinstance(data, dict) else {}
         info["chat_id"] = chat_id
+        
+        real_user = users.get(chat_id)
+        if real_user:
+            # Overwrite any cached names with the real name from the users table.
+            info["first_name"] = real_user.get("nombre", "")
+            info["username"] = real_user.get("username", "")
+            info["nombre"] = real_user.get("nombre", "") # some parts of js might look for this
+            
         results.append(info)
     # Sort by last_time descending
     results.sort(key=lambda x: x.get("last_time", ""), reverse=True)
@@ -608,6 +617,14 @@ def api_support_chat_history(chat_id):
         database.patch_fb(f"user_telegrams/{chat_id}/info", {"unread": 0})
         info["unread"] = 0
         
+    # Overwrite any cached names with the real name from the users table.
+    users = database.get_fb("usuarios") or {}
+    real_user = users.get(chat_id)
+    if real_user and isinstance(info, dict):
+        info["first_name"] = real_user.get("nombre", "")
+        info["username"] = real_user.get("username", "")
+        info["nombre"] = real_user.get("nombre", "")
+
     msgs_raw = chat_data.get("messages", {})
     messages = []
     if isinstance(msgs_raw, dict):

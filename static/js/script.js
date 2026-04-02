@@ -597,14 +597,24 @@
     const cardReal = document.getElementById('hero-balance-real');
     const cardDemo = document.getElementById('hero-balance-demo');
 
+    // Toggle active class on GPC-style buttons
+    if (btnReal && btnDemo) {
+      if (mode === 'real') {
+        btnReal.classList.add('gpc-mode-active');
+        btnDemo.classList.remove('gpc-mode-active');
+      } else {
+        btnDemo.classList.add('gpc-mode-active');
+        btnReal.classList.remove('gpc-mode-active');
+        // Demo active: use purple tint
+        btnDemo.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)';
+        btnDemo.style.color = '#fff';
+      }
+    }
+
     if (mode === 'real') {
-      if (btnReal) { btnReal.style.background = 'var(--gold-1,#d4af37)'; btnReal.style.color = '#000'; }
-      if (btnDemo) { btnDemo.style.background = 'transparent'; btnDemo.style.color = '#aaa'; }
       if (cardReal) cardReal.style.opacity = '1';
       if (cardDemo) cardDemo.style.opacity = '0.45';
     } else {
-      if (btnDemo) { btnDemo.style.background = '#a855f7'; btnDemo.style.color = '#fff'; }
-      if (btnReal) { btnReal.style.background = 'transparent'; btnReal.style.color = '#aaa'; }
       if (cardDemo) cardDemo.style.opacity = '1';
       if (cardReal) cardReal.style.opacity = '0.45';
     }

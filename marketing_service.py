@@ -32,7 +32,7 @@ JITTER_MAX = 9
 # Se usa SPINTAX básico: cada lista de variantes se elige al azar.
 # Hay 30+ plantillas para que no se repitan fácilmente.
 
-PLANTILLAS = [
+PLANTILLAS_GENERAL = [
     # --- Tipo: humor informal ---
     "Oye {nombre}, ¿ya viste los nuevos juegos que activamos hoy en {casino}? 🎰 Parece que la suerte anda suelta por ahí...",
     "Hey {nombre} 👋 se nos olvidó avisarte que tu silla favorita en {casino} sigue libre. ¿La reclamamos?",
@@ -71,10 +71,35 @@ PLANTILLAS = [
     # --- Tipo: casual / chit-chat ---
     "Nada de emocionante pasó hoy, {nombre}... mentira, {casino} estuvo full movida 😂 ¿Cuándo entras?",
     "{nombre} cuídate. Ah, y si tienes un momento, {casino} tiene mesa libre con tu nombre 😄",
-    "Buenos días (o buenas noches, no sé cuándo lees esto), {nombre} 😄 {casino} espera.",
     "Corto y directo, {nombre}: {casino} + tu suerte de hoy = potencial interesante. Tú lo decides 🎰",
     "{nombre}, ojalá te estén yendo bien las cosas. Si quieres relajarte un rato, {casino} siempre es buena opción 🙌",
     "Oye {nombre}, te escribo rápido porque sé que andas ocupado. Hay novedades en {casino}. Cuando puedas dale un vistazo 👀",
+]
+
+PLANTILLAS_MANANA = [
+    "¡Buenos días {nombre}! ☀️ Levántate con suerte, {casino} ya está abierto para tu primer intento del día.",
+    "Buen día {nombre} ☕. Un café y una tirada en {casino} suenan como la combinación perfecta para empezar."
+]
+
+PLANTILLAS_TARDE = [
+    "¡Buenas tardes {nombre}! 🌤️ Ideal para relajarse un rato en {casino} después de las labores.",
+    "El sol empieza a bajar, {nombre}... la mesa en {casino} ya se está calentando. ¿Te animas? 🎲"
+]
+
+PLANTILLAS_FIN_SEMANA = [
+    "¡Al fin fin de semana {nombre}! 🎉 La mejor vibra está en {casino} esta noche. No te la pierdas.",
+    "{nombre}, es finde y el cuerpo lo sabe 🍾. Relájate y ven a probar suerte a {casino}.",
+    "Sábado o Domingo, da igual {nombre}. En {casino} no descansamos y las rachas andan fuertes 🔥."
+]
+
+PLANTILLAS_INICIO_SEMANA = [
+    "¡Feliz inicio de semana {nombre}! 🚀 Que este lunes empiece con el pie derecho y una buena ganancia en {casino}.",
+    "{nombre}, sabemos que los inicios de semana son pesados... ¿por qué no aflojas un rato entrando a {casino}? 😉"
+]
+
+PLANTILLAS_JUEVES = [
+    "¡Feliz Jueves {nombre}! Ya huele a viernes en {casino}. Ven y calienta motores 🏎️💨",
+    "{nombre}, pásate por {casino} como buen 'ombligo de la semana' para romper la rutina 🐪."
 ]
 
 CASINO_NAME = "Zona Jackpot 777"
@@ -111,6 +136,29 @@ def _set_marketing_state(data: dict):
     database.patch_fb(f"marketing_estado/{_get_today_key()}", data)
 
 
+def _get_contextual_templates() -> list:
+    from datetime import datetime, timedelta
+    agora = datetime.utcnow() - timedelta(hours=6)
+    dia_semana = agora.weekday() # 0 = Lunes, 3 = Jueves, 4 = Viernes, ... 6 = Domingo
+    hora = agora.hour
+
+    activas = list(PLANTILLAS_GENERAL)
+
+    if dia_semana in (0, 1): # Lunes, Martes
+        activas.extend(PLANTILLAS_INICIO_SEMANA)
+    elif dia_semana == 3: # Jueves
+        activas.extend(PLANTILLAS_JUEVES)
+    elif dia_semana in (4, 5, 6): # Viernes, Sábado, Domingo
+        activas.extend(PLANTILLAS_FIN_SEMANA)
+
+    if 5 <= hora < 12:
+        activas.extend(PLANTILLAS_MANANA)
+    elif 12 <= hora < 18:
+        activas.extend(PLANTILLAS_TARDE)
+        
+    return activas
+
+
 def _pick_template_for_user(telegram_id: str, nombre: str) -> str:
     """
     Selecciona una plantilla que NO haya sido enviada al usuario recientemente.
@@ -119,13 +167,14 @@ def _pick_template_for_user(telegram_id: str, nombre: str) -> str:
     historial_data = database.get_fb(f"marketing_historial/{telegram_id}") or {}
     ya_enviados = set(historial_data.keys()) if isinstance(historial_data, dict) else set()
 
-    disponibles = [t for t in PLANTILLAS if t not in ya_enviados]
+    activas = _get_contextual_templates()
+    disponibles = [t for t in activas if t not in ya_enviados]
 
     # Si ya se agotaron todas las plantillas, reiniciar el historial
     if not disponibles:
         database.patch_fb(f"marketing_historial/{telegram_id}", {"__reset__": True})
         database.get_fb(f"marketing_historial/{telegram_id}")  # forzar lectura limpia
-        disponibles = PLANTILLAS[:]
+        disponibles = activas[:]
 
     plantilla = random.choice(disponibles)
 
