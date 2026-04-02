@@ -597,17 +597,22 @@
     const cardReal = document.getElementById('hero-balance-real');
     const cardDemo = document.getElementById('hero-balance-demo');
 
-    // Toggle active class on GPC-style buttons
     if (btnReal && btnDemo) {
+      // Always reset inline styles first so CSS classes take full control
+      btnReal.style.background = '';
+      btnReal.style.color      = '';
+      btnDemo.style.background = '';
+      btnDemo.style.color      = '';
+
       if (mode === 'real') {
         btnReal.classList.add('gpc-mode-active');
         btnDemo.classList.remove('gpc-mode-active');
+        btnDemo.classList.remove('gpc-mode-demo-active');
       } else {
         btnDemo.classList.add('gpc-mode-active');
+        btnDemo.classList.add('gpc-mode-demo-active');
         btnReal.classList.remove('gpc-mode-active');
-        // Demo active: use purple tint
-        btnDemo.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)';
-        btnDemo.style.color = '#fff';
+        btnReal.classList.remove('gpc-mode-demo-active');
       }
     }
 
