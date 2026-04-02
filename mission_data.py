@@ -1,6 +1,6 @@
 """
 mission_data.py — Generador Maestro de Misiones (59 Misiones x 3 Niveles = 177 Objetivos)
-Zona Jackpot 777
+GHOSTH PLAGUE CASINO
 """
 
 def _generate_missions():

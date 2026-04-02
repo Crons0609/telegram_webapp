@@ -1,5 +1,5 @@
 /**
- * loading-screen.js — Zona Jackpot 777
+ * loading-screen.js — Ghosth Plague Casino
  * v2 — Instant-show, button-aware, defer-safe.
  *
  * KEY FIXES vs v1:
@@ -76,7 +76,7 @@
     const text   = cfg.text || DEFAULT_CONFIG.text;
     const logo   = cfg.logo_url
       ? `<img src="${cfg.logo_url}" class="ls-logo-img" alt="Logo">`
-      : `<div class="ls-logo">🎰 ZONA JACKPOT 777</div>`;
+      : `<div class="ls-logo">👻 GHOSTH PLAGUE CASINO</div>`;
 
     div.innerHTML = `
       ${logo}

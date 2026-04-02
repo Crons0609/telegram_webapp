@@ -77,7 +77,7 @@ def process_pending_bets():
 🎉 Tu predicción ({choice}) fue correcta.
 💸 <b>Ganancias:</b> +{winnings} bits
 
-🔥 ¡Sigue apostando en Zona Jackpot 777!
+🔥 ¡Sigue apostando en GHOSTH PLAGUE CASINO!
 """
                 send_telegram_message(telegram_id, text)
                 logger.info(f"Bet {bet_id} WON by {telegram_id}. Winnings: {winnings}")

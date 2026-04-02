@@ -1,5 +1,5 @@
 // ======================================================
-// ZONA JACKPOT 777 - FRONTEND SPORTSBOOK
+// GHOSTH PLAGUE CASINO - FRONTEND SPORTSBOOK
 // ======================================================
 
 let currentBalance = 0

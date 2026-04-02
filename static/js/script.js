@@ -132,7 +132,7 @@
   }
 
   /* =====================================================
-     🎰 ZONA JACKPOT 777 — UI CORE ENGINE v3
+     🎰 GHOSTH PLAGUE CASINO — UI CORE ENGINE v3
      Arquitectura empresarial optimizada
   ===================================================== */
 

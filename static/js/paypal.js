@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     enableSound();
                     return actions.order.create({
                         purchase_units: [{
-                            description: `Compra de ${pkg.totalBits.toLocaleString()} bits para Zona Jackpot 777`,
+                            description: `Compra de ${pkg.totalBits.toLocaleString()} bits para GHOSTH PLAGUE CASINO`,
                             amount: { currency_code: 'USD', value: pkg.price },
                             custom_id: pkg.totalBits.toString()
                         }]

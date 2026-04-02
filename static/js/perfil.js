@@ -332,7 +332,17 @@ window.UserProfileManager = {
                 <div class="dh-info-section">
                     <div class="dh-name-row">
                         <h3 class="profile-name">${p.nombre}</h3>
-                        <span class="dh-telegram-id">ID: ${p.id || 'N/A'}</span>
+                        <span class="dh-telegram-id" id="tg-id-badge"
+                              title="Toca para copiar tu ID de Telegram"
+                              onclick="(function(el){
+                                  const id = el.dataset.tgid;
+                                  if(navigator.clipboard){navigator.clipboard.writeText(id).then(()=>{el.textContent='✓ Copiado!';setTimeout(()=>{el.textContent='🆔 '+id;},1400)});}
+                                  else{el.textContent='✓ Copiado!';setTimeout(()=>{el.textContent='🆔 '+id;},1400);}
+                              })(this)"
+                              data-tgid="${p.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'N/A'}"
+                              style="cursor:pointer; user-select:none;">
+                            🆔 ${p.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'N/A'}
+                        </span>
                     </div>
                     <div class="profile-rank-badge"><span>${p.rank.icon}</span> ${p.rank.full_name || p.rank.name}</div>
                     <div class="xp-container">
@@ -351,10 +361,6 @@ window.UserProfileManager = {
                 <div class="stat-box-d"><span class="stat-value">${p.juegos_jugados||0}</span><span class="stat-label">Partidas</span></div>
                 <div class="stat-box-d"><span class="stat-value">${p.wins_total||0}</span><span class="stat-label">Victorias</span></div>
                 <div class="stat-box-d"><span class="stat-value">${p.jackpots_ganados||0}</span><span class="stat-label">Jackpots</span></div>
-            </div>
-
-            <div style="display:flex;gap:10px;margin-bottom:20px;">
-                <button class="btn-primary" style="flex:1" onclick="UserProfileManager.claimDailyReward()">🎁 Recompensa Diaria</button>
             </div>
 
             <div class="profile-tabs custom-scrollbar" style="overflow-x:auto; white-space:nowrap; padding-bottom:10px; margin-bottom:15px;">

@@ -1,5 +1,5 @@
 /* =============================================================
-   LOADING SCREEN — Zona Jackpot 777
+   LOADING SCREEN — Ghosth Plague Casino
    10 CSS-only animated icons, no external dependencies
    ============================================================= */
 
@@ -12,9 +12,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: clamp(14px, 4vw, 28px);
   background: var(--ls-bg, #0a0a1a);
   opacity: 1;
+  padding: clamp(16px, 5vw, 40px);
+  box-sizing: border-box;
   /* Only transition when HIDING (class added) — showing is instant */
   transition: opacity 0.35s ease;
   pointer-events: all;
@@ -23,6 +25,7 @@
   will-change: opacity;
   /* Ensure text is still sharp during GPU compositing */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #casino-loading-screen.ls-hidden {
@@ -35,17 +38,21 @@
 }
 
 .ls-logo {
-  font-size: 2.4rem;
+  font-size: clamp(1.2rem, 5.5vw, 2.4rem);
   font-weight: 900;
-  letter-spacing: 2px;
+  letter-spacing: clamp(1px, 0.4vw, 3px);
   color: var(--ls-icon-color, #f59e0b);
   text-shadow: 0 0 20px var(--ls-icon-color, #f59e0b);
-  margin-bottom: -8px;
+  margin-bottom: -4px;
+  text-align: center;
+  max-width: 90vw;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .ls-icon-wrap {
-  width: 72px;
-  height: 72px;
+  width: clamp(48px, 14vw, 80px);
+  height: clamp(48px, 14vw, 80px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,11 +60,12 @@
 }
 
 .ls-text {
-  font-size: 1rem;
+  font-size: clamp(0.78rem, 3.2vw, 1.05rem);
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: clamp(0.5px, 0.3vw, 1.5px);
   color: var(--ls-text-color, rgba(255,255,255,0.7));
   font-family: 'Poppins', sans-serif;
+  text-align: center;
 }
 
 /* ── Shared keyframes ─────────────────────────────────────── */
@@ -102,7 +110,7 @@
    ICON 3 — Barra de progreso
    ══════════════════════════════════════════════════════════════ */
 .ls-icon-3 {
-  width: 180px; height: 8px;
+  width: clamp(120px, 60vw, 220px); height: clamp(6px, 1.5vw, 10px);
   background: rgba(255,255,255,0.1);
   border-radius: 8px;
   overflow: hidden;
@@ -224,8 +232,23 @@
 
 /* ── Custom logo image ────────────────────────────────────── */
 .ls-logo-img {
-  max-width: 120px;
-  max-height: 80px;
+  max-width: clamp(70px, 28vw, 140px);
+  max-height: clamp(50px, 18vw, 90px);
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 8px;
+}
+
+/* ── Responsive tweaks for very small screens (< 360px) ──── */
+@media (max-width: 360px) {
+  #casino-loading-screen { gap: 10px; padding: 12px; }
+  .ls-icon-wrap { width: 44px; height: 44px; }
+}
+
+/* ── Landscape phones ─────────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  #casino-loading-screen { gap: 8px; padding: 10px; }
+  .ls-icon-wrap { width: 36px; height: 36px; }
+  .ls-logo { font-size: clamp(0.9rem, 4vw, 1.4rem); }
 }

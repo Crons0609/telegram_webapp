@@ -1,12 +1,7 @@
 AGREGAR LAS APIS DE LOS DEPORTES QUE HACEN FALTA. 
 
-La pantalla de carga de una weba  otra no funciona. 
-
 en el apartado de soporte de telegram no se ven los nombres de los usuario que me envian mensajes. 
 
 en el soportede telegram necesito poder enviar imagenes y audios.
 
 en los mensajes automaticos necesito poder enviar imagenes.
-
-en los mensajes automaticos necesito que sean personalizados ya sea de mañana, de tarde ,
-de fin de semana, inicio de semana, o jueves que es el hombligo de la semana

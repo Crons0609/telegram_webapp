@@ -102,7 +102,7 @@ PLANTILLAS_JUEVES = [
     "{nombre}, pásate por {casino} como buen 'ombligo de la semana' para romper la rutina 🐪."
 ]
 
-CASINO_NAME = "Zona Jackpot 777"
+CASINO_NAME = "GHOSTH PLAGUE CASINO"
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # ─── FUNCIONES INTERNAS ───────────────────────────────────────────────────────

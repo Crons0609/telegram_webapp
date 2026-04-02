@@ -744,7 +744,7 @@ def api_withdrawals_approve(tx_id):
                 email        = paypal_email,
                 amount_usd   = usd,
                 reference_id = tx_ref,
-                note         = f'Retiro de {bits:,} bits — Zona Jackpot 777'
+                note         = f'Retiro de {bits:,} bits — GHOSTH PLAGUE CASINO'
             )
 
             if result['success']:

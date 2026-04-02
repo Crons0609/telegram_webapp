@@ -2499,7 +2499,7 @@ function renderLoadingConfig(cfg) {
             <!-- Logo URL -->
             <div class="card" style="padding:20px;">
                 <h4 style="margin:0 0 8px;">URL de Logo (opcional)</h4>
-                <p style="color:#94a3b8;font-size:0.8rem;margin:0 0 10px;">Si se deja vacío, se mostrará el texto "🎰 ZONA JACKPOT 777"</p>
+                <p style="color:#94a3b8;font-size:0.8rem;margin:0 0 10px;">Si se deja vacío, se mostrará el texto "🎰 GHOSTH PLAGUE CASINO"</p>
                 <input type="url" id="ls_logo_url" value="${cfg.logo_url || ''}" placeholder="https://..."
                     style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#fff;font-size:0.9rem;">
             </div>

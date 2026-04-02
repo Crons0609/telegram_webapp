@@ -777,6 +777,8 @@ def get_profile():
     perfil['rank'] = rank_info
     perfil['progress'] = progress
     perfil['play_mode'] = session.get('play_mode', 'real')
+    # Garantizar que el id de Telegram siempre esté disponible en el perfil
+    perfil['id'] = str(session["telegram_id"])
     return jsonify({"status": "ok", "profile": perfil})
 
 @app.route('/api/user/set_mode', methods=["POST"])
@@ -894,6 +896,46 @@ def claim_daily_reward():
             "is_demo": True
         })
     return jsonify({"status": "error", "message": "Error procesando la recompensa."}), 500
+
+@app.route('/api/profile/send_gift', methods=["POST"])
+def send_gift():
+    if "telegram_id" not in session:
+        return jsonify({"status": "error", "message": "No autenticado"}), 401
+    
+    data = request.get_json() or {}
+    to_username = data.get("to_username")
+    bits_to_send = int(data.get("bits", 0))
+    
+    if not to_username or bits_to_send <= 0:
+        return jsonify({"status": "error", "message": "Datos inválidos"}), 400
+        
+    sender_id = session["telegram_id"]
+    sender_bits = database.obtener_bits(sender_id, is_demo=False)
+    
+    if sender_bits < bits_to_send:
+        return jsonify({"status": "error", "message": f"No tienes suficientes bits. Balance: {sender_bits}"}), 400
+        
+    # Find recipient by name (exact match, case insensitive)
+    users = database.obtener_todos_usuarios()
+    recipient = None
+    for u in users:
+        if u.get("nombre", "").lower() == to_username.lower():
+            if str(u.get("telegram_id")) == str(sender_id):
+                return jsonify({"status": "error", "message": "No puedes enviarte bits a ti mismo"}), 400
+            recipient = u
+            break
+            
+    if not recipient:
+        return jsonify({"status": "error", "message": "Jugador no encontrado"}), 404
+        
+    recipient_id = str(recipient.get("telegram_id"))
+    
+    # Process transfer
+    if database.descontar_bits(sender_id, bits_to_send, is_demo=False):
+        database.recargar_bits(recipient_id, bits_to_send)
+        return jsonify({"status": "ok", "message": "Regalo enviado con éxito"})
+        
+    return jsonify({"status": "error", "message": "Error al procesar el envío"}), 500
 
 @app.route('/api/ranking/top3', methods=["GET"])
 def get_top_3_ranking():

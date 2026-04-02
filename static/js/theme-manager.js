@@ -1,5 +1,5 @@
 /**
- * THEME MANAGER — Zona Jackpot 777
+ * THEME MANAGER — GHOSTH PLAGUE CASINO
  * Fetches the active global theme from the server and applies it to the body.
  * Polls every 60s for live updates from the admin panel.
  * Also injects the global loading screen CSS + JS.

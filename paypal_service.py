@@ -43,7 +43,7 @@ def execute_payout(email: str, amount_usd: float, reference_id: str = None, note
         return {"success": False, "batch_id": None, "status": "INVALID", "error_msg": "Email o monto inválido."}
 
     reference_id = reference_id or str(uuid.uuid4())
-    note         = note or "Retiro de bits — Zona Jackpot 777"
+    note         = note or "Retiro de bits — GHOSTH PLAGUE CASINO"
 
     try:
         token = _get_access_token()
@@ -53,8 +53,8 @@ def execute_payout(email: str, amount_usd: float, reference_id: str = None, note
     payload = {
         "sender_batch_header": {
             "sender_batch_id": reference_id,
-            "email_subject":   "💰 Pago recibido de Zona Jackpot 777",
-            "email_message":   "Has recibido un pago de retiro de la plataforma Zona Jackpot 777. ¡Gracias por jugar!"
+            "email_subject":   "💰 Pago recibido de GHOSTH PLAGUE CASINO",
+            "email_message":   "Has recibido un pago de retiro de la plataforma GHOSTH PLAGUE CASINO. ¡Gracias por jugar!"
         },
         "items": [
             {

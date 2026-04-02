@@ -11,14 +11,14 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
   <!-- ================= SEO ================= -->
-  <title>Zona Jackpot 777 | Casino Premium en Telegram</title>
+  <title>GHOSTH PLAGUE CASINO | Casino Premium en Telegram</title>
   <meta name="description"
     content="El casino premium dentro de Telegram. Juega Moche, Ruleta Francesa y Slots con efectos de lujo, sistema de rangos y premios reales.">
   <meta name="robots" content="index, follow">
-  <meta name="author" content="Zona Jackpot 777">
+  <meta name="author" content="GHOSTH PLAGUE CASINO">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Zona Jackpot 777 — Casino Premium">
+  <meta property="og:title" content="GHOSTH PLAGUE CASINO — Casino Premium">
   <meta property="og:description" content="La experiencia de casino más premium dentro de Telegram.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="/static/img/preview.jpg">
@@ -90,6 +90,35 @@
     <!-- CSS Particles -->
     <div class="hero-particles" aria-hidden="true" id="hero-particles"></div>
 
+    <!-- ── PANEL FLOTANTE IZQUIERDO ── -->
+    <div class="gpc-float-panel" id="float-panel-left">
+
+      <!-- 1: Invitar Amigos -->
+      <button class="gpc-float-btn" type="button" id="float-btn-invitar"
+              aria-label="Invitar Amigos"
+              onclick="_handleInvitarAmigos()">
+        <img src="/static/img/invitar-amigos.png" alt="Invitar Amigos" class="gpc-float-img">
+        <span class="gpc-float-label">Invita amigos</span>
+      </button>
+
+      <!-- 2: Recompensa Diaria -->
+      <button class="gpc-float-btn" type="button" id="float-btn-recompensa"
+              aria-label="Recompensa Diaria"
+              onclick="UserProfileManager && UserProfileManager.claimDailyReward ? UserProfileManager.claimDailyReward() : null">
+        <img src="/static/img/recompensa-diaria.png" alt="Recompensa Diaria" class="gpc-float-img">
+        <span class="gpc-float-label">Recompensa diaria</span>
+      </button>
+
+      <!-- 3: Enviar Regalos -->
+      <button class="gpc-float-btn" type="button" id="float-btn-regalo"
+              aria-label="Enviar Regalos"
+              onclick="_handleEnviarRegalo()">
+        <img src="/static/img/enviar-regalo.png" alt="Enviar Regalos" class="gpc-float-img">
+        <span class="gpc-float-label">Enviar Regalos</span>
+      </button>
+
+    </div>
+
     <!-- Hero Content -->
     <div class="hero-content-wrap gpc-wrap">
 
@@ -134,7 +163,8 @@
           <div class="gpc-od-label">CUENTA REAL</div>
           <div class="gpc-od-body">
             <span class="gpc-od-icon">&#128142;</span>
-            <div class="gpc-od-display" id="od-real" data-value="{{ global_profile.bits if global_profile else 0 }}"></div>
+            <div class="gpc-od-display" id="od-real" data-value="{{ global_profile.bits if global_profile else 0 }}">
+            </div>
           </div>
         </div>
 
@@ -143,14 +173,15 @@
           <div class="gpc-od-label gpc-od-label-demo">CUENTA DEMO</div>
           <div class="gpc-od-body">
             <span class="gpc-od-icon">&#127918;</span>
-            <div class="gpc-od-display" id="od-demo" data-value="{{ global_profile.bits_demo if global_profile else 0 }}"></div>
+            <div class="gpc-od-display" id="od-demo"
+              data-value="{{ global_profile.bits_demo if global_profile else 0 }}"></div>
           </div>
         </div>
 
       </div>
       <!-- hidden spans for JS compatibility -->
       <span id="hero-bits-display" style="display:none">{{ global_profile.bits if global_profile else 0 }}</span>
-      <span id="hero-bits-demo"    style="display:none">{{ global_profile.bits_demo if global_profile else 0 }}</span>
+      <span id="hero-bits-demo" style="display:none">{{ global_profile.bits_demo if global_profile else 0 }}</span>
 
       <!-- ── ACTION BUTTONS ── -->
       <div class="gpc-actions reveal reveal-d3">
@@ -451,33 +482,35 @@
 
     .gpc-od-real {
       background: linear-gradient(160deg, #0a2420 0%, #0d2e28 60%, #0a1f1c 100%);
-      border: 1.5px solid rgba(0,220,170,0.5);
+      border: 1.5px solid rgba(0, 220, 170, 0.5);
       box-shadow:
-        0 0 0 1px rgba(0,200,150,0.12) inset,
-        0 0 20px rgba(0,200,150,0.15),
-        0 4px 18px rgba(0,0,0,0.55);
+        0 0 0 1px rgba(0, 200, 150, 0.12) inset,
+        0 0 20px rgba(0, 200, 150, 0.15),
+        0 4px 18px rgba(0, 0, 0, 0.55);
     }
 
     .gpc-od-demo {
       background: linear-gradient(160deg, #0a2028 0%, #0d2a35 60%, #0a1c22 100%);
-      border: 1.5px solid rgba(0,200,230,0.45);
+      border: 1.5px solid rgba(0, 200, 230, 0.45);
       box-shadow:
-        0 0 0 1px rgba(0,190,220,0.1) inset,
-        0 0 20px rgba(0,180,220,0.14),
-        0 4px 18px rgba(0,0,0,0.55);
+        0 0 0 1px rgba(0, 190, 220, 0.1) inset,
+        0 0 20px rgba(0, 180, 220, 0.14),
+        0 4px 18px rgba(0, 0, 0, 0.55);
     }
 
     /* Subtle inner glow line at top */
     .gpc-od-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 10%; right: 10%;
+      top: 0;
+      left: 10%;
+      right: 10%;
       height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(0,255,180,0.4), transparent);
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 180, 0.4), transparent);
     }
 
     .gpc-od-demo::before {
-      background: linear-gradient(90deg, transparent, rgba(0,220,255,0.35), transparent);
+      background: linear-gradient(90deg, transparent, rgba(0, 220, 255, 0.35), transparent);
     }
 
     .gpc-od-label {
@@ -492,7 +525,7 @@
     }
 
     .gpc-od-label-demo {
-      color: rgba(0,220,255,0.85);
+      color: rgba(0, 220, 255, 0.85);
     }
 
     .gpc-od-body {
@@ -505,7 +538,7 @@
     .gpc-od-icon {
       font-size: 1.45rem;
       line-height: 1;
-      filter: drop-shadow(0 0 5px rgba(0,220,180,0.5));
+      filter: drop-shadow(0 0 5px rgba(0, 220, 180, 0.5));
     }
 
     /* The digit display container */
@@ -521,16 +554,18 @@
       height: 28px;
       background: linear-gradient(180deg, #040d0c 0%, #071612 50%, #040d0c 100%);
       border-radius: 4px;
-      border: 1px solid rgba(0,200,160,0.18);
+      border: 1px solid rgba(0, 200, 160, 0.18);
       overflow: hidden;
       position: relative;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -1px 2px rgba(0,200,160,0.08);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 -1px 2px rgba(0, 200, 160, 0.08);
     }
 
     /* The rolling strip inside each digit */
     .gpc-od-reel {
       position: absolute;
-      top: 0; left: 0; right: 0;
+      top: 0;
+      left: 0;
+      right: 0;
       transition: transform 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
 
@@ -554,24 +589,24 @@
 
     /* Demo digit column gets a cyan border tint */
     .gpc-od-digit-demo {
-      border-color: rgba(0,200,230,0.2);
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -1px 2px rgba(0,190,220,0.1);
+      border-color: rgba(0, 200, 230, 0.2);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 -1px 2px rgba(0, 190, 220, 0.1);
     }
 
     /* Demo digit text = cyan */
     .gpc-od-cell-demo {
       color: #00d8ff !important;
-      text-shadow: 0 0 8px rgba(0,216,255,0.7) !important;
+      text-shadow: 0 0 8px rgba(0, 216, 255, 0.7) !important;
     }
 
     /* Horizontal scan line in demo card */
     .gpc-od-digit-demo::after {
-      background: rgba(0,200,230,0.18);
+      background: rgba(0, 200, 230, 0.18);
     }
 
     /* Comma/dot separator between digit groups */
     .gpc-od-sep {
-      color: rgba(0,240,176,0.4);
+      color: rgba(0, 240, 176, 0.4);
       font-size: 0.7rem;
       font-weight: 900;
       line-height: 28px;
@@ -632,118 +667,197 @@
       border: 1.5px solid rgba(0, 200, 100, 0.35);
       box-shadow: 0 4px 20px rgba(0, 145, 75, 0.32);
     }
+
+    /* ═══════════════════════════════════════
+       PANEL FLOTANTE IZQUIERDO
+    ═══════════════════════════════════════ */
+    .gpc-float-panel {
+      position: absolute;
+      top: 40px;
+      left: 10px;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+      pointer-events: none;
+    }
+
+    .gpc-float-btn {
+      pointer-events: all;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      width: 68px;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.18s ease, filter 0.18s ease;
+      animation: floatBtnIn 0.5s ease both;
+    }
+
+    .gpc-float-btn:nth-child(1) { animation-delay: 0.1s; }
+    .gpc-float-btn:nth-child(2) { animation-delay: 0.2s; }
+    .gpc-float-btn:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes floatBtnIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .gpc-float-btn:hover {
+      transform: translateX(3px) scale(1.08);
+      filter: brightness(1.15) drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    }
+
+    .gpc-float-btn:active {
+      transform: scale(0.93);
+      filter: brightness(0.92);
+    }
+
+    .gpc-float-img {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+      filter: drop-shadow(0 3px 8px rgba(0,0,0,0.6));
+    }
+
+    .gpc-float-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.85);
+      text-align: center;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      line-height: 1.2;
+      max-width: 66px;
+      letter-spacing: 0.2px;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* En pantallas muy pequeñas achicar un poco */
+    @media (max-height: 600px) {
+      .gpc-float-panel { gap: 2px; }
+      .gpc-float-img   { width: 42px; height: 42px; }
+    }
   </style>
 
   <!-- ODOMETER ENGINE -->
   <script>
-  (function() {
-    'use strict';
-    var CELL_H = 28;
+    (function () {
+      'use strict';
+      var CELL_H = 28;
 
-    function buildReel(col, isDemo) {
-      var reel = document.createElement('div');
-      reel.className = 'gpc-od-reel';
-      for (var d = 0; d <= 9; d++) {
-        var cell = document.createElement('div');
-        cell.className = 'gpc-od-cell' + (isDemo ? ' gpc-od-cell-demo' : '');
-        cell.textContent = d;
-        reel.appendChild(cell);
-      }
-      col.appendChild(reel);
-      return reel;
-    }
-
-    function buildDisplay(el) {
-      el.innerHTML = '';
-      var isDemo = !!el.closest('.gpc-od-demo');
-      var raw = parseInt(el.dataset.value || '0', 10);
-      var str = String(raw);
-      var reels = [];
-      str.split('').forEach(function(ch) {
-        var col = document.createElement('div');
-        col.className = 'gpc-od-digit' + (isDemo ? ' gpc-od-digit-demo' : '');
-        var reel = buildReel(col, isDemo);
-        el.appendChild(col);
-        reels.push(reel);
-      });
-      el._reels = reels;
-      el._value = raw;
-      el._isDemo = isDemo;
-      setDigitsInstant(el, raw);
-    }
-
-    function setDigitsInstant(el, value) {
-      var str = String(Math.max(0, value));
-      if (!el._reels || el._reels.length !== str.length) { buildDisplay(el); return; }
-      str.split('').forEach(function(ch, i) {
-        var reel = el._reels[i];
-        reel.style.transition = 'none';
-        reel.style.transitionDelay = '0ms';
-        reel.style.transform = 'translateY(-' + (parseInt(ch, 10) * CELL_H) + 'px)';
-        requestAnimationFrame(function() { reel.style.transition = ''; });
-      });
-      el._value = value;
-    }
-
-    function setDigitsAnim(el, value) {
-      var str = String(Math.max(0, value));
-      if (!el._reels || el._reels.length !== str.length) {
-        buildDisplay(el);
-        setDigitsAnim(el, value);
-        return;
-      }
-      str.split('').forEach(function(ch, i) {
-        var reel = el._reels[i];
-        reel.style.transitionDelay = (i * 45) + 'ms';
-        reel.style.transform = 'translateY(-' + (parseInt(ch, 10) * CELL_H) + 'px)';
-      });
-      el._value = value;
-    }
-
-    window.GpcOdometer = {
-      update: function(id, value) {
-        var el = document.getElementById(id);
-        if (el && el._reels) setDigitsAnim(el, value);
-      },
-      countTo: function(id, target, dur) {
-        var el = document.getElementById(id);
-        if (!el || !el._reels) return;
-        var start = el._value || 0;
-        dur = dur || 900;
-        var t0 = performance.now();
-        function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
-        function step(now) {
-          var t = Math.min(1, (now - t0) / dur);
-          setDigitsInstant(el, Math.round(start + (target - start) * ease(t)));
-          if (t < 1) requestAnimationFrame(step);
-          else setDigitsInstant(el, target);
+      function buildReel(col, isDemo) {
+        var reel = document.createElement('div');
+        reel.className = 'gpc-od-reel';
+        for (var d = 0; d <= 9; d++) {
+          var cell = document.createElement('div');
+          cell.className = 'gpc-od-cell' + (isDemo ? ' gpc-od-cell-demo' : '');
+          cell.textContent = d;
+          reel.appendChild(cell);
         }
-        requestAnimationFrame(step);
+        col.appendChild(reel);
+        return reel;
       }
-    };
 
-    document.addEventListener('DOMContentLoaded', function() {
-      ['od-real','od-demo'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) buildDisplay(el);
-      });
-      function patchSpan(spanId, odId) {
-        var span = document.getElementById(spanId);
-        if (!span) return;
-        var _v = span.textContent;
-        Object.defineProperty(span, 'textContent', {
-          get: function() { return _v; },
-          set: function(val) {
-            _v = val;
-            var n = parseInt(val, 10);
-            if (!isNaN(n)) window.GpcOdometer.countTo(odId, n, 900);
-          }
+      function buildDisplay(el) {
+        el.innerHTML = '';
+        var isDemo = !!el.closest('.gpc-od-demo');
+        var raw = parseInt(el.dataset.value || '0', 10);
+        var str = String(raw);
+        var reels = [];
+        str.split('').forEach(function (ch) {
+          var col = document.createElement('div');
+          col.className = 'gpc-od-digit' + (isDemo ? ' gpc-od-digit-demo' : '');
+          var reel = buildReel(col, isDemo);
+          el.appendChild(col);
+          reels.push(reel);
         });
+        el._reels = reels;
+        el._value = raw;
+        el._isDemo = isDemo;
+        setDigitsInstant(el, raw);
       }
-      patchSpan('hero-bits-display', 'od-real');
-      patchSpan('hero-bits-demo',    'od-demo');
-    });
-  })();
+
+      function setDigitsInstant(el, value) {
+        var str = String(Math.max(0, value));
+        if (!el._reels || el._reels.length !== str.length) { buildDisplay(el); return; }
+        str.split('').forEach(function (ch, i) {
+          var reel = el._reels[i];
+          reel.style.transition = 'none';
+          reel.style.transitionDelay = '0ms';
+          reel.style.transform = 'translateY(-' + (parseInt(ch, 10) * CELL_H) + 'px)';
+          requestAnimationFrame(function () { reel.style.transition = ''; });
+        });
+        el._value = value;
+      }
+
+      function setDigitsAnim(el, value) {
+        var str = String(Math.max(0, value));
+        if (!el._reels || el._reels.length !== str.length) {
+          buildDisplay(el);
+          setDigitsAnim(el, value);
+          return;
+        }
+        str.split('').forEach(function (ch, i) {
+          var reel = el._reels[i];
+          reel.style.transitionDelay = (i * 45) + 'ms';
+          reel.style.transform = 'translateY(-' + (parseInt(ch, 10) * CELL_H) + 'px)';
+        });
+        el._value = value;
+      }
+
+      window.GpcOdometer = {
+        update: function (id, value) {
+          var el = document.getElementById(id);
+          if (el && el._reels) setDigitsAnim(el, value);
+        },
+        countTo: function (id, target, dur) {
+          var el = document.getElementById(id);
+          if (!el || !el._reels) return;
+          var start = el._value || 0;
+          dur = dur || 900;
+          var t0 = performance.now();
+          function ease(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+          function step(now) {
+            var t = Math.min(1, (now - t0) / dur);
+            setDigitsInstant(el, Math.round(start + (target - start) * ease(t)));
+            if (t < 1) requestAnimationFrame(step);
+            else setDigitsInstant(el, target);
+          }
+          requestAnimationFrame(step);
+        }
+      };
+
+      document.addEventListener('DOMContentLoaded', function () {
+        ['od-real', 'od-demo'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) buildDisplay(el);
+        });
+        function patchSpan(spanId, odId) {
+          var span = document.getElementById(spanId);
+          if (!span) return;
+          var _v = span.textContent;
+          Object.defineProperty(span, 'textContent', {
+            get: function () { return _v; },
+            set: function (val) {
+              _v = val;
+              var n = parseInt(val, 10);
+              if (!isNaN(n)) window.GpcOdometer.countTo(odId, n, 900);
+            }
+          });
+        }
+        patchSpan('hero-bits-display', 'od-real');
+        patchSpan('hero-bits-demo', 'od-demo');
+      });
+    })();
   </script>
 
   <!-- ===================================================
@@ -768,7 +882,7 @@
     <section class="benefits-section" aria-labelledby="benefits-title">
 
       <div class="section-header reveal">
-        <h2 id="benefits-title">💎 ¿Por qué Zona Jackpot?</h2>
+        <h2 id="benefits-title">💎 ¿Por qué Ghosth Plague?</h2>
       </div>
 
       <div class="benefits-grid">
@@ -925,6 +1039,53 @@
       </div>
     </div>
   </div>
+
+
+  <!-- ── SCRIPTS DE PANEL FLOTANTE ── -->
+  <script>
+    /* === Invitar Amigos === */
+    function _handleInvitarAmigos() {
+      try {
+        const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        if (!tgId) { alert('No se pudo obtener tu ID de Telegram.'); return; }
+        const link = `https://t.me/Zona_Jackpot_777bot?start=ref_${tgId}`;
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🎰 Únete al Ghosth Plague Casino conmigo!')}`;
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+          window.Telegram.WebApp.openTelegramLink(shareUrl);
+        } else {
+          window.open(shareUrl, '_blank');
+        }
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+          window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        }
+      } catch(e) { console.error('Invite error:', e); }
+    }
+
+    /* === Enviar Regalo === */
+    function _handleEnviarRegalo() {
+      const username = prompt('Ingresa el nombre de usuario del jugador al que deseas enviar un regalo.\n(Ej: Young-G59)');
+      if (!username || !username.trim()) return;
+      const bits = parseInt(prompt(`¿Cuántos bits quieres enviar a ${username.trim()}?`) || '0', 10);
+      if (!bits || bits <= 0) return;
+      fetch('/api/profile/send_gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to_username: username.trim(), bits })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.status === 'ok') {
+          alert(`✅ Regalo enviado: ${bits.toLocaleString()} bits a ${username.trim()}`);
+          if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+          }
+        } else {
+          alert('❌ ' + (d.message || 'Error al enviar el regalo.'));
+        }
+      })
+      .catch(() => alert('❌ Error de red.'));
+    }
+  </script>
 
 </body>
 
