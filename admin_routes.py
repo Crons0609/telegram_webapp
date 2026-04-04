@@ -906,7 +906,8 @@ def api_resolve_bet(bet_id):
         user_choice = bet.get('team_choice')
         
         if action == 'cancel':
-            database.recargar_bits(telegram_id, int(amount)) # Refund
+            is_demo = bet.get('is_demo', False)
+            database.registrar_ganancia(telegram_id, int(amount), is_demo=is_demo) # Refund
             database.patch_fb(f"sports_bets/{bet_id}", {"status": "cancelled"})
             msg = f"Apuesta CANCELADA. Se han devuelto {amount} bits al jugador."
             
@@ -919,7 +920,8 @@ def api_resolve_bet(bet_id):
                 is_draw = str(user_choice).lower().strip() in ['empate', 'draw', 'x']
                 actual_odd = 2.00 if is_draw else 1.75
                 winnings = int(amount * actual_odd)
-                database.recargar_bits(telegram_id, winnings)
+                is_demo = bet.get('is_demo', False)
+                database.registrar_ganancia(telegram_id, winnings, is_demo=is_demo)
                 database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
                 msg = f"Apuesta marcada como GANADA. Pagados {winnings} bits."
             else:
@@ -1158,7 +1160,8 @@ def resolve_custom_match():
                 actual_odd = 2.00 if is_draw else 1.75
                 winnings = int(amount * actual_odd)
                 
-                database.recargar_bits(telegram_id, winnings)
+                is_demo = b.get('is_demo', False)
+                database.registrar_ganancia(telegram_id, winnings, is_demo=is_demo)
                 database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
                 score_info = f" (Resultado: {score_display})" if score_display else ""
                 try:

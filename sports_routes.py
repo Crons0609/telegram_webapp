@@ -459,11 +459,13 @@ def place_bet():
             logger.warning(f"[BetWindow] Date parse error: {e}")
             # If we can't parse, let it through (don't block on bad date)
 
+    is_demo = session.get('play_mode') == 'demo'
     user = database.get_fb(f"usuarios/{telegram_id}")
     if not user:
         return jsonify({"success": False, "error": "Usuario no encontrado"}), 404
 
-    if user.get('bits', 0) < amount:
+    current_bits = int(user.get('bits_demo', 0)) if is_demo else int(user.get('bits', 0))
+    if current_bits < amount:
         return jsonify({"success": False, "error": "Saldo insuficiente"}), 400
 
     try:
@@ -472,8 +474,8 @@ def place_bet():
     except:
         return jsonify({"success": False, "error": "Cuota (Odd) inválida"}), 400
 
-    # Descontamos bits del balance real
-    database.descontar_bits(telegram_id, amount)
+    # Descontamos bits del balance correspondiente
+    database.descontar_bits(telegram_id, amount, is_demo=is_demo)
     
     # Registramos la apuesta con los datos enviados por la API deportiva
     bet_data = {
@@ -486,12 +488,13 @@ def place_bet():
         "sport_source": sport_source,
         "status": "pending",
         "created_at": datetime.utcnow().isoformat(),
-        "match_date": match_date or None
+        "match_date": match_date or None,
+        "is_demo": is_demo
     }
     database.post_fb("sports_bets", bet_data)
     
-    new_balance = database.obtener_bits(telegram_id)
-    logger.info(f"Apuesta Deportiva: {telegram_id} -> {amount} bits a {team_choice} (Cuota {odd}) en {match_name}")
+    new_balance = database.obtener_bits(telegram_id, is_demo=is_demo)
+    logger.info(f"Apuesta Deportiva (Demo: {is_demo}): {telegram_id} -> {amount} bits a {team_choice} (Cuota {odd}) en {match_name}")
     return jsonify({"success": True, "new_balance": new_balance})
 
 @sports_bp.route('/api/bets/<telegram_id>')

@@ -61,7 +61,8 @@ def process_pending_bets():
                 database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
                 
                 # Update User Bits
-                database.recargar_bits(telegram_id, winnings)
+                is_demo = bet.get('is_demo', False)
+                database.registrar_ganancia(telegram_id, winnings, is_demo=is_demo)
                 
                 # Also Add XP
                 from user_profile_manager import UserProfileManager

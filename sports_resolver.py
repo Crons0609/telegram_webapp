@@ -91,7 +91,8 @@ def resolve_soccer_match(match_id, bet_id, bet_data):
             is_draw = user_choice in ['empate', 'draw', 'x']
             actual_odd = 2.00 if is_draw else 1.75
             winnings = int(amount * actual_odd)
-            database.recargar_bits(telegram_id, winnings)
+            is_demo = bet_data.get('is_demo', False)
+            database.registrar_ganancia(telegram_id, winnings, is_demo=is_demo)
             database.patch_fb(f"sports_bets/{bet_id}", {"status": "won"})
             try:
                 database.notify_user(telegram_id, "✅ Apuesta Deportiva Ganada", f"¡Apostaste con éxito a la victoria de tu equipo en Fútbol!\nGanancias: {winnings} bits en {match_name}.")
