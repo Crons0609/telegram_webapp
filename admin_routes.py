@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, session, redirect, url_fo
 import database
 from werkzeug.security import check_password_hash
 from functools import wraps
+from cache_system import sports_cache
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -1189,3 +1190,86 @@ def resolve_custom_match():
         'success': True,
         'message': f'Partido resuelto.{score_msg} Apuestas procesadas: {resolved_count} ({won_count} ganadas, {lost_count} perdidas).'
     })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PANEL DE CACHÉ DE APIs DEPORTIVAS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/api/sports_cache/status', methods=['GET'])
+@admin_required_api
+def api_cache_status():
+    """Devuelve el estado completo del caché de APIs deportivas."""
+    return jsonify({'success': True, 'cache': sports_cache.status()})
+
+
+@admin_bp.route('/api/sports_cache/refresh', methods=['POST'])
+@role_required_api('superadmin', 'admin')
+def api_cache_refresh():
+    """
+    Fuerza el refresco del caché deportivo llamando al endpoint interno.
+    Ejecuta el refresh en background y devuelve inmediatamente.
+    """
+    import threading
+    import requests as _req
+
+    def _do_refresh():
+        try:
+            import config as _cfg
+            base_url = getattr(_cfg, 'WEBAPP_URL', 'http://localhost:5000').rstrip('/')
+            # Quitar la parte /app si es la URL de Telegram
+            if 't.me' in base_url or 'telegram' in base_url:
+                base_url = 'http://localhost:5000'
+            _req.get(f"{base_url}/sports/api/cache/refresh", timeout=20)
+        except Exception as exc:
+            print(f"[AdminCache] Refresh error: {exc}")
+
+    t = threading.Thread(target=_do_refresh, daemon=True)
+    t.start()
+    return jsonify({'success': True, 'message': 'Refresco de caché iniciado en segundo plano.'})
+
+
+@admin_bp.route('/api/sports_cache/clear', methods=['POST'])
+@role_required_api('superadmin', 'admin')
+def api_cache_clear():
+    """Limpia completamente el caché de APIs deportivas."""
+    sports_cache.clear()
+    return jsonify({'success': True, 'message': 'Caché deportivo limpiado exitosamente.'})
+
+
+@admin_bp.route('/api/sports_cache/ttl', methods=['POST'])
+@role_required_api('superadmin', 'admin')
+def api_cache_set_ttl():
+    """
+    Actualiza el TTL de una categoría en tiempo de ejecución.
+    Body: { "category": "live|matches|leagues", "ttl": 30 }
+    """
+    data = request.get_json() or {}
+    category = data.get('category', '')
+    ttl = data.get('ttl', 0)
+
+    valid_categories = {'live', 'matches', 'leagues', 'default'}
+    if category not in valid_categories:
+        return jsonify({'success': False, 'message': f'Categoría inválida. Usa: {valid_categories}'}), 400
+
+    try:
+        ttl = int(ttl)
+        if ttl < 5:
+            return jsonify({'success': False, 'message': 'TTL mínimo: 5 segundos'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'message': 'TTL debe ser un entero positivo'}), 400
+
+    sports_cache.set_ttl_override(category, ttl)
+    return jsonify({
+        'success': True,
+        'message': f'TTL de "{category}" actualizado a {ttl}s',
+        'ttl_config': sports_cache.status()['ttl_config'],
+    })
+
+
+@admin_bp.route('/api/sports_cache/delete/<path:cache_key>', methods=['DELETE'])
+@role_required_api('superadmin', 'admin')
+def api_cache_delete_entry(cache_key):
+    """Elimina una entrada específica del caché."""
+    sports_cache.delete(cache_key)
+    return jsonify({'success': True, 'message': f'Entrada "{cache_key}" eliminada del caché.'})
